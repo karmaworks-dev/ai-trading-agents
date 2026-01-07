@@ -757,13 +757,23 @@ function applySettings(settings) {
     document.querySelector(`input[name="swarm-mode"][value="${swarmMode}"]`).checked = true;
     updateSwarmModelsVisibility();
 
-    // Token settings
-    selectedTokens = settings.monitored_tokens || ['ETH', 'BTC', 'SOL'];
+    // Token settings - tier-based defaults
+    if (!settings.monitored_tokens) {
+        // Check tier to set appropriate defaults
+        const maxTokens = currentTierData?.features?.max_tokens || 5;
+        if (maxTokens <= 5) {
+            selectedTokens = ['BTC', 'ETH', 'SOL', 'LTC', 'HYPE'];
+        } else {
+            selectedTokens = ['BTC', 'ETH', 'SOL', 'LTC', 'AAVE', 'HYPE', 'TAO', 'DOGE'];
+        }
+    } else {
+        selectedTokens = settings.monitored_tokens;
+    }
     updateTokenSelection();
 
-    // Main model settings - Default to OpenRouter with FREE DeepSeek V3.1 Nex-N1
+    // Main model settings - Default to OpenRouter with FREE Llama 3.1 Nemotron 70B
     const defaultProvider = settings.ai_provider || 'openrouter';
-    const defaultModel = settings.ai_model || 'nex-agi/deepseek-v3.1-nex-n1:free';
+    const defaultModel = settings.ai_model || 'nvidia/llama-3.1-nemotron-70b-instruct:free';
     document.getElementById('main-provider-select').value = defaultProvider;
     updateMainModelOptions();
     document.getElementById('main-model-select').value = defaultModel;
@@ -775,14 +785,8 @@ function applySettings(settings) {
 
     document.getElementById('main-max-tokens').value = settings.ai_max_tokens || 2000;
 
-    // Swarm models - Default to 4 FREE OpenRouter models for cost-effective consensus
-    // Source: https://openrouter.ai/collections/free-models
-    swarmModels = settings.swarm_models || [
-        { provider: 'openrouter', model: 'nex-agi/deepseek-v3.1-nex-n1:free', temperature: 0.5, max_tokens: 2048 },
-        { provider: 'openrouter', model: 'xiaomi/mimo-v2-flash:free', temperature: 0.5, max_tokens: 2048 },
-        { provider: 'openrouter', model: 'mistralai/devstral-2512:free', temperature: 0.5, max_tokens: 2048 },
-        { provider: 'openrouter', model: 'tngtech/deepseek-r1t2-chimera:free', temperature: 0.5, max_tokens: 2048 }
-    ];
+    // Swarm models - Start empty, user must add their own
+    swarmModels = settings.swarm_models || [];
     renderSwarmModels();
 }
 
@@ -900,7 +904,7 @@ function updateMainModelOptions() {
     const models = availableModels[provider] || {};
 
     modelSelect.innerHTML = Object.entries(models).map(([modelId, description]) => {
-        return `<option value="${modelId}">${description}</option>`;
+        return `<option value="${modelId}">${provider}/${modelId}</option>`;
     }).join('');
 }
 
@@ -1089,7 +1093,7 @@ async function saveSettings() {
 
         // Main AI model settings
         ai_provider: document.getElementById('main-provider-select').value,
-        ai_model: document.getElementById('main-model-select').value,
+        ai_model: document.getElementById('main-model-input').value || document.getElementById('main-model-select').value,
         ai_temperature: parseFloat((document.getElementById('main-temperature').value / 100).toFixed(1)),
         ai_max_tokens: maxTokens,
 
@@ -1833,3 +1837,4 @@ async function validateSettingsForTier(settings) {
 }
 
 console.log('✅ Dashboard ready');
+        return { valid: true, errors: [] }; // Allow on error

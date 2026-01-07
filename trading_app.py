@@ -968,7 +968,7 @@ def run_trading_agent():
     user_settings = load_settings()
 
     # Get monitored tokens from settings (use user's selection, not hardcoded)
-    monitored_tokens = user_settings.get('monitored_tokens', ['ETH', 'BTC', 'SOL'])
+    monitored_tokens = user_settings.get('monitored_tokens', ['BTC', 'ETH', 'SOL', 'LTC', 'HYPE'])
     swarm_mode = user_settings.get('swarm_mode', 'single')
     mode_display = 'Swarm' if swarm_mode == 'swarm' else 'Single Agent'
 
