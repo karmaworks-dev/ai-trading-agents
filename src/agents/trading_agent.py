@@ -2055,15 +2055,16 @@ Return ONLY valid JSON with the following structure:
                 return []
 
             # ==========================================================
-            # STEP 3 — ACCOUNT EQUITY
+            # STEP 3 — ACCOUNT BALANCE & TOTAL EQUITY (MUST BE EARLY)
             # ==========================================================
             account_balance = get_account_balance(self.account)
 
-            total_equity = (
-                n.get_account_value(self.account.address)
-                if EXCHANGE == "HYPERLIQUID"
-                else account_balance
-            )
+            if EXCHANGE == "HYPERLIQUID":
+                total_equity = n.get_account_value(
+                    self.account.address if hasattr(self.account, "address") else self.account
+                )
+            else:
+                total_equity = account_balance
 
             if total_equity <= 0:
                 cprint("❌ Total equity is zero. Allocation aborted.", "red")
@@ -2151,24 +2152,40 @@ Return ONLY valid JSON with the following structure:
                         reject(f"{sym}: reduce_by_usd <= 0")
                         continue
 
-                if RISK_MANAGER_AVAILABLE and self.risk_manager:
-                    try:
-                        confidence = a.get("confidence", 50) / 100.0
-                        verdict = self.risk_manager.validate_trade_decision(
-                            symbol=sym,
-                            action=act,
-                            confidence=confidence,
-                            entry_price=100.0,
-                            account_balance=total_equity,
-                        )
-                        if not verdict.get("valid", False):
-                            reject(f"{sym}: rejected by risk manager")
-                            continue
-                    except Exception as e:
-                        reject(f"{sym}: risk validation error ({e})")
-                        continue
+                if sym not in self.allowed_symbols:
+                    reject(f"{sym}: not tradable")
+                    continue
+
+                if act not in ["OPEN_LONG", "OPEN_SHORT", "CLOSE", "HOLD"]:
+                    reject(f"{sym}: invalid action {act}")
+                    continue
+
+                # Allocation phase:
+                # Risk manager is intentionally NOT applied here.
+                # Risk validation must occur during execute_allocations(),
+                # where prices, leverage and margin are real.
 
                 valid_actions.append(a)
+
+               
+                #if RISK_MANAGER_AVAILABLE and self.risk_manager:
+                #    try:
+                #        confidence = a.get("confidence", 50) / 100.0
+                #        verdict = self.risk_manager.validate_trade_decision(
+                #            symbol=sym,
+                #            action=act,
+                #            confidence=confidence,
+                #            entry_price=100.0,
+                #            account_balance=total_equity,
+                #        )
+                #        if not verdict.get("valid", False):
+                #            reject(f"{sym}: rejected by risk manager")
+                #            continue
+                #    except Exception as e:
+                #        reject(f"{sym}: risk validation error ({e})")
+                #        continue
+
+                #valid_actions.append(a)
 
             # ==========================================================
             # STEP 7 — LOG REJECTIONS
