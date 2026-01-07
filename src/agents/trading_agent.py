@@ -115,6 +115,14 @@ try:
 except ImportError:
     RISK_MANAGER_AVAILABLE = False
 
+# Import confidence thresholds from config
+try:
+    from src.config import MIN_SINGLE_CONFIDENCE, MIN_SWARM_CONFIDENCE
+except ImportError:
+    # Fallback defaults
+    MIN_SINGLE_CONFIDENCE = 60
+    MIN_SWARM_CONFIDENCE = 65
+
 # Import intelligence integrator for strategy and volume signals
 try:
     from src.utils.intelligence_integrator import (
@@ -128,6 +136,14 @@ except ImportError:
     def collect_all_intelligence(*args, **kwargs): return {"token": "", "combined_context": ""}
     def get_volume_intel_for_token(*args, **kwargs): return None
     def get_volume_summary(): return ""
+
+# Import pattern intelligence system
+try:
+    from src.utils.pattern_intelligence import get_pattern_intelligence
+    PATTERN_INTELLIGENCE_AVAILABLE = True
+except ImportError:
+    PATTERN_INTELLIGENCE_AVAILABLE = False
+    def get_pattern_intelligence(*args, **kwargs): return "Pattern intelligence unavailable"
 
 
 # Load Environment Variables
@@ -2942,13 +2958,23 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 0: DISPLAY VOLUME INTELLIGENCE SUMMARY (if available)
+            # STEP 0: DISPLAY INTELLIGENCE SUMMARIES (if available)
             if INTELLIGENCE_AVAILABLE:
                 volume_summary = get_volume_summary()
                 if volume_summary and "No volume" not in volume_summary:
                     cprint("\n📊 VOLUME INTELLIGENCE:", "white", "on_blue")
                     cprint(volume_summary, "cyan")
                     add_console_log("📊 Volume intelligence loaded", "info")
+
+            # STEP 0.1: LOAD PATTERN INTELLIGENCE (like volume intelligence)
+            if PATTERN_INTELLIGENCE_AVAILABLE:
+                cprint("\n🔍 PATTERN INTELLIGENCE:", "white", "on_magenta")
+                pattern_intel = get_pattern_intelligence(self.symbols, self.timeframe)
+                if pattern_intel and "No significant patterns" not in pattern_intel:
+                    cprint(pattern_intel, "magenta")
+                    add_console_log("🔍 Pattern intelligence loaded", "info")
+                else:
+                    cprint("   No significant patterns detected", "yellow")
 
             # STEP 1: FETCH ALL OPEN POSITIONS
             add_console_log("Fetching open positions...", "info")
