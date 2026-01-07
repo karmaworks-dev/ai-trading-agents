@@ -235,6 +235,10 @@ MIN_CLOSE_CONFIDENCE = 70
 # Profit threshold for automatic position closing (percentage), Positions with profit >= this value close immediately, bypassing other checks
 TP_THRESHOLD = 0.5
 
+# 🌊 CONFIDENCE THRESHOLDS
+MIN_SINGLE_CONFIDENCE = 60  # Single model confidence threshold (50-70% recommended)
+MIN_SWARM_CONFIDENCE = 65  # Swarm consensus threshold (55-65% recommended)
+
 # SINGLE MODEL SETTINGS
 AI_MODEL_TYPE = 'openrouter' 
 AI_MODEL_NAME = 'x-ai/grok-4.1-fast' 
@@ -679,12 +683,24 @@ class TradingAgent:
         if EXCHANGE == "HYPERLIQUID":
             cprint("🔑 Initializing Hyperliquid Account...", "cyan")
             try:
-                # Standardized key lookup
-                raw_key = os.getenv("HYPER_LIQUID_ETH_PRIVATE_KEY", "") or os.getenv("HYPER_LIQUID_KEY", "")
+                # Standardized key lookup - prioritize ETH private key over API key
+                raw_key = os.getenv("HYPER_LIQUID_ETH_PRIVATE_KEY", "")
+                
+                # If ETH private key not found, try the legacy key (but warn)
+                if not raw_key:
+                    raw_key = os.getenv("HYPER_LIQUID_KEY", "")
+                    if raw_key:
+                        cprint("⚠️ Using legacy HYPER_LIQUID_KEY - this should be an ETH private key (32 bytes)", "yellow")
+                
                 clean_key = raw_key.strip().replace('"', '').replace("'", "")
 
                 if not clean_key:
-                    raise ValueError("Private Key not found in .env")
+                    raise ValueError("Private Key not found in .env. Please set HYPER_LIQUID_ETH_PRIVATE_KEY in your .env file")
+
+                # Validate key length (Ethereum private keys should be 32 bytes = 64 hex chars + optional 0x prefix)
+                key_without_prefix = clean_key.replace('0x', '')
+                if len(key_without_prefix) != 64:
+                    raise ValueError(f"Invalid private key length: {len(key_without_prefix)} characters. Expected 64 hex characters (32 bytes). Got: {clean_key[:20]}...")
 
                 self.account = Account.from_key(clean_key)
                 self.address = os.getenv("ACCOUNT_ADDRESS")
@@ -695,6 +711,7 @@ class TradingAgent:
                 cprint(f"✅ Account loaded successfully! Address: {self.address}", "green")
             except Exception as e:
                 cprint(f"❌ Error loading key: {e}", "red")
+                cprint("💡 Make sure your .env file has HYPER_LIQUID_ETH_PRIVATE_KEY set to a valid 32-byte Ethereum private key", "yellow")
                 sys.exit(1)
 
         # Check if using swarm mode or single model

@@ -227,3 +227,4 @@ dist/
 
 # Local cache directory
 .cache/
+.env
