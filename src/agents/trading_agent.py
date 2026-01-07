@@ -235,10 +235,6 @@ MIN_CLOSE_CONFIDENCE = 70
 # Profit threshold for automatic position closing (percentage), Positions with profit >= this value close immediately, bypassing other checks
 TP_THRESHOLD = 0.5
 
-# 🌊 CONFIDENCE THRESHOLDS
-MIN_SINGLE_CONFIDENCE = 60  # Single model confidence threshold (50-70% recommended)
-MIN_SWARM_CONFIDENCE = 65  # Swarm consensus threshold (55-65% recommended)
-
 # SINGLE MODEL SETTINGS
 AI_MODEL_TYPE = 'openrouter' 
 AI_MODEL_NAME = 'x-ai/grok-4.1-fast' 
@@ -683,24 +679,12 @@ class TradingAgent:
         if EXCHANGE == "HYPERLIQUID":
             cprint("🔑 Initializing Hyperliquid Account...", "cyan")
             try:
-                # Standardized key lookup - prioritize ETH private key over API key
-                raw_key = os.getenv("HYPER_LIQUID_ETH_PRIVATE_KEY", "")
-                
-                # If ETH private key not found, try the legacy key (but warn)
-                if not raw_key:
-                    raw_key = os.getenv("HYPER_LIQUID_KEY", "")
-                    if raw_key:
-                        cprint("⚠️ Using legacy HYPER_LIQUID_KEY - this should be an ETH private key (32 bytes)", "yellow")
-                
+                # Standardized key lookup
+                raw_key = os.getenv("HYPER_LIQUID_ETH_PRIVATE_KEY", "") or os.getenv("HYPER_LIQUID_KEY", "")
                 clean_key = raw_key.strip().replace('"', '').replace("'", "")
 
                 if not clean_key:
-                    raise ValueError("Private Key not found in .env. Please set HYPER_LIQUID_ETH_PRIVATE_KEY in your .env file")
-
-                # Validate key length (Ethereum private keys should be 32 bytes = 64 hex chars + optional 0x prefix)
-                key_without_prefix = clean_key.replace('0x', '')
-                if len(key_without_prefix) != 64:
-                    raise ValueError(f"Invalid private key length: {len(key_without_prefix)} characters. Expected 64 hex characters (32 bytes). Got: {clean_key[:20]}...")
+                    raise ValueError("Private Key not found in .env")
 
                 self.account = Account.from_key(clean_key)
                 self.address = os.getenv("ACCOUNT_ADDRESS")
@@ -711,7 +695,6 @@ class TradingAgent:
                 cprint(f"✅ Account loaded successfully! Address: {self.address}", "green")
             except Exception as e:
                 cprint(f"❌ Error loading key: {e}", "red")
-                cprint("💡 Make sure your .env file has HYPER_LIQUID_ETH_PRIVATE_KEY set to a valid 32-byte Ethereum private key", "yellow")
                 sys.exit(1)
 
         # Check if using swarm mode or single model
@@ -1999,38 +1982,6 @@ Return ONLY valid JSON with the following structure:
 
 
 
-
-    def normalize_allocation_response(self, response_text):
-        """Normalize AI response to expected format"""
-        try:
-            # Try to parse as SMART_ALLOCATION_PROMPT format first
-            allocation_plan = extract_json_from_text(response_text)
-            if allocation_plan and "actions" in allocation_plan:
-                add_console_log("✅ AI response in SMART_ALLOCATION format", "success")
-                return allocation_plan
-            
-            # Try to convert ALLOCATION_PROMPT format to SMART_ALLOCATION_PROMPT format
-            if allocation_plan and "USDC_ADDRESS" in allocation_plan:
-                add_console_log("⚠️ Converting from old ALLOCATION_PROMPT format", "warning")
-                actions = []
-                for symbol, amount in allocation_plan.items():
-                    if symbol != "USDC_ADDRESS":
-                        actions.append({
-                            "symbol": symbol,
-                            "action": "OPEN_LONG",
-                            "margin_usd": amount,
-                            "reason": "Converted from old format"
-                        })
-                return {
-                    "actions": actions,
-                    "cash_buffer_usd": allocation_plan.get("USDC_ADDRESS", 0),
-                    "reasoning": "Converted from old allocation format"
-                }
-        except Exception as e:
-            add_console_log(f"❌ Format conversion failed: {e}", "error")
-            return None
-        
-        return None
     def allocate_portfolio(self):
         """
         AI-DRIVEN SMART PORTFOLIO ALLOCATION WITH RISK MANAGEMENT
@@ -2114,7 +2065,6 @@ Return ONLY valid JSON with the following structure:
 
             if not signals:
                 cprint("📊 No actionable signals. Skipping allocation.", "yellow")
-                add_console_log("❌ No actionable signals for allocation", "error")
                 add_console_log("No actionable signals for allocation", "info")
                 return []
 
@@ -2145,11 +2095,6 @@ Return ONLY valid JSON with the following structure:
             cprint(f"💎 Total Equity (Balance + Positions): ${total_equity:.2f}", "cyan")
             cprint(f"📊 Positions Value: ${total_position_value:.2f}", "cyan")
             cprint(f"💵 Available Balance: ${available_balance:.2f}", "green")
-            
-            # CRITICAL FIX: Use total_equity consistently for calculations
-            usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)
-            cash_buffer = total_equity * (CASH_PERCENTAGE / 100)
-            add_console_log(f"📊 Balance calc: Total=${total_equity:.2f}, Usable=${usable_margin:.2f}, Buffer=${cash_buffer:.2f}", "info")
 
             # ================================================================
             # STEP 4: Build Portfolio State Summary for AI
@@ -2316,17 +2261,10 @@ Return ONLY valid JSON with the following structure:
 
                 cprint("=" * 60 + "\n", "green")
                 add_console_log(f"Planned {len(valid_actions)} actions", "info")
-                
-                if len(valid_actions) == 0:
-                    add_console_log("❌ No allocation actions generated", "error")
-                else:
-                    add_console_log(f"✅ Allocation complete: {len(valid_actions)} actions", "success")
 
-                    return valid_actions
+                return valid_actions
 
             except Exception as e:
-                add_console_log(f"❌ JSON parsing error: {e}", "error")
-                add_console_log(f"Raw AI response: {ai_response[:200]}...", "debug")
                 cprint(f"⚠️ Error parsing AI response: {e}", "yellow")
                 cprint(f"   Response: {ai_response[:200]}...", "white")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
@@ -3222,4 +3160,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
