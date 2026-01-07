@@ -2969,7 +2969,12 @@ Return ONLY valid JSON with the following structure:
             # STEP 0.1: LOAD PATTERN INTELLIGENCE (like volume intelligence)
             if PATTERN_INTELLIGENCE_AVAILABLE:
                 cprint("\n🔍 PATTERN INTELLIGENCE:", "white", "on_magenta")
-                pattern_intel = get_pattern_intelligence(self.symbols, self.timeframe)
+                # Use existing market_data to avoid duplicate API calls
+                pattern_intel = get_pattern_intelligence(
+                    symbols=self.symbols,
+                    timeframe=self.timeframe,
+                    market_data_dict=market_data  # PASS EXISTING DATA
+                )
                 if pattern_intel and "No significant patterns" not in pattern_intel:
                     cprint(pattern_intel, "magenta")
                     add_console_log("🔍 Pattern intelligence loaded", "info")

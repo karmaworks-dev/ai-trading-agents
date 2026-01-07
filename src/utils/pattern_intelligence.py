@@ -6,6 +6,7 @@ Similar to volume intelligence - loaded once per cycle with frontend logging
 
 import logging
 import sys
+import asyncio
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from pathlib import Path
@@ -408,10 +409,18 @@ class PatternIntelligence:
         
         return "\n".join(summary_lines)
     
-    def get_pattern_intelligence_for_trading(self, symbols: List[str], timeframe: str = '30m') -> str:
-        """Get formatted pattern intelligence for trading cycle (like volume intelligence)"""
+    def get_pattern_intelligence_for_trading(self, symbols: List[str], timeframe: str = '30m', market_data_dict: Optional[Dict[str, Any]] = None) -> str:
+        """Get formatted pattern intelligence for trading cycle (like volume intelligence)
+        
+        Args:
+            symbols: List of token symbols to analyze
+            timeframe: Timeframe of the data (for logging/context)
+            market_data_dict: Optional dictionary of {symbol: DataFrame} with OHLCV data
+                             If provided, uses existing data instead of fetching new data
+        """
         try:
-            pattern_summary = self.collect_pattern_intelligence(symbols, timeframe)
+            # Use smart collection method that can use existing data
+            pattern_summary = self.collect_pattern_intelligence_smart(symbols, market_data_dict, timeframe)
             formatted_summary = self.format_pattern_intelligence_summary(pattern_summary)
             
             # Log for debugging
@@ -423,11 +432,163 @@ class PatternIntelligence:
             logger.error(f"Error getting pattern intelligence: {e}")
             return "Pattern intelligence unavailable"
 
+    def collect_pattern_intelligence_smart(self, symbols: List[str], market_data_dict: Optional[Dict[str, Any]] = None, timeframe: str = '30m') -> Dict[str, Any]:
+        """Smart pattern intelligence collection that uses existing data when available
+        
+        Args:
+            symbols: List of token symbols to analyze
+            market_data_dict: Optional dictionary of {symbol: DataFrame} with OHLCV data
+                             If provided, uses existing data instead of fetching new data
+            timeframe: Timeframe of the data (for logging/context)
+            
+        Returns:
+            Dictionary of {symbol: pattern_intelligence_data}
+        """
+        pattern_summary = {}
+        
+        logger.info(f"🔍 Analyzing patterns for {len(symbols)} symbols (timeframe: {timeframe})")
+        
+        successful = 0
+        failed = 0
+        total_patterns = 0
+        
+        for symbol in symbols:
+            try:
+                # Check if we have data for this symbol
+                if market_data_dict and symbol in market_data_dict:
+                    # Use existing market data (NO RE-FETCH)
+                    df = market_data_dict[symbol]
+                    
+                    # Validate DataFrame
+                    if df.empty:
+                        logger.debug(f"Empty DataFrame for {symbol}, skipping")
+                        continue
+                    
+                    # Validate required columns
+                    required_cols = ['Open', 'High', 'Low', 'Close']
+                    if not all(col in df.columns for col in required_cols):
+                        logger.warning(f"Missing OHLCV columns for {symbol}, skipping")
+                        continue
+                    
+                    # Convert DataFrame to pattern detector format
+                    candles, prices = self._convert_df_to_candles(df)
+                    
+                    if not candles or len(candles) < 10:
+                        logger.debug(f"Insufficient candles for {symbol} ({len(candles)}), skipping")
+                        continue
+                    
+                else:
+                    # Fallback to current behavior - fetch data
+                    market_data = self.get_market_data(symbol, timeframe)
+                    
+                    if not market_data or not market_data.get('candles'):
+                        continue
+                    
+                    candles = market_data['candles']
+                    prices = market_data['prices']
+                
+                # Analyze patterns using existing method
+                pattern_analysis = asyncio.run(
+                    self.pattern_integration.scan_and_analyze_patterns(
+                        symbol, candles, prices
+                    )
+                )
+                
+                # Extract actionable intelligence
+                intelligence = self.extract_pattern_intelligence(
+                    symbol, pattern_analysis, {'candles': candles, 'prices': prices, 'symbol': symbol}
+                )
+                
+                if intelligence and intelligence.get('patterns'):
+                    # Limit patterns per symbol to prevent bloat
+                    intelligence['patterns'] = sorted(
+                        intelligence['patterns'],
+                        key=lambda x: x.get('quality', 0),
+                        reverse=True
+                    )[:5]  # Keep top 5 patterns only
+                    
+                    pattern_summary[symbol] = intelligence
+                    total_patterns += len(intelligence['patterns'])
+                    successful += 1
+                
+            except Exception as e:
+                logger.warning(f"Pattern detection failed for {symbol}: {e}")
+                failed += 1
+                continue
+        
+        logger.info(
+            f"✅ Pattern analysis complete: {successful} succeeded, "
+            f"{failed} failed, {total_patterns} patterns detected"
+        )
+        
+        return pattern_summary
+
+    def _convert_df_to_candles(self, df: Any) -> Tuple[List[Dict], List[float]]:
+        """
+        Convert pandas DataFrame to pattern detector format.
+        
+        Args:
+            df: DataFrame with OHLCV data (index = timestamp)
+            
+        Returns:
+            Tuple of (candles list, prices list)
+        """
+        candles = []
+        prices = []
+        
+        try:
+            for idx, row in df.iterrows():
+                # Handle timestamp - could be datetime index or column
+                if hasattr(idx, 'isoformat'):
+                    timestamp_str = idx.isoformat()
+                else:
+                    timestamp_str = str(idx)
+                
+                # Extract OHLCV values with robust type conversion
+                candle = {
+                    'timestamp': timestamp_str,
+                    'open': float(row['Open']),
+                    'high': float(row['High']),
+                    'low': float(row['Low']),
+                    'close': float(row['Close']),
+                    'volume': float(row.get('Volume', 0))
+                }
+                candles.append(candle)
+                prices.append(float(row['Close']))
+            
+        except Exception as e:
+            logger.error(f"Error converting DataFrame to candles: {e}")
+            return [], []
+        
+        return candles, prices
+
 
 # Create global instance
 pattern_intelligence = PatternIntelligence()
 
 
-def get_pattern_intelligence(symbols: List[str], timeframe: str = '30m') -> str:
-    """Get pattern intelligence for trading (similar to volume intelligence)"""
-    return pattern_intelligence.get_pattern_intelligence_for_trading(symbols, timeframe)
+def get_pattern_intelligence(symbols: List[str], timeframe: str = '30m', market_data_dict: Optional[Dict[str, Any]] = None) -> str:
+    """Get pattern intelligence for trading (similar to volume intelligence)
+    
+    Args:
+        symbols: List of token symbols to analyze
+        timeframe: Timeframe of the data (for logging/context)
+        market_data_dict: Optional dictionary of {symbol: DataFrame} with OHLCV data
+                         If provided, uses existing data instead of fetching new data
+    """
+    return pattern_intelligence.get_pattern_intelligence_for_trading(symbols, timeframe, market_data_dict)
+
+
+def collect_pattern_intelligence_smart(symbols: List[str], market_data_dict: Optional[Dict[str, Any]] = None, timeframe: str = '30m') -> Dict[str, Any]:
+    """Smart pattern intelligence collection that uses existing data when available
+    
+    Args:
+        symbols: List of token symbols to analyze
+        market_data_dict: Optional dictionary of {symbol: DataFrame} with OHLCV data
+                         If provided, uses existing data instead of fetching new data
+        timeframe: Timeframe of the data (for logging/context)
+        
+    Returns:
+        Dictionary of {symbol: pattern_intelligence_data}
+    """
+    return pattern_intelligence.collect_pattern_intelligence_smart(symbols, market_data_dict, timeframe)
