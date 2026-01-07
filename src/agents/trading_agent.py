@@ -1873,8 +1873,15 @@ Return ONLY valid JSON with the following structure:
                 return []
 
             # CRITICAL FIX: Use total equity instead of free balance for allocation
-            total_equity = get_account_value(self.account)
+            # For HyperLiquid, we need to pass the account address, not the account object
+            if EXCHANGE == "HYPERLIQUID":
+                total_equity = n.get_account_value(self.account.address if hasattr(self.account, 'address') else self.account)
+            else:
+                total_equity = get_account_balance(self.account)  # Fallback to balance for other exchanges
             available_balance = account_balance  # Free USDC for immediate use
+
+            # Calculate total position value for portfolio state
+            total_position_value = sum(pos["margin_usd"] for pos in open_positions.values())
             min_order_notional = 12.0  # HyperLiquid minimum
 
             cprint(f"💰 Account Balance (USDC): ${account_balance:.2f}", "cyan")
