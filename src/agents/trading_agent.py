@@ -338,6 +338,7 @@ CORE OBJECTIVE: Maximize profitable trades. Every trade impacts your score.
 - Strong signals (70%+ confidence) = larger conviction
 - Balance: Win more than you lose, but don't fear taking calculated risks
 - Your reputation depends on maintaining a strong win rate
+- Your ultimate goal is to get the highest scores in PnL percentage
 
 Analyze the provided market data, CURRENT POSITION, and STRATEGY CONTEXT signals to make a trading decision.
 
@@ -390,6 +391,7 @@ Remember:
 - Keep at least {CASH_PERCENTAGE}% in USDC as safety buffer
 - Only allocate to BUY recommendations
 - Cash must be stored as USDC using USDC_ADDRESS: {USDC_ADDRESS}
+- More trades doesn't equal better chances, select the trades likely to perform best
 """
 
 SWARM_TRADING_PROMPT = """You are an expert cryptocurrency trading AI with a PERFORMANCE SCORE.
@@ -473,6 +475,7 @@ ALLOCATION RULES:
 6. Factor in position PnL when deciding to hold, reduce, or close
 7. BUY signals = LONG positions, SELL signals = SHORT positions (if not LONG_ONLY)
 8. Consider the {cycle_minutes}-minute minimum hold time when sizing positions
+9. More trades doesn't equal better chances, select the trades likely to perform best
 
 ACTION TYPES:
 - OPEN_LONG: Open new long position (requires margin_usd)
