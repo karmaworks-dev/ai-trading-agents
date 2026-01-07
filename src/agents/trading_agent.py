@@ -434,69 +434,78 @@ RESPONSE FORMAT EXAMPLES:
 
 RESPOND WITH ONLY: ACTION | CONFIDENCE%"""
 
-SMART_ALLOCATION_PROMPT = """You are an expert portfolio allocation AI for cryptocurrency trading.
-
-# CRITICAL REQUIREMENTS
-1. Return ONLY a valid JSON object with this EXACT structure:
-Format your response as a Python dictionary:
-{
-    "token_address": allocated_amount,  # In USD
-    ...
-    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
-}
-
-# FORMAT RULES
-- No markdown or explanation outside the JSON
-
-CURRENT PORTFOLIO STATE:
-{portfolio_state}
-
-AI TRADING SIGNALS:
-{signals}
-
-ACCOUNT INFO:
-- Available Balance: ${available_balance:.2f}
-- Leverage: {leverage}x
-- Max Position %: {max_position_pct}%
-- Cash Buffer: {cash_buffer_pct}%
-- Minimum Order: ${min_order:.2f} notional
-- Trading Cycle: Every {cycle_minutes} minutes (MINIMUM HOLD TIME)
+SMART_ALLOCATION_PROMPT = """
+You are an expert crypto portfolio allocation AI.
 
 YOUR TASK:
-Analyze the current positions and AI signals to create an OPTIMAL allocation plan.
+Return a FINAL, EXECUTABLE allocation plan based on the signals and portfolio state.
 
-⚠️ CRITICAL: Positions will be held for AT LEAST {cycle_minutes} minutes until the next cycle.
-- Factor this hold time into your risk assessment
-- Higher leverage + longer hold = more exposure to volatility
-- Be more conservative if cycle time is long relative to expected move
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESPONSE FORMAT (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Return ONLY valid JSON in this EXACT structure:
 
-ALLOCATION RULES:
-1. Higher confidence signals deserve larger allocations
-2. Consider reallocating from underperforming positions (negative PnL) to stronger opportunities
-3. Keep at least {cash_buffer_pct}% as cash buffer
-4. Each position's margin should not exceed {max_position_pct}% of total equity
-5. Account for existing positions - don't over-allocate to positions already at target size
-6. Factor in position PnL when deciding to hold, reduce, or close
-7. BUY signals = LONG positions, SELL signals = SHORT positions (if not LONG_ONLY)
-8. Consider the {cycle_minutes}-minute minimum hold time when sizing positions
-9. More trades doesn't equal better chances, select the trades likely to perform best
+{
+  "actions": [
+    {
+      "symbol": "HYPE",
+      "action": "OPEN_LONG | OPEN_SHORT | REDUCE | CLOSE | INCREASE",
+      "margin_usd": 123.45,
+      "confidence": 65,
+      "reason": "Short explanation"
+    }
+  ],
+  "cash_buffer_usd": 100.0,
+  "reasoning": "Overall allocation logic summary"
+}
 
-ACTION TYPES:
-- OPEN_LONG: Open new long position (requires margin_usd)
-- OPEN_SHORT: Open new short position (requires margin_usd)
-- INCREASE: Add to existing position (requires margin_usd)
-- REDUCE: Reduce existing position (requires reduce_by_usd in notional)
-- CLOSE: Close position entirely
-- HOLD: Keep position as-is
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STRICT RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- ALWAYS return at least ONE action
+- NEVER return HOLD
+- BUY signal → OPEN_LONG
+- SELL signal → OPEN_SHORT (LONG_ONLY = False)
+- All values must be in USD
+- margin_usd must be >= minimum order
+- confidence must be 1–100
+- Do NOT include markdown
+- Do NOT include explanations outside JSON
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PORTFOLIO STATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{portfolio_state}
 
-ABSOLUTE REQUIREMENTS:
-- Always return valid JSON
-- Never return empty actions array
-- Always use USD values
-- Allocate based on confidence levels
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AI TRADING SIGNALS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{signals}
 
-CRITICAL: Return ONLY the JSON object, no markdown, no explanation outside the JSON."""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACCOUNT CONSTRAINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Total Equity: ${available_balance:.2f}
+- Leverage: {leverage}x
+- Max Position %: {max_position_pct}%
+- Required Cash Buffer: {cash_buffer_pct}%
+- Minimum Order Size: ${min_order:.2f}
+- Minimum Hold Time: {cycle_minutes} minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALLOCATION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Higher confidence → larger allocation
+2. Do not exceed max position %
+3. Respect cash buffer
+4. Prefer opening new positions over many small trades
+5. If no good trade exists, CLOSE weakest position instead
+6. Return ONLY executable actions
+
+REMEMBER:
+This JSON will be executed directly by a trading engine.
+"""
+
 
 POSITION_ANALYSIS_PROMPT = """
 You are an expert crypto trading analyst. Your task is to analyze the user's open positions based on the provided position summaries and current market data.
