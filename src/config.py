@@ -74,8 +74,8 @@ MAX_LOSS_USD = 2   # If we lose $2, stop trading (Protects your $10)
 MAX_GAIN_USD = 3   # If we make $5, stop and take profit
 
 # USD MINIMUM BALANCE RISK CONTROL
-MINIMUM_BALANCE_USD = 5  # If balance drops below $5, close everything
-USE_AI_CONFIRMATION = False # Set to False for faster exits
+MINIMUM_BALANCE_USD = 1  # If balance drops below $5, close everything
+USE_AI_CONFIRMATION = True # Set to False for faster exits
 
 # Transaction settings ⚡
 slippage = 0.01  # 1% Slippage
