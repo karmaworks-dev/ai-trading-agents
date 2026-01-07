@@ -336,7 +336,6 @@ CORE OBJECTIVE: Maximize profitable trades. Every trade impacts your score.
 - Take trades when you see good opportunities (50%+ confidence)
 - Be selective but not paralyzed - missing good trades also hurts performance
 - Strong signals (70%+ confidence) = larger conviction
-- Weak signals (below 50%) = recommend NOTHING
 - Balance: Win more than you lose, but don't fear taking calculated risks
 - Your reputation depends on maintaining a strong win rate
 
