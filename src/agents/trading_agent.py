@@ -438,19 +438,15 @@ SMART_ALLOCATION_PROMPT = """You are an expert portfolio allocation AI for crypt
 
 # CRITICAL REQUIREMENTS
 1. Return ONLY a valid JSON object with this EXACT structure:
-{{
-  "actions": [ // List of actions (required)
-    {{"symbol": "...", "action": "OPEN_LONG"/"OPEN_SHORT"/"REDUCE"/"CLOSE", "margin_usd"/"reduce_by_usd": number, "reason": "..."}}
-  ],
-  "cash_buffer_usd": ...,
-  "reasoning": "..."
-}}
+Format your response as a Python dictionary:
+{
+    "token_address": allocated_amount,  # In USD
+    ...
+    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
+}
 
 # FORMAT RULES
 - No markdown or explanation outside the JSON
-- All number values must be in USD
-- Action must be one of: OPEN_LONG, OPEN_SHORT, REDUCE, CLOSE
-- Cash buffer must be at least {cash_buffer_pct}% of total equity
 
 CURRENT PORTFOLIO STATE:
 {portfolio_state}
@@ -492,13 +488,6 @@ ACTION TYPES:
 - REDUCE: Reduce existing position (requires reduce_by_usd in notional)
 - CLOSE: Close position entirely
 - HOLD: Keep position as-is
-
-Format your response as a Python dictionary:
-{
-    "token_address": allocated_amount,  # In USD
-    ...
-    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
-}
 
 
 ABSOLUTE REQUIREMENTS:
