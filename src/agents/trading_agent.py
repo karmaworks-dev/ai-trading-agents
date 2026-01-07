@@ -375,32 +375,32 @@ Remember:
 - Consider both technical and strategy signals
 """
 
-ALLOCATION_PROMPT = """
-You are our Portfolio Allocation Assistant 🕉️
+#ALLOCATION_PROMPT = """
+#You are our Portfolio Allocation Assistant 🕉️
 
-Given the total portfolio size and trading recommendations, allocate capital efficiently.
-Consider:
-1. Position sizing based on confidence levels
-2. Risk distribution
-3. Keep cash buffer as specified
-4. Maximum allocation per position
+#Given the total portfolio size and trading recommendations, allocate capital efficiently.
+#Consider:
+#1. Position sizing based on confidence levels
+#2. Risk distribution
+#3. Keep cash buffer as specified
+#4. Maximum allocation per position
 
-Format your response as a Python dictionary:
-{
-    "token_address": allocated_amount,  # In USD
-    ...
-    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
-}
+#Format your response as a Python dictionary:
+#{
+#    "token_address": allocated_amount,  # In USD
+#    ...
+#    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
+#}
 
-Remember:
-- Total allocations must not exceed total_size
-- Higher confidence should get larger allocations
-- Never allocate more than {MAX_POSITION_PERCENTAGE}% to a single position
-- Keep at least {CASH_PERCENTAGE}% in USDC as safety buffer
-- Only allocate to BUY recommendations
-- Cash must be stored as USDC using USDC_ADDRESS: {USDC_ADDRESS}
-- More trades doesn't equal better chances, select the trades likely to perform best
-"""
+#Remember:
+#- Total allocations must not exceed total_size
+#- Higher confidence should get larger allocations
+#- Never allocate more than {MAX_POSITION_PERCENTAGE}% to a single position
+#- Keep at least {CASH_PERCENTAGE}% in USDC as safety buffer
+#- Only allocate to BUY recommendations
+#- Cash must be stored as USDC using USDC_ADDRESS: {USDC_ADDRESS}
+#- More trades doesn't equal better chances, select the trades likely to perform best
+#"""
 
 SWARM_TRADING_PROMPT = """You are an expert cryptocurrency trading AI with a PERFORMANCE SCORE.
 
@@ -492,6 +492,14 @@ ACTION TYPES:
 - REDUCE: Reduce existing position (requires reduce_by_usd in notional)
 - CLOSE: Close position entirely
 - HOLD: Keep position as-is
+
+Format your response as a Python dictionary:
+{
+    "token_address": allocated_amount,  # In USD
+    ...
+    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
+}
+
 
 ABSOLUTE REQUIREMENTS:
 - Always return valid JSON
