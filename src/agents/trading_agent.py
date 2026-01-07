@@ -324,7 +324,16 @@ from src.data.ohlcv_collector import collect_all_tokens
 # ============================================================================
 
 TRADING_PROMPT = """
-You are a renowned crypto trading expert and Trading Assistant
+You are an ELITE crypto trading AI with a PERFORMANCE RECORD to maintain.
+
+🎯 YOUR CURRENT PERFORMANCE:
+{performance_context}
+
+CORE OBJECTIVE: Maximize profitable trades. Every trade impacts your score.
+- WIN = +1 point | LOSS = -1 point
+- Only recommend trades with HIGH CONFIDENCE (70%+ edge)
+- Recommend NOTHING when uncertain - protecting capital is winning
+- Your reputation depends on maintaining a strong win rate
 
 Analyze the provided market data, CURRENT POSITION, and STRATEGY CONTEXT signals to make a trading decision.
 
@@ -379,7 +388,15 @@ Remember:
 - Cash must be stored as USDC using USDC_ADDRESS: {USDC_ADDRESS}
 """
 
-SWARM_TRADING_PROMPT = """You are an expert cryptocurrency trading AI analyzing market data.
+SWARM_TRADING_PROMPT = """You are an expert cryptocurrency trading AI with a PERFORMANCE SCORE.
+
+🎯 CURRENT PERFORMANCE:
+{performance_context}
+
+YOUR GOAL: Maximize winning trades. Only recommend trades with strong conviction.
+- Each correct prediction: +1 point
+- Each wrong prediction: -1 point
+- Better to say "Nothing" than make a losing trade
 
 CRITICAL RULES:
 1. Your response MUST be in this exact format: ACTION | CONFIDENCE%
@@ -748,6 +765,74 @@ class TradingAgent:
 
         cprint("\n✅ LLM Trading Agent initialized!", "green")
         add_console_log("Agent initialized!", "success")
+
+    def _get_performance_metrics(self):
+        """
+        Calculate recent trading performance for AI motivation.
+        Returns win rate, total PnL, and performance grade.
+        """
+        try:
+            from pathlib import Path
+            trades_file = Path(__file__).parent.parent / "data" / "trades.json"
+            
+            if not trades_file.exists():
+                return {
+                    'win_rate': 0,
+                    'total_pnl': 0,
+                    'winning_trades': 0,
+                    'total_trades': 0,
+                    'grade': 'STARTING'
+                }
+            
+            import json
+            with open(trades_file, 'r') as f:
+                trades = json.load(f)
+            
+            # Get last 20 trades
+            recent_trades = trades[-20:] if len(trades) > 20 else trades
+            
+            if not recent_trades:
+                return {
+                    'win_rate': 0,
+                    'total_pnl': 0,
+                    'winning_trades': 0,
+                    'total_trades': 0,
+                    'grade': 'STARTING'
+                }
+            
+            # Calculate metrics
+            winning_trades = len([t for t in recent_trades if t.get('pnl', 0) > 0])
+            total_trades = len(recent_trades)
+            win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+            total_pnl = sum([t.get('pnl', 0) for t in recent_trades])
+            
+            # Assign performance grade
+            if win_rate >= 70:
+                grade = 'EXCELLENT ⭐⭐⭐'
+            elif win_rate >= 60:
+                grade = 'GREAT ⭐⭐'
+            elif win_rate >= 50:
+                grade = 'GOOD ⭐'
+            else:
+                grade = 'NEEDS IMPROVEMENT ⚠️'
+            
+            return {
+                'win_rate': round(win_rate, 1),
+                'total_pnl': round(total_pnl, 2),
+                'winning_trades': winning_trades,
+                'total_trades': total_trades,
+                'grade': grade
+            }
+        
+        except Exception as e:
+            cprint(f"⚠️ Error calculating performance: {e}", "yellow")
+            return {
+                'win_rate': 0,
+                'total_pnl': 0,
+                'winning_trades': 0,
+                'total_trades': 0,
+                'grade': 'UNKNOWN'
+            }
 
     def _build_swarm_models_config(self):
         """
@@ -1633,11 +1718,20 @@ Return ONLY valid JSON with the following structure:
                     attrs=["bold"],
                 )
 
+                # Get performance context for motivation
+                performance_metrics = self._get_performance_metrics()
+                performance_context = (
+                    f"Win Rate: {performance_metrics['win_rate']}% | "
+                    f"Total PnL: ${performance_metrics['total_pnl']} | "
+                    f"Grade: {performance_metrics['grade']} | "
+                    f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
+                )
+
                 base_market_data = self._format_market_data_for_swarm(token, market_data)
                 formatted_data = f"{position_context}\n\n{base_market_data}"
 
                 swarm_result = self.swarm.query(
-                    prompt=formatted_data, system_prompt=SWARM_TRADING_PROMPT
+                    prompt=formatted_data, system_prompt=SWARM_TRADING_PROMPT.format(performance_context=performance_context)
                 )
 
                 if not swarm_result:
@@ -1724,10 +1818,20 @@ Return ONLY valid JSON with the following structure:
                     cprint(f"⚠️ Failed to prepare strategy context: {e}", "yellow")
                     strategy_context_text = "No strategy intelligence available."
 
+                # Get performance context for motivation
+                performance_metrics = self._get_performance_metrics()
+                performance_context = (
+                    f"Win Rate: {performance_metrics['win_rate']}% | "
+                    f"Total PnL: ${performance_metrics['total_pnl']} | "
+                    f"Grade: {performance_metrics['grade']} | "
+                    f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
+                )
+
                 response = self.chat_with_ai(
                     TRADING_PROMPT.format(
                         strategy_context=strategy_context_text,
                         position_context=position_context,
+                        performance_context=performance_context,
                     ),
                     f"Market Data to Analyze:\n{market_data}",
                 )
