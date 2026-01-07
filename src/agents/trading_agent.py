@@ -1713,7 +1713,17 @@ Return ONLY valid JSON with the following structure:
                 for line in lines:
                     if "confidence" in line.lower():
                         try:
-                            confidence = int("".join(filter(str.isdigit, line)))
+                            # Extract first percentage number (handles "82% confidence" correctly)
+                            match = re.search(r'(\d{1,3})\s*%', line)
+                            if match:
+                                confidence = min(100, max(0, int(match.group(1))))
+                            else:
+                                # Fallback: first standalone number
+                                match = re.search(r'\b(\d{1,3})\b', line)
+                                if match:
+                                    confidence = min(100, max(0, int(match.group(1))))
+                                else:
+                                    confidence = 50
                         except Exception:
                             confidence = 50
 
@@ -1824,6 +1834,10 @@ Return ONLY valid JSON with the following structure:
             for _, row in self.recommendations_df.iterrows():
                 token = row["token"]
                 if token not in self.symbols:
+                    continue
+
+                # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
+                if row["action"] not in ["BUY", "SELL"]:
                     continue
 
                 # Skip SELL signals in LONG_ONLY mode (can't open shorts)
