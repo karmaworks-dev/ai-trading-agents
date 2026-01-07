@@ -137,3 +137,21 @@ CLOSED_POSITIONS_TXT = '777'
 minimum_trades_in_last_hour = 2
 MIN_TRADES_LAST_HOUR = 2  # Alias for nice_funcs.py compatibility
 REALTIME_CLIPS_ENABLED = False
+
+# 💰 POSITION SIZING & RISK MANAGEMENT
+USE_PORTFOLIO_ALLOCATION = True
+MAX_POSITION_PERCENTAGE = 90  # Max % of balance per position
+LEVERAGE = 20  # Leverage multiplier
+CASH_PERCENTAGE = 10  # Reserve cash %
+
+# Stop Loss & Take Profit
+STOP_LOSS_PERCENTAGE = 2.0  # SL @ -2% PnL
+TAKE_PROFIT_PERCENTAGE = 5.0  # TP @ +5% PnL
+
+# 🌊 CONFIDENCE THRESHOLDS
+MIN_SINGLE_CONFIDENCE = 60  # Single model confidence threshold (50-70% recommended)
+MIN_SWARM_CONFIDENCE = 65  # Swarm consensus threshold (55-65% recommended)
+
+# ⚙️ POSITION MANAGEMENT SETTINGS
+MIN_AGE_HOURS = 0.1  # Minimum hold time before close (hours)
+MIN_CLOSE_CONFIDENCE = 70  # AI confidence needed to close position

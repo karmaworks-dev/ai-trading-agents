@@ -152,6 +152,10 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6"></path></svg>
                     MODE
                 </button>
+                <button class="settings-tab" data-tab="risk" onclick="switchSettingsTab('risk')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    RISK
+                </button>
                 <button class="settings-tab" data-tab="token" onclick="switchSettingsTab('token')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v12m-6-6h12"></path></svg>
                     TOKEN
@@ -232,6 +236,111 @@
                                     </div>
                                 </div>
                             </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RISK Tab Content -->
+                <div id="tab-risk" class="settings-tab-content">
+                    <!-- Confidence Thresholds -->
+                    <div class="setting-section">
+                        <h3 class="section-title">Confidence Thresholds</h3>
+                        <p class="section-desc">Minimum AI confidence required to execute trades</p>
+                        
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="min-single-confidence">Single Model Min Confidence (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="min-single-confidence" class="setting-input" min="0" max="100" value="60" />
+                                    <span class="input-hint">Trades below this confidence are rejected (50-70% recommended)</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="min-swarm-confidence">Swarm Consensus Min Confidence (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="min-swarm-confidence" class="setting-input" min="0" max="100" value="65" />
+                                    <span class="input-hint">Swarm votes below this are rejected (55-70% recommended)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Risk Management -->
+                    <div class="setting-section">
+                        <h3 class="section-title">Stop Loss & Take Profit</h3>
+                        <p class="section-desc">Automatic position exit thresholds</p>
+                        
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="stop-loss-pct">Stop Loss (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="stop-loss-pct" class="setting-input" min="0.1" max="50" step="0.1" value="2.0" />
+                                    <span class="input-hint">Close position at -X% loss (1-5% recommended)</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="take-profit-pct">Take Profit (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="take-profit-pct" class="setting-input" min="0.1" max="100" step="0.1" value="5.0" />
+                                    <span class="input-hint">Close position at +X% profit (3-10% recommended)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Position Sizing -->
+                    <div class="setting-section">
+                        <h3 class="section-title">Position Sizing</h3>
+                        <p class="section-desc">Control position size and leverage</p>
+                        
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="max-position-pct">Max Position Size (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="max-position-pct" class="setting-input" min="1" max="100" value="90" />
+                                    <span class="input-hint">Max % of balance per position (20-90%)</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="leverage">Leverage Multiplier</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="leverage" class="setting-input" min="1" max="100" value="20" />
+                                    <span class="input-hint">Trading leverage (1-50x, use caution!)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <div class="setting-group">
+                                <label for="cash-buffer-pct">Cash Buffer (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="cash-buffer-pct" class="setting-input" min="0" max="50" value="10" />
+                                    <span class="input-hint">Keep X% in reserve (5-20% recommended)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Position Management -->
+                    <div class="setting-section">
+                        <h3 class="section-title">Position Management</h3>
+                        <p class="section-desc">Control when positions can be closed</p>
+                        
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="min-age-hours">Min Hold Time (hours)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="min-age-hours" class="setting-input" min="0" max="24" step="0.1" value="0.1" />
+                                    <span class="input-hint">Minimum time before AI can close (0-2 hours)</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="min-close-confidence">Min Close Confidence (%)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="min-close-confidence" class="setting-input" min="0" max="100" value="70" />
+                                    <span class="input-hint">AI confidence needed to close position (60-80%)</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

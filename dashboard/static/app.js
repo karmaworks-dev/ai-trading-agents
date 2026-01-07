@@ -757,6 +757,23 @@ function applySettings(settings) {
     document.querySelector(`input[name="swarm-mode"][value="${swarmMode}"]`).checked = true;
     updateSwarmModelsVisibility();
 
+    // Confidence thresholds
+    document.getElementById('min-single-confidence').value = settings.min_single_confidence || 60;
+    document.getElementById('min-swarm-confidence').value = settings.min_swarm_confidence || 65;
+    
+    // Risk management
+    document.getElementById('stop-loss-pct').value = settings.stop_loss_pct || 2.0;
+    document.getElementById('take-profit-pct').value = settings.take_profit_pct || 5.0;
+    
+    // Position sizing
+    document.getElementById('max-position-pct').value = settings.max_position_pct || 90;
+    document.getElementById('leverage').value = settings.leverage || 20;
+    document.getElementById('cash-buffer-pct').value = settings.cash_buffer_pct || 10;
+    
+    // Position management
+    document.getElementById('min-age-hours').value = settings.min_age_hours || 0.1;
+    document.getElementById('min-close-confidence').value = settings.min_close_confidence || 70;
+
     // Token settings - tier-based defaults
     if (!settings.monitored_tokens) {
         // Check tier to set appropriate defaults
@@ -1098,7 +1115,18 @@ async function saveSettings() {
         ai_max_tokens: maxTokens,
 
         // Swarm models
-        swarm_models: collectSwarmModels()
+        swarm_models: collectSwarmModels(),
+
+        // Risk Management Settings
+        min_single_confidence: parseInt(document.getElementById('min-single-confidence').value),
+        min_swarm_confidence: parseInt(document.getElementById('min-swarm-confidence').value),
+        stop_loss_pct: parseFloat(document.getElementById('stop-loss-pct').value),
+        take_profit_pct: parseFloat(document.getElementById('take-profit-pct').value),
+        max_position_pct: parseInt(document.getElementById('max-position-pct').value),
+        leverage: parseInt(document.getElementById('leverage').value),
+        cash_buffer_pct: parseInt(document.getElementById('cash-buffer-pct').value),
+        min_age_hours: parseFloat(document.getElementById('min-age-hours').value),
+        min_close_confidence: parseInt(document.getElementById('min-close-confidence').value)
     };
 
     try {
@@ -1837,4 +1865,3 @@ async function validateSettingsForTier(settings) {
 }
 
 console.log('✅ Dashboard ready');
-        return { valid: true, errors: [] }; // Allow on error

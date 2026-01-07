@@ -583,7 +583,11 @@ class TradingAgent:
     def __init__(self, timeframe=None, days_back=None, stop_check_callback=None,
                  symbols=None, ai_provider=None, ai_model=None,
                  ai_temperature=None, ai_max_tokens=None,
-                 swarm_mode=None, swarm_models=None):
+                 swarm_mode=None, swarm_models=None,
+                 min_single_confidence=None, min_swarm_confidence=None,
+                 take_profit_pct=None, stop_loss_pct=None,
+                 max_position_pct=None, leverage=None, cash_buffer_pct=None,
+                 min_age_hours=None, min_close_confidence=None):
         """
         Initialize Trading Agent with configurable settings
 
@@ -613,6 +617,23 @@ class TradingAgent:
         # Store swarm mode settings (use passed values or fall back to defaults)
         self.use_swarm_mode = (swarm_mode == 'swarm') if swarm_mode is not None else DEFAULT_SWARM_MODE
         self.swarm_models_config = swarm_models or []
+
+        # Confidence thresholds
+        self.min_single_confidence = min_single_confidence if min_single_confidence is not None else MIN_SINGLE_CONFIDENCE
+        self.min_swarm_confidence = min_swarm_confidence if min_swarm_confidence is not None else MIN_SWARM_CONFIDENCE
+        
+        # Risk management settings
+        self.take_profit_pct = take_profit_pct if take_profit_pct is not None else TAKE_PROFIT_PERCENTAGE
+        self.stop_loss_pct = stop_loss_pct if stop_loss_pct is not None else STOP_LOSS_PERCENTAGE
+        
+        # Position sizing settings
+        self.max_position_pct = max_position_pct if max_position_pct is not None else MAX_POSITION_PERCENTAGE
+        self.leverage = leverage if leverage is not None else LEVERAGE
+        self.cash_buffer_pct = cash_buffer_pct if cash_buffer_pct is not None else CASH_PERCENTAGE
+        
+        # Position management settings
+        self.min_age_hours = min_age_hours if min_age_hours is not None else MIN_AGE_HOURS
+        self.min_close_confidence = min_close_confidence if min_close_confidence is not None else MIN_CLOSE_CONFIDENCE
 
         # Store symbols to analyze (use passed values or fall back to config)
         if symbols is not None:
@@ -1739,6 +1760,19 @@ Return ONLY valid JSON with the following structure:
                 reasoning = (
                     "\n".join(lines[1:]) if len(lines) > 1 else "No detailed reasoning provided"
                 )
+
+                # Apply confidence threshold for single model
+                if action in ["BUY", "SELL"] and confidence < self.min_single_confidence:
+                    cprint(
+                        f"⚠️ LOW CONFIDENCE: {confidence}% < {self.min_single_confidence}% threshold",
+                        "yellow",
+                        attrs=["bold"]
+                    )
+                    cprint(f"   → Downgrading {action} to NOTHING", "yellow")
+                    add_console_log(f"{token} -> NOTHING | {confidence}% (low confidence)", "warning")
+                    
+                    action = "NOTHING"
+                    reasoning = f"Original: {action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
 
                 self.recommendations_df = pd.concat(
                     [

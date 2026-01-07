@@ -1013,16 +1013,28 @@ def run_trading_agent():
                 timeframe=user_settings.get('timeframe', '30m'),
                 days_back=user_settings.get('days_back', 2),
                 stop_check_callback=should_stop_agent,
-                # Pass user-selected tokens to the agent
                 symbols=monitored_tokens,
-                # Pass AI settings
+                # AI Model Settings
                 ai_provider=user_settings.get('ai_provider', 'openrouter'),
                 ai_model=user_settings.get('ai_model', 'x-ai/grok-4.1-fast'),
                 ai_temperature=user_settings.get('ai_temperature', 0.6),
                 ai_max_tokens=user_settings.get('ai_max_tokens', 8024),
-                # Pass swarm mode settings
+                # Swarm Settings
                 swarm_mode=user_settings.get('swarm_mode', 'single'),
-                swarm_models=user_settings.get('swarm_models', [])
+                swarm_models=user_settings.get('swarm_models', []),
+                # Confidence Thresholds
+                min_single_confidence=user_settings.get('min_single_confidence', 60),
+                min_swarm_confidence=user_settings.get('min_swarm_confidence', 65),
+                # Risk Management
+                take_profit_pct=user_settings.get('take_profit_pct', 5.0),
+                stop_loss_pct=user_settings.get('stop_loss_pct', 2.0),
+                # Position Sizing
+                max_position_pct=user_settings.get('max_position_pct', 90),
+                leverage=user_settings.get('leverage', 20),
+                cash_buffer_pct=user_settings.get('cash_buffer_pct', 10),
+                # Position Management
+                min_age_hours=user_settings.get('min_age_hours', 0.1),
+                min_close_confidence=user_settings.get('min_close_confidence', 70)
             )
 
             # Set executing flag to True (agent is now actively analyzing)
