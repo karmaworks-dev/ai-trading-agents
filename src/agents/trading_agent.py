@@ -749,6 +749,10 @@ class TradingAgent:
             self.risk_manager = None
             cprint("⚠️ Risk Management System not available", "yellow")
 
+        # Add recently_closed tracker for allocation flow fixes
+        self.recently_closed = {}  # dict: symbol -> timestamp (float, seconds since epoch)
+        self.REENTRY_GRACE_PERIOD = 15  # seconds - short grace period to ignore ghost positions
+
         self.recommendations_df = pd.DataFrame(
             columns=["token", "action", "confidence", "reasoning"]
         )
@@ -2043,23 +2047,34 @@ Return ONLY valid JSON with the following structure:
                 except Exception:
                     continue
 
+            # DEBUG: show live open positions and incoming signals
+            try:
+                cprint(f"DEBUG open_positions: {open_positions}", "red")
+                cprint(f"DEBUG incoming signals: {signals}", "red")
+            except Exception:
+                pass
+
             # ================================================================
             # STEP 2: Collect AI Signals
             # ================================================================
             signals = []
+            removed_actions = []  # Track removed actions for logging
             for _, row in self.recommendations_df.iterrows():
                 token = row["token"]
                 if token not in self.symbols:
+                    removed_actions.append(f"{token} -> Skipped (not in configured symbols)")
                     continue
 
                 # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
                 # Fix case sensitivity issue - ensure action is uppercase
                 action_upper = row["action"].upper()
                 if action_upper not in ["BUY", "SELL"]:
+                    removed_actions.append(f"{token} -> {action_upper} (skipped: not actionable)")
                     continue
 
                 # Skip SELL signals in LONG_ONLY mode (can't open shorts)
                 if LONG_ONLY and action_upper == "SELL" and token not in open_positions:
+                    removed_actions.append(f"{token} -> SELL (skipped: LONG_ONLY mode)")
                     continue
 
                 # Use the uppercase version for consistency
@@ -2068,6 +2083,13 @@ Return ONLY valid JSON with the following structure:
                     "action": action_upper,
                     "confidence": int(row["confidence"]),
                 })
+
+            # Log removed actions
+            if removed_actions:
+                cprint(f"\n📋 Removed {len(removed_actions)} actions:", "yellow")
+                for action in removed_actions:
+                    cprint(f"   - {action}", "white")
+                add_console_log(f"Removed {len(removed_actions)} actions", "warning")
 
             if not signals:
                 cprint("📊 No actionable signals. Skipping allocation.", "yellow")
@@ -2218,11 +2240,15 @@ Return ONLY valid JSON with the following structure:
                     # ENHANCEMENT: Add risk management validation
                     if RISK_MANAGER_AVAILABLE and self.risk_manager:
                         try:
+                            # Correct confidence scaling: convert from 1-100 to 0-1
+                            confidence_raw = action.get("confidence", 50)
+                            confidence_scaled = confidence_raw / 100.0  # Convert to 0-1 range
+                            
                             # Validate action against risk constraints
                             validation = self.risk_manager.validate_trade_decision(
                                 symbol=action["symbol"],
                                 action=action["action"],
-                                confidence=action.get("confidence", 50) / 10.0,  # Convert to 0-1
+                                confidence=confidence_scaled,  # Use properly scaled confidence
                                 entry_price=100.0,  # Placeholder
                                 account_balance=total_equity
                             )
@@ -2293,24 +2319,50 @@ Return ONLY valid JSON with the following structure:
             return []
 
         # Filter out signals where we already have aligned position
+        # Use grace period and min-margin logic to handle ghost positions
         new_signals = []
+        now_ts = time.time()
+
         for sig in actionable_signals:
             sym = sig["symbol"]
+
+            # If exchange reports a position, inspect it
             if sym in open_positions:
                 pos = open_positions[sym]
-                # If signal aligns with position, skip (already positioned)
-                if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
-                   (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
-                    continue
+
+                # 1) If position margin is tiny (below minimum order notional), treat as flat
+                if pos.get("margin_usd", 0) < min_order_notional:
+                    # treat as no position — allow re-entry
+                    pass
+
+                # 2) If we closed this symbol recently in this cycle, allow re-entry (grace window)
+                elif sym in self.recently_closed:
+                    closed_ts = self.recently_closed.get(sym, 0)
+                    if (now_ts - closed_ts) < getattr(self, "REENTRY_GRACE_PERIOD", 15):
+                        # still within grace window -> treat as flat
+                        pass
+                    else:
+                        # outside grace window: enforce alignment protection
+                        if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
+                           (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
+                            # Already aligned with existing live position — skip
+                            continue
+                else:
+                    # No recent close and margin is meaningful: enforce alignment protection
+                    if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
+                       (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
+                        continue
+
+            # If we reach here, signal is allowed
             new_signals.append(sig)
 
         if not new_signals:
-            cprint("   No new positions to open.", "cyan")
+            cprint("   No new positions to open after filtering.", "cyan")
             return []
 
         # Calculate margin per position
-        usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)
-        cash_buffer = available_balance * (CASH_PERCENTAGE / 100)
+        usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)  # CRITICAL: Use total_equity
+        cash_buffer = total_equity * (CASH_PERCENTAGE / 100)  # CRITICAL: Use total_equity
 
         # Prevent division by zero
         if len(new_signals) == 0:
@@ -2802,13 +2854,19 @@ Return ONLY valid JSON with the following structure:
                             close_ok = True
 
                         if close_ok:
+                            # Record recently-closed timestamp so allocation ignores transient ghost positions
+                            try:
+                                self.recently_closed[token] = time.time()
+                            except Exception:
+                                pass
+
                             # Remove from position tracker
                             if POSITION_TRACKER_AVAILABLE:
                                 remove_position(token)
 
                             cprint("✅ Position closed successfully!", "white", "on_green")
-                            add_console_log(f"Closed {token} {position_dir} - signal contradicted direction", "warning")
-                            positions_closed += 1
+                            add_console_log(f"✅ Closed {token} {position_dir} | Reason: {decision['reasoning']}", "success")
+                            closed_count += 1
                         else:
                             cprint("⚠️ Position close may have failed - will retry next cycle", "yellow")
                             add_console_log(f"⚠️ Close failed for {token}", "warning")
@@ -2927,6 +2985,27 @@ Return ONLY valid JSON with the following structure:
         """Run the trading agent (implements BaseAgent interface)"""
         self.run_trading_cycle()
 
+    def _cleanup_recently_closed(self):
+        """Clean up recently_closed entries older than grace period to prevent memory leaks"""
+        try:
+            now_ts = time.time()
+            grace_period = getattr(self, "REENTRY_GRACE_PERIOD", 15)
+            
+            # Remove entries older than grace period
+            old_entries = []
+            for symbol, closed_ts in self.recently_closed.items():
+                if (now_ts - closed_ts) > grace_period:
+                    old_entries.append(symbol)
+            
+            for symbol in old_entries:
+                del self.recently_closed[symbol]
+                
+            if old_entries:
+                cprint(f"🧹 Cleaned up {len(old_entries)} old recently_closed entries", "cyan")
+                
+        except Exception as e:
+            cprint(f"⚠️ Error cleaning recently_closed: {e}", "yellow")
+
     def run_trading_cycle(self, strategy_signals=None):
         """Enhanced trading cycle with position management and intelligence integration"""
         try:
@@ -2936,6 +3015,9 @@ Return ONLY valid JSON with the following structure:
             cprint(f"{'=' * 80}", "cyan")
 
             add_console_log(f"TRADING CYCLE STARTED", "info")
+
+            # Clean up old recently_closed entries
+            self._cleanup_recently_closed()
 
             # CRITICAL FIX: Reset recommendations_df at the start of each cycle
             self.recommendations_df = pd.DataFrame(
@@ -3166,3 +3248,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
