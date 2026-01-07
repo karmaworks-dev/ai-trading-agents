@@ -2134,9 +2134,6 @@ Return ONLY valid JSON with the following structure:
                 sym = a.get("symbol")
                 act = a.get("action")
 
-                if sym not in self.symbols:
-                    reject(f"{sym}: invalid symbol")
-                    continue
 
                 if act not in ["OPEN_LONG", "OPEN_SHORT", "INCREASE", "REDUCE", "CLOSE"]:
                     reject(f"{sym}: invalid action {act}")
@@ -2151,10 +2148,6 @@ Return ONLY valid JSON with the following structure:
                     if a.get("reduce_by_usd", 0) <= 0:
                         reject(f"{sym}: reduce_by_usd <= 0")
                         continue
-
-                if sym not in self.allowed_symbols:
-                    reject(f"{sym}: not tradable")
-                    continue
 
                 if act not in ["OPEN_LONG", "OPEN_SHORT", "CLOSE", "HOLD"]:
                     reject(f"{sym}: invalid action {act}")
