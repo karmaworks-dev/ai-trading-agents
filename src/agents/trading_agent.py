@@ -2299,12 +2299,13 @@ Return ONLY valid JSON with the following structure:
 
                 cprint("=" * 60 + "\n", "green")
                 add_console_log(f"Planned {len(valid_actions)} actions", "info")
-            if len(valid_actions) == 0:
-                add_console_log("❌ No allocation actions generated", "error")
-            else:
-                add_console_log(f"✅ Allocation complete: {len(valid_actions)} actions", "success")
+                
+                if len(valid_actions) == 0:
+                    add_console_log("❌ No allocation actions generated", "error")
+                else:
+                    add_console_log(f"✅ Allocation complete: {len(valid_actions)} actions", "success")
 
-                return valid_actions
+                    return valid_actions
 
             except Exception as e:
                 add_console_log(f"❌ JSON parsing error: {e}", "error")
