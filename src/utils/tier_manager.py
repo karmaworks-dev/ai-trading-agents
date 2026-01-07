@@ -98,7 +98,7 @@ TIERS = {
 
 # Users with special access (for testing/development)
 # These users can access all tiers regardless of subscription
-ADMIN_USERS = ["KW-Trader", "admin", "moondev"]
+ADMIN_USERS = ["KW-Trader", "admin", "karmadev"]
 
 # ============================================================================
 # TIER MANAGEMENT FUNCTIONS

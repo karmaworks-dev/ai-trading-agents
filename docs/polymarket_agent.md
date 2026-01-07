@@ -1,6 +1,6 @@
 # Polymarket Prediction Agent
 
-**Built by Moon Dev** - Real-time prediction market analysis using AI swarm consensus
+**Built by Karma Dev** - Real-time prediction market analysis using AI swarm consensus
 
 ## What It Does
 
@@ -38,7 +38,7 @@ USE_SWARM_MODE = True                  # Use 6 AI models (or single model)
 TOP_MARKETS_COUNT = 5                  # How many top consensus picks to show
 ```
 
-### AI Prompts (🌙 Customize for Your Own Edge!)
+### AI Prompts (🕉️ Customize for Your Own Edge!)
 ```python
 MARKET_ANALYSIS_SYSTEM_PROMPT = """..."""      # Prompt for individual AI models
 CONSENSUS_AI_PROMPT_TEMPLATE = """..."""       # Prompt for consensus AI
@@ -74,7 +74,7 @@ CONSENSUS_AI_PROMPT_TEMPLATE = """..."""       # Prompt for consensus AI
 src/data/polymarket/
 ├── markets.csv          - All markets with trades over $100
 ├── predictions.csv      - All 25 market predictions per analysis run
-└── consensus_picks.csv  - 🌙 ONLY the top 5 consensus picks (append-only)
+└── consensus_picks.csv  - 🕉️ ONLY the top 5 consensus picks (append-only)
 ```
 
 ### markets.csv (All Discovered Markets)
@@ -92,7 +92,7 @@ One row per market analyzed (25 markets per run).
 - `consensus_prediction` - Overall consensus (e.g., "YES (83%)")
 - `num_models_responded` - How many AIs successfully responded
 
-### consensus_picks.csv (🌙 Top Consensus Picks - Your Trading List!)
+### consensus_picks.csv (🕉️ Top Consensus Picks - Your Trading List!)
 **APPEND-ONLY** - Builds history throughout the day. Contains ONLY the top 5 strongest consensus picks from each analysis run.
 
 **Columns:**
@@ -165,7 +165,7 @@ Faster, cheaper, single perspective - no consensus analysis.
 - **Intelligent analysis** - only runs when enough new markets collected
 - **No duplicate analysis** - tracks which markets already analyzed
 
-### AI Swarm Features (🌙 New!)
+### AI Swarm Features (🕉️ New!)
 - **Parallel execution** - 6 AI models analyze simultaneously
 - **Graceful timeout handling** - if 1 AI times out, continue with 5
 - **120-second timeout** per model (increased from 90s for reliability)
@@ -175,14 +175,14 @@ Faster, cheaper, single perspective - no consensus analysis.
 - **Blue background display** - makes top picks impossible to miss
 - **Invalid market filtering** - skips AI hallucinations (market numbers out of range)
 
-### CSV History Features (🌙 New!)
+### CSV History Features (🕉️ New!)
 - **Append-only consensus CSV** - builds trading signal history over time
 - **Full market predictions** - saves all 25 markets × all 6 models
 - **Consensus tracking** - see which markets get repeated strong agreement
 - **Direct links** - every market has clickable Polymarket URL
 - **Structured data** - easy to analyze in Excel/Python/R
 
-### Customization Features (🌙 New!)
+### Customization Features (🕉️ New!)
 - **Editable prompts** - customize AI analysis at top of file
 - **Build your edge** - change analysis criteria, risk tolerance, market focus
 - **Configurable consensus** - change from 5 picks to any number
@@ -191,7 +191,7 @@ Faster, cheaper, single perspective - no consensus analysis.
 ## Sample Output
 
 ```
-🌙 Polymarket Prediction Market Agent
+🕉️ Polymarket Prediction Market Agent
 ================================================================================
 ✅ Loaded 1,247 existing markets from CSV
 ✅ Loaded 18 existing predictions from CSV
@@ -415,6 +415,6 @@ Running continuously with swarm mode:
 
 ---
 
-**Built by Moon Dev** 🌙 | Part of the moon-dev-ai-agents-for-trading system
+**Built by Karma Dev** 🕉️ | Part of the moon-dev-ai-agents-for-trading system
 
 **Latest Update:** Added consensus AI, top 5 picks display, append-only CSV tracking, customizable prompts, and graceful partial response handling.

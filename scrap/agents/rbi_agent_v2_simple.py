@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's RBI AI v2.0 (Simplified - Direct DeepSeek)
+🕉️ Karma Dev's RBI AI v2.0 (Simplified - Direct DeepSeek)
 """
 
 import subprocess
@@ -59,7 +59,7 @@ for dir in [DATA_DIR, TODAY_DIR, RESEARCH_DIR, BACKTEST_DIR, PACKAGE_DIR,
 
 # Prompts (same as before)
 RESEARCH_PROMPT = """
-You are Moon Dev's Research AI 🌙
+You are Karma Dev's Research AI 🕉️
 
 IMPORTANT NAMING RULES:
 1. Create a UNIQUE TWO-WORD NAME for this specific strategy
@@ -88,7 +88,7 @@ Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
 """
 
 BACKTEST_PROMPT = """
-You are Moon Dev's Backtest AI 🌙 ONLY SEND BACK CODE, NO OTHER TEXT.
+You are Karma Dev's Backtest AI 🕉️ ONLY SEND BACK CODE, NO OTHER TEXT.
 Create a backtesting.py implementation for the strategy.
 USE BACKTESTING.PY
 Include:
@@ -271,7 +271,7 @@ def execute_backtest(file_path: str, strategy_name: str) -> dict:
 
 def main():
     """Main function"""
-    cprint(f"\n🌟 Moon Dev's RBI AI v2.0 (Simplified) Starting Up!", "green")
+    cprint(f"\n🌟 Karma Dev's RBI AI v2.0 (Simplified) Starting Up!", "green")
     cprint(f"📅 Today's Date: {TODAY_DATE}", "magenta")
     cprint(f"🔄 EXECUTION LOOP ENABLED!", "yellow")
     

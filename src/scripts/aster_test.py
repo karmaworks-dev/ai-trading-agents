@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Aster Test Script
+🕉️ Karma Dev's Aster Test Script
 Tests Aster Exchange integration with proof of concept
 
 Workflow:
@@ -11,7 +11,7 @@ Workflow:
 6. Close the position
 7. Show final balance
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os
@@ -339,7 +339,7 @@ def close_position(symbol):
 def main():
     """Main test flow"""
     cprint("\n" + "="*60, "cyan", attrs=['bold'])
-    cprint("🌙 Moon Dev's Aster Exchange Test Script 🚀", "cyan", attrs=['bold'])
+    cprint("🕉️ Karma Dev's Aster Exchange Test Script 🚀", "cyan", attrs=['bold'])
     cprint("="*60 + "\n", "cyan", attrs=['bold'])
 
     try:
@@ -387,7 +387,7 @@ def main():
         cprint(f"📊 Change: ${balance_change:+.2f}", "green" if balance_change >= 0 else "red", attrs=['bold'])
 
         cprint("\n✅ All tests completed successfully!", "green", attrs=['bold'])
-        cprint("🚀 Aster Exchange integration is working! 🌙\n", "cyan", attrs=['bold'])
+        cprint("🚀 Aster Exchange integration is working! 🕉️\n", "cyan", attrs=['bold'])
 
         print_separator()
 

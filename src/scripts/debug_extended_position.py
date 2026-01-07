@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Extended Position Debug Script
+🕉️ Karma Dev's Extended Position Debug Script
 Shows all available fields in the position object
 """
 import sys
@@ -14,7 +14,7 @@ from src import nice_funcs_extended as extended
 
 def debug_position():
     """Debug Extended position object"""
-    cprint("\n🔍 Moon Dev's Extended Position Debugger\n", "white", "on_blue")
+    cprint("\n🔍 Karma Dev's Extended Position Debugger\n", "white", "on_blue")
 
     try:
         # Get the API instance directly

@@ -1,7 +1,7 @@
 """
-🌙 Moon Dev's Exchange Manager
+🕉️ Karma Dev's Exchange Manager
 Unified interface for trading on Solana and HyperLiquid
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os

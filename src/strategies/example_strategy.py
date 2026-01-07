@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Example Strategy
+🕉️ Karma Dev's Example Strategy
 Simple Moving Average Crossover Strategy
 """
 

@@ -1,6 +1,6 @@
 # 🎬 Video Agent - Sora 2 Integration
 
-**🌙 Built by Moon Dev**
+**🕉️ Built by Karma Dev**
 
 An AI-powered video generation agent using OpenAI's Sora 2 API for parallel video creation from text prompts.
 
@@ -57,7 +57,7 @@ When you run the agent, you'll see an interactive prompt:
 
 ```
 ╔══════════════════════════════════════════════════════════╗
-║  🌙 Moon Dev's Sora 2 Video Generation Agent           ║
+║  🕉️ Karma Dev's Sora 2 Video Generation Agent           ║
 ║  Parallel video generation with OpenAI Sora 2          ║
 ╚══════════════════════════════════════════════════════════╝
 
@@ -345,7 +345,7 @@ The agent handles this by queuing jobs and processing them as workers become ava
 
 ---
 
-## 🌙 Moon Dev's Use Cases
+## 🕉️ Karma Dev's Use Cases
 
 ### Content Creation Pipeline
 
@@ -391,11 +391,11 @@ The agent handles this by queuing jobs and processing them as workers become ava
 
 - **OpenAI Sora 2 Release**: https://openai.com/sora
 - **Sora API Docs**: https://platform.openai.com/docs/guides/video-generation
-- **Moon Dev YouTube**: Weekly updates and tutorials
+- **Karma Dev YouTube**: Weekly updates and tutorials
 - **Discord Community**: https://discord.gg/8UPuVZ53bh
 
 ---
 
-**🌙 Built with love by Moon Dev - Democratizing AI agent development**
+**🕉️ Built with love by Karma Dev - Democratizing AI agent development**
 
-*Part of the Moon Dev AI Agents for Trading ecosystem - 48+ specialized agents, all open source.*
+*Part of the Karma Dev AI Agents for Trading ecosystem - 48+ specialized agents, all open source.*

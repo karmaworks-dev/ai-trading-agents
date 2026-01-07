@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's OpenAI O3-mini Test Script
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's OpenAI O3-mini Test Script
+Built with love by Karma Dev 🚀
 """
 
 from openai import OpenAI
@@ -15,7 +15,7 @@ def test_o3_mini():
     """Test the OpenAI O3-mini model with a fun coding challenge"""
     
     # Initialize client with correct env variable name
-    cprint("🚀 Moon Dev's O3-mini test launching...", "cyan")
+    cprint("🚀 Karma Dev's O3-mini test launching...", "cyan")
     api_key = os.getenv('OPENAI_KEY')  # Changed to match your .env setup
     if not api_key:
         cprint("❌ No OpenAI API key found! Make sure OPENAI_KEY is set in your .env file", "red")
@@ -29,7 +29,7 @@ def test_o3_mini():
     sum of all even numbers in the list. Include detailed comments.
     """
     
-    cprint("🤔 Moon Dev is thinking deep thoughts...", "yellow")
+    cprint("🤔 Karma Dev is thinking deep thoughts...", "yellow")
     try:
         response = client.chat.completions.create(
             model="o3-mini",
@@ -42,13 +42,13 @@ def test_o3_mini():
             ]
         )
         
-        cprint("✨ Moon Dev's O3-mini model responded successfully!", "green")
+        cprint("✨ Karma Dev's O3-mini model responded successfully!", "green")
         print("\n🎯 Generated Response:")
         print(response.choices[0].message.content)
         
     except Exception as e:
-        cprint(f"❌ Oops! Even Moon Dev hits bumps sometimes: {str(e)}", "red")
+        cprint(f"❌ Oops! Even Karma Dev hits bumps sometimes: {str(e)}", "red")
 
 if __name__ == "__main__":
-    cprint("🌙 Moon Dev AI Lab - O3-mini Test", "magenta")
+    cprint("🕉️ Karma Dev AI Lab - O3-mini Test", "magenta")
     test_o3_mini()

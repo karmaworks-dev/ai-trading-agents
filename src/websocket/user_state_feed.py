@@ -1,7 +1,7 @@
 """
-Moon Dev's User State Feed
+Karma Dev's User State Feed
 Real-time user state updates from Hyperliquid WebSocket
-Built with love by Moon Dev
+Built with love by Karma Dev
 
 Features:
 - Real-time position updates

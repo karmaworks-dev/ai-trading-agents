@@ -1,3 +1,3 @@
 """
-🌙 Moon Dev's Trading System
+🕉️ Karma Dev's Trading System
 """ 

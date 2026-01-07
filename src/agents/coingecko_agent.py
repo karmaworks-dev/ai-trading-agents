@@ -1,7 +1,7 @@
 from pathlib import Path
 
 """
-🌙 Moon Dev's CoinGecko Agent 🦎
+🕉️ Karma Dev's CoinGecko Agent 🦎
 Provides comprehensive access to CoinGecko API data and market intelligence
 
 =================================
@@ -98,7 +98,7 @@ Memory Files:
 - src/data/agent_memory/agent_two.json
 - src/data/agent_discussed_tokens.csv
 
-Author: Moon Dev 🌙
+Author: Karma Dev 🕉️
 """
 
 # Model override settings
@@ -122,7 +122,7 @@ Focus on:
 - Support/resistance levels
 - Short to medium-term opportunities
 
-Remember to be specific about entry/exit points and always consider Moon Dev's risk management rules! 🎯
+Remember to be specific about entry/exit points and always consider Karma Dev's risk management rules! 🎯
 """
 
 AGENT_TWO_PROMPT = """
@@ -136,7 +136,7 @@ Focus on:
 - Competitor analysis
 - Long-term growth potential
 
-Always consider the bigger picture and help guide Moon Dev's long-term strategy! 🚀
+Always consider the bigger picture and help guide Karma Dev's long-term strategy! 🚀
 """
 
 TOKEN_EXTRACTOR_PROMPT = """
@@ -150,7 +150,7 @@ Rules:
 - Be thorough but avoid duplicates
 - When only a name is given, provide the symbol
 
-Keep Moon Dev's token tracking clean and organized! 📝
+Keep Karma Dev's token tracking clean and organized! 📝
 """
 
 SYNOPSIS_AGENT_PROMPT = """
@@ -164,7 +164,7 @@ Guidelines:
 - Note significant market observations
 - Track progress toward the $10M goal
 
-Help Moon Dev keep track of the trading journey! 🎯
+Help Karma Dev keep track of the trading journey! 🎯
 """
 
 # Agent Model Selection
@@ -245,7 +245,7 @@ load_dotenv()
 def print_banner():
     """Print a fun colorful banner"""
     cprint("\n" + "="*70, "white", "on_blue")
-    cprint("🌙 🎮 Moon Dev's Crypto Trading Game! 🎮 🌙", "white", "on_magenta", attrs=["bold"])
+    cprint("🕉️ 🎮 Karma Dev's Crypto Trading Game! 🎮 🕉️", "white", "on_magenta", attrs=["bold"])
     cprint("="*70 + "\n", "white", "on_blue")
 
 def print_section(title: str, color: str = "on_blue"):
@@ -337,7 +337,7 @@ Previous Agent Message:
 
 Remember to format your response like this:
 
-Hey Moon Dev! {self.name} here!
+Hey Karma Dev! {self.name} here!
 =================================
 
 📊 Market Vibes:
@@ -356,8 +356,8 @@ Hey Moon Dev! {self.name} here!
 💰 Portfolio Impact:
 [How this helps reach our $10M goal]
 
-🌙 Moon Dev Wisdom:
-[Fun reference to Moon Dev's trading style]
+🕉️ Karma Dev Wisdom:
+[Fun reference to Karma Dev's trading style]
 """
             
             # Get AI response with correct client
@@ -395,7 +395,7 @@ Hey Moon Dev! {self.name} here!
                 .strip())
             
             # Add extra newlines between sections for readability
-            sections = ["Market Vibes:", "Opportunities I See:", "My Recommendations:", "Portfolio Impact:", "Moon Dev Wisdom:"]
+            sections = ["Market Vibes:", "Opportunities I See:", "My Recommendations:", "Portfolio Impact:", "Karma Dev Wisdom:"]
             for section in sections:
                 response = response.replace(section, f"\n{section}\n")
             
@@ -426,7 +426,7 @@ class CoinGeckoAPI:
             "x-cg-pro-api-key": self.api_key,
             "Content-Type": "application/json"
         }
-        print("🦎 Moon Dev's CoinGecko API initialized!")
+        print("🦎 Karma Dev's CoinGecko API initialized!")
         
     def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
         """Make API request with rate limiting and error handling"""
@@ -628,7 +628,7 @@ class MultiAgentSystem:
         self.token_extractor = TokenExtractorAgent()
         self.round_history = []  # Store round synopses
         self.max_history_rounds = 50  # Keep last 50 rounds of context
-        cprint("🎮 Moon Dev's Trading Game System Ready! 🎮", "white", "on_green", attrs=["bold"])
+        cprint("🎮 Karma Dev's Trading Game System Ready! 🎮", "white", "on_green", attrs=["bold"])
         
     def generate_round_synopsis(self, agent_one_response: str, agent_two_response: str) -> str:
         """Generate a brief synopsis of the round's key points using Synopsis Agent"""
@@ -724,7 +724,7 @@ Create a brief synopsis of this trading round.
 def main():
     """Main function to run the multi-agent system"""
     print_banner()
-    cprint("🎮 Welcome to Moon Dev's Trading Game! 🎮", "white", "on_magenta", attrs=["bold"])
+    cprint("🎮 Welcome to Karma Dev's Trading Game! 🎮", "white", "on_magenta", attrs=["bold"])
     cprint("Two AI agents will collaborate to turn $10,000 into $10,000,000!", "white", "on_blue")
     cprint("Let the trading begin! 🚀\n", "white", "on_green", attrs=["bold"])
     
@@ -742,7 +742,7 @@ def main():
             round_number += 1
             
     except KeyboardInterrupt:
-        cprint("\n👋 Thanks for playing Moon Dev's Trading Game! 🌙", "white", "on_magenta", attrs=["bold"])
+        cprint("\n👋 Thanks for playing Karma Dev's Trading Game! 🕉️", "white", "on_magenta", attrs=["bold"])
     except Exception as e:
         cprint(f"\n❌ Game Error: {str(e)}", "white", "on_red")
 

@@ -27,7 +27,7 @@ class VWAPVolumeStrategy(Strategy):
         self.avg_volume = np.convolve(volume, np.ones(self.vwap_window), 'valid') / self.vwap_window
         self.avg_volume = np.pad(self.avg_volume, (pad_length, 0), 'constant', constant_values=np.nan)
         
-        print("🌙 MOON DEV: VWAP and Volume calculations initialized successfully! 🚀")
+        print("🕉️ MOON DEV: VWAP and Volume calculations initialized successfully! 🚀")
 
     def next(self):
         # Go long if the closing price is above VWAP and volume is above the threshold

@@ -1,9 +1,9 @@
 '''
-🌙 Moon Dev's Compliance Agent 🌙
+🕉️ Karma Dev's Compliance Agent 🕉️
 This agent analyzes ad images and videos against Facebook guidelines to ensure compliance.
 It extracts frames from videos, transcribes audio, and provides a compliance rating.
 
-Created with ❤️ by Moon Dev's AI Assistant
+Created with ❤️ by Karma Dev's AI Assistant
 '''
 
 import os
@@ -52,7 +52,7 @@ for dir_path in [OUTPUT_DIR, FRAMES_DIR, TRANSCRIPTS_DIR, REPORTS_DIR]:
 
 # System prompt for compliance analysis
 COMPLIANCE_PROMPT = """
-You are Moon Dev's Compliance Agent 🌙, an expert in analyzing ads for compliance with Facebook's advertising guidelines.
+You are Karma Dev's Compliance Agent 🕉️, an expert in analyzing ads for compliance with Facebook's advertising guidelines.
 
 Your task is to analyze the provided ad frames and transcript to determine if they comply with Facebook's advertising guidelines.
 
@@ -81,7 +81,7 @@ Your response MUST follow this format:
 {
   "compliance_status": "compliant" or "non-compliant",
   "overall_assessment": "Brief overall assessment",
-  "moon_dev_message": "A fun message mentioning Moon Dev 🌙"
+  "karma_dev_message": "A fun message mentioning Karma Dev 🕉️"
 }
 
 Remember to be thorough but fair in your assessment. The goal is to help improve ad compliance, not to reject ads unnecessarily.
@@ -100,7 +100,7 @@ class ComplianceAgent:
         for dir_path in [OUTPUT_DIR, FRAMES_DIR, TRANSCRIPTS_DIR, REPORTS_DIR]:
             dir_path.mkdir(parents=True, exist_ok=True)
             
-        cprint("🌙 Moon Dev's Compliance Agent initialized! 🌙", "magenta")
+        cprint("🕉️ Karma Dev's Compliance Agent initialized! 🕉️", "magenta")
         
     def _load_guidelines(self, guidelines_path: Optional[Path] = None) -> str:
         """Load Facebook advertising guidelines"""
@@ -200,7 +200,7 @@ class ComplianceAgent:
                 
                 # Show progress
                 if saved_count % 10 == 0:
-                    cprint(f"💫 Extracted {saved_count} frames... Moon Dev would be proud!", "green")
+                    cprint(f"💫 Extracted {saved_count} frames... Karma Dev would be proud!", "green")
             
             # Release the video
             video.release()
@@ -279,7 +279,7 @@ class ComplianceAgent:
             
             # Get analysis from model
             cprint("🧠 Asking AI to analyze compliance...", "cyan")
-            cprint("🌙 Moon Dev's Compliance Agent is thinking deeply... 🌙", "magenta")
+            cprint("🕉️ Karma Dev's Compliance Agent is thinking deeply... 🕉️", "magenta")
             
             response = self.model.generate_response(
                 system_prompt=COMPLIANCE_PROMPT,
@@ -314,7 +314,7 @@ class ComplianceAgent:
                 else:
                     cprint(f"\nCompliance Status: {analysis.get('compliance_status', 'Unknown')}", "white", "on_red")
                 cprint(f"Overall Assessment: {analysis.get('overall_assessment', 'No assessment provided.')}", "white", "on_blue")
-                cprint(f"Moon Dev Message: {analysis.get('moon_dev_message', 'Moon Dev says: Keep those ads compliant! 🌙')}", "white", "on_blue")
+                cprint(f"Karma Dev Message: {analysis.get('karma_dev_message', 'Karma Dev says: Keep those ads compliant! 🕉️')}", "white", "on_blue")
                 
                 return analysis
             except Exception as json_error:
@@ -397,7 +397,7 @@ class ComplianceAgent:
             
             if not video_files:
                 cprint(f"⚠️ No video files found in {VIDEOS_DIR}", "yellow")
-                cprint(f"🌙 Moon Dev says: Add some videos and try again! 🌙", "magenta")
+                cprint(f"🕉️ Karma Dev says: Add some videos and try again! 🕉️", "magenta")
                 return
             
             # Process each video
@@ -422,7 +422,7 @@ class ComplianceAgent:
             
             cprint("\n🎉 All videos processed successfully!", "green")
             cprint(f"📂 Reports saved to: {REPORTS_DIR}", "green")
-            cprint(f"🌟 Moon Dev's Compliance Agent has completed all tasks! 🌟", "magenta")
+            cprint(f"🌟 Karma Dev's Compliance Agent has completed all tasks! 🌟", "magenta")
         except Exception as e:
             cprint(f"❌ Error processing videos: {str(e)}", "red")
     
@@ -484,7 +484,7 @@ class ComplianceAgent:
 
 def main():
     """Main function to run the compliance agent"""
-    print("🚀 Starting Moon Dev's Compliance Agent 🚀")
+    print("🚀 Starting Karma Dev's Compliance Agent 🚀")
     
     try:
         # Initialize the compliance agent
@@ -494,7 +494,7 @@ def main():
         agent.process_all_videos()
         
     except KeyboardInterrupt:
-        cprint("\n👋 Moon Dev's Compliance Agent shutting down gracefully...", "yellow")
+        cprint("\n👋 Karma Dev's Compliance Agent shutting down gracefully...", "yellow")
     except Exception as e:
         cprint(f"\n❌ Fatal error: {str(e)}", "red")
         import traceback

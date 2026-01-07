@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's RBI AI v3.0 PARALLEL PROCESSOR 🚀
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's RBI AI v3.0 PARALLEL PROCESSOR 🚀
+Built with love by Karma Dev 🚀
 
 PARALLEL PROCESSING: Run up to 5 backtests simultaneously!
 - Each thread processes a different trading idea
@@ -120,7 +120,7 @@ OPTIMIZE_CONFIG = {
 
 # 🎯 PROFIT TARGET CONFIGURATION
 TARGET_RETURN = 50  # Target return in %
-SAVE_IF_OVER_RETURN = 1.0  # Save backtest to CSV and folders if return > this % (Moon Dev's threshold!)
+SAVE_IF_OVER_RETURN = 1.0  # Save backtest to CSV and folders if return > this % (Karma Dev's threshold!)
 CONDA_ENV = "tflow"
 MAX_DEBUG_ITERATIONS = 10
 MAX_OPTIMIZATION_ITERATIONS = 10
@@ -138,13 +138,13 @@ TODAY_DIR = DATA_DIR / TODAY_DATE
 RESEARCH_DIR = TODAY_DIR / "research"
 BACKTEST_DIR = TODAY_DIR / "backtests"
 PACKAGE_DIR = TODAY_DIR / "backtests_package"
-WORKING_BACKTEST_DIR = TODAY_DIR / "backtests_working"  # Moon Dev's working iterations!
+WORKING_BACKTEST_DIR = TODAY_DIR / "backtests_working"  # Karma Dev's working iterations!
 FINAL_BACKTEST_DIR = TODAY_DIR / "backtests_final"
 OPTIMIZATION_DIR = TODAY_DIR / "backtests_optimized"
 CHARTS_DIR = TODAY_DIR / "charts"
 EXECUTION_DIR = TODAY_DIR / "execution_results"
 PROCESSED_IDEAS_LOG = DATA_DIR / "processed_ideas.log"
-STATS_CSV = DATA_DIR / "backtest_stats.csv"  # Moon Dev's stats tracker!
+STATS_CSV = DATA_DIR / "backtest_stats.csv"  # Karma Dev's stats tracker!
 
 IDEAS_FILE = DATA_DIR / "ideas.txt"
 
@@ -199,7 +199,7 @@ def rate_limited_api_call(func, thread_id, *args, **kwargs):
 # ============================================
 
 RESEARCH_PROMPT = """
-You are Moon Dev's Research AI 🌙
+You are Karma Dev's Research AI 🕉️
 
 IMPORTANT NAMING RULES:
 1. Create a UNIQUE TWO-WORD NAME for this specific strategy
@@ -239,7 +239,7 @@ Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
 """
 
 BACKTEST_PROMPT = """
-You are Moon Dev's Backtest AI 🌙 ONLY SEND BACK CODE, NO OTHER TEXT.
+You are Karma Dev's Backtest AI 🕉️ ONLY SEND BACK CODE, NO OTHER TEXT.
 Create a backtesting.py implementation for the strategy.
 USE BACKTESTING.PY
 Include:
@@ -290,7 +290,7 @@ Example fix:
 RISK MANAGEMENT:
 1. Always calculate position sizes based on risk percentage
 2. Use proper stop loss and take profit calculations
-4. Print entry/exit signals with Moon Dev themed messages
+4. Print entry/exit signals with Karma Dev themed messages
 
 If you need indicators use TA lib or pandas TA.
 
@@ -300,14 +300,14 @@ datetime, open, high, low, close, volume,
 2023-01-01 00:00:00, 16531.83, 16532.69, 16509.11, 16510.82, 231.05338022,
 2023-01-01 00:15:00, 16509.78, 16534.66, 16509.11, 16533.43, 308.12276951,
 
-Always add plenty of Moon Dev themed debug prints with emojis to make debugging easier! 🌙 ✨ 🚀
+Always add plenty of Karma Dev themed debug prints with emojis to make debugging easier! 🕉️ ✨ 🚀
 
 FOR THE PYTHON BACKTESTING LIBRARY USE BACKTESTING.PY AND SEND BACK ONLY THE CODE, NO OTHER TEXT.
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 DEBUG_PROMPT = """
-You are Moon Dev's Debug AI 🌙
+You are Karma Dev's Debug AI 🕉️
 Fix technical issues in the backtest code WITHOUT changing the strategy logic.
 
 CRITICAL ERROR TO FIX:
@@ -358,12 +358,12 @@ Focus on:
 
 DO NOT change strategy logic, entry/exit conditions, or risk management rules.
 
-Return the complete fixed code with Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 PACKAGE_PROMPT = """
-You are Moon Dev's Package AI 🌙
+You are Karma Dev's Package AI 🕉️
 Your job is to ensure the backtest code NEVER uses ANY backtesting.lib imports or functions.
 
 ❌ STRICTLY FORBIDDEN:
@@ -397,12 +397,12 @@ Example conversions:
 ✅ self.sma = self.I(talib.SMA, self.data.Close, timeperiod=20)
 
 IMPORTANT: Scan the ENTIRE code for any backtesting.lib usage and replace ALL instances!
-Return the complete fixed code with proper Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with proper Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 OPTIMIZE_PROMPT = """
-You are Moon Dev's Optimization AI 🌙
+You are Karma Dev's Optimization AI 🕉️
 Your job is to IMPROVE the strategy to achieve higher returns while maintaining good risk management.
 
 CURRENT PERFORMANCE:
@@ -443,14 +443,14 @@ OPTIMIZATION TECHNIQUES TO CONSIDER:
 
 IMPORTANT RULES:
 - DO NOT break the code structure
-- Keep all Moon Dev debug prints
+- Keep all Karma Dev debug prints
 - Maintain proper backtesting.py format
 - Use self.I() for all indicators
 - Position sizes must be int or fraction (0-1)
 - Focus on REALISTIC improvements (no curve fitting!)
 - Explain your optimization changes in comments
 
-Return the COMPLETE optimized code with Moon Dev themed comments explaining what you improved! 🌙 ✨
+Return the COMPLETE optimized code with Karma Dev themed comments explaining what you improved! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
@@ -475,7 +475,7 @@ def parse_return_from_output(stdout: str, thread_id: int) -> float:
 
 def parse_all_stats_from_output(stdout: str, thread_id: int) -> dict:
     """
-    🌙 Moon Dev's Stats Parser - Extract all key stats from backtest output!
+    🕉️ Karma Dev's Stats Parser - Extract all key stats from backtest output!
     Returns dict with: return_pct, buy_hold_pct, max_drawdown_pct, sharpe, sortino, expectancy
     """
     stats = {
@@ -529,7 +529,7 @@ def parse_all_stats_from_output(stdout: str, thread_id: int) -> dict:
 
 def log_stats_to_csv(strategy_name: str, iteration: int, thread_id: int, stats: dict, file_path: str) -> None:
     """
-    🌙 Moon Dev's CSV Logger - Thread-safe stats logging!
+    🕉️ Karma Dev's CSV Logger - Thread-safe stats logging!
     Appends backtest stats to CSV for easy analysis and comparison
     """
     try:
@@ -580,7 +580,7 @@ def log_stats_to_csv(strategy_name: str, iteration: int, thread_id: int, stats: 
 
 def save_backtest_if_threshold_met(code: str, stats: dict, strategy_name: str, iteration: int, thread_id: int, phase: str = "debug") -> bool:
     """
-    🌙 Moon Dev's Threshold Checker - Save backtests that pass the return threshold!
+    🕉️ Karma Dev's Threshold Checker - Save backtests that pass the return threshold!
 
     Args:
         code: The backtest code to save
@@ -615,7 +615,7 @@ def save_backtest_if_threshold_met(code: str, stats: dict, strategy_name: str, i
             with open(working_file, 'w') as f:
                 f.write(code)
 
-        # Save to FINAL folder (same logic per Moon Dev's request)
+        # Save to FINAL folder (same logic per Karma Dev's request)
         final_file = FINAL_BACKTEST_DIR / filename
         with file_lock:
             with open(final_file, 'w') as f:
@@ -709,7 +709,7 @@ def log_processed_idea(idea: str, strategy_name: str, thread_id: int) -> None:
         if not PROCESSED_IDEAS_LOG.exists():
             PROCESSED_IDEAS_LOG.parent.mkdir(parents=True, exist_ok=True)
             with open(PROCESSED_IDEAS_LOG, 'w') as f:
-                f.write("# Moon Dev's RBI AI - Processed Ideas Log 🌙\n")
+                f.write("# Karma Dev's RBI AI - Processed Ideas Log 🕉️\n")
                 f.write("# Format: hash,timestamp,thread_id,strategy_name,idea_snippet\n")
 
         idea_snippet = idea[:50].replace(',', ';') + ('...' if len(idea) > 50 else '')
@@ -909,7 +909,7 @@ def debug_backtest(backtest_code, error_message, strategy_name, thread_id, itera
     if output:
         output = clean_model_output(output, "code")
 
-        # 🌙 Moon Dev: Save debug iterations to BACKTEST_DIR, not FINAL
+        # 🕉️ Karma Dev: Save debug iterations to BACKTEST_DIR, not FINAL
         # Only threshold-passing backtests go to FINAL/WORKING folders!
         filepath = BACKTEST_DIR / f"T{thread_id:02d}_{strategy_name}_DEBUG_v{iteration}.py"
         with file_lock:
@@ -1017,7 +1017,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                             return {"success": False, "error": "Debug failed", "thread_id": thread_id}
 
                         current_code = debugged_code
-                        # 🌙 Moon Dev: Update to match new debug file location
+                        # 🕉️ Karma Dev: Update to match new debug file location
                         current_file = BACKTEST_DIR / f"T{thread_id:02d}_{strategy_name}_DEBUG_v{debug_iteration}.py"
                         continue
                     else:
@@ -1027,7 +1027,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                     # SUCCESS! Code executes with trades!
                     thread_print("🎉 BACKTEST SUCCESSFUL!", thread_id, "green", attrs=['bold'])
 
-                    # 🌙 Moon Dev: Parse ALL stats, not just return!
+                    # 🕉️ Karma Dev: Parse ALL stats, not just return!
                     all_stats = parse_all_stats_from_output(execution_result['stdout'], thread_id)
                     current_return = all_stats.get('return_pct')
 
@@ -1039,7 +1039,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                                 f.write(current_code)
                         break
 
-                    # 🌙 Moon Dev: Check threshold and save if met!
+                    # 🕉️ Karma Dev: Check threshold and save if met!
                     save_backtest_if_threshold_met(
                         current_code,
                         all_stats,
@@ -1055,7 +1055,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                         # TARGET HIT!
                         thread_print("🚀🚀🚀 TARGET HIT! 🚀🚀🚀", thread_id, "green", attrs=['bold'])
 
-                        # 🌙 Moon Dev: Save to OPTIMIZATION_DIR for target hits
+                        # 🕉️ Karma Dev: Save to OPTIMIZATION_DIR for target hits
                         final_file = OPTIMIZATION_DIR / f"T{thread_id:02d}_{strategy_name}_TARGET_HIT_{current_return}pct.py"
                         with file_lock:
                             with open(final_file, 'w') as f:
@@ -1101,7 +1101,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                                 thread_print(f"⚠️ Optimization {optimization_iteration} failed", thread_id, "yellow")
                                 continue
 
-                            # 🌙 Moon Dev: Parse ALL stats from optimization!
+                            # 🕉️ Karma Dev: Parse ALL stats from optimization!
                             opt_stats = parse_all_stats_from_output(opt_result['stdout'], thread_id)
                             new_return = opt_stats.get('return_pct')
 
@@ -1117,7 +1117,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                                 best_code = optimized_code
                                 optimization_code = optimized_code
 
-                                # 🌙 Moon Dev: Check threshold and save if met!
+                                # 🕉️ Karma Dev: Check threshold and save if met!
                                 save_backtest_if_threshold_met(
                                     optimized_code,
                                     opt_stats,
@@ -1185,7 +1185,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
                         return {"success": False, "error": "Debug failed", "thread_id": thread_id}
 
                     current_code = debugged_code
-                    # 🌙 Moon Dev: Update to match new debug file location
+                    # 🕉️ Karma Dev: Update to match new debug file location
                     current_file = BACKTEST_DIR / f"T{thread_id:02d}_{strategy_name}_DEBUG_v{debug_iteration}.py"
                 else:
                     thread_print(f"❌ Max debug iterations reached", thread_id, "red")
@@ -1200,7 +1200,7 @@ def process_trading_idea_parallel(idea: str, thread_id: int) -> dict:
 def main():
     """Main parallel processing orchestrator"""
     cprint(f"\n{'='*60}", "cyan", attrs=['bold'])
-    cprint(f"🌟 Moon Dev's RBI AI v3.0 PARALLEL PROCESSOR 🚀", "cyan", attrs=['bold'])
+    cprint(f"🌟 Karma Dev's RBI AI v3.0 PARALLEL PROCESSOR 🚀", "cyan", attrs=['bold'])
     cprint(f"{'='*60}", "cyan", attrs=['bold'])
 
     cprint(f"\n📅 Date: {TODAY_DATE}", "magenta")

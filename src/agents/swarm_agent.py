@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🌙 Moon Dev's Swarm Agent 🌙
+🕉️ Karma Dev's Swarm Agent 🕉️
 
 Queries multiple AI models in parallel and returns:
 - Clean individual responses from each model
@@ -30,7 +30,7 @@ Usage:
     # Check model mapping (AI #1 = CLAUDE, AI #2 = OPENAI, etc.)
     print(result["model_mapping"])
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os
@@ -51,7 +51,7 @@ project_root = str(Path(__file__).parent.parent.parent)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-# Import Moon Dev's model factory
+# Import Karma Dev's model factory
 from src.models.model_factory import model_factory
 
 # ============================================
@@ -62,7 +62,7 @@ from src.models.model_factory import model_factory
 # Maximum 6 models allowed for swarm functionality
 # Keys are named swarm_model_1 through swarm_model_6 for simplicity
 SWARM_MODELS = {
-    # 🌙 Moon Dev's Default Swarm Models - FREE TIER OPTIMIZED
+    # 🕉️ Karma Dev's Default Swarm Models - FREE TIER OPTIMIZED
     # These defaults use free models to minimize costs while maintaining quality
     "swarm_model_1": (True, "gemini", "gemini-2.0-flash"),       # Gemini 2.0 Flash - FREE (generous quota)
     "swarm_model_2": (True, "gemini", "gemini-2.5-flash"),       # Gemini 2.5 Flash - FREE (fast & capable)
@@ -83,7 +83,7 @@ DEFAULT_TEMPERATURE = 0.6
 DEFAULT_MAX_TOKENS = 2048  # Increased for model compatibility (Gemini/Groq/Qwen need 2048+ minimum)
 
 # Timeout for each model (seconds)
-MODEL_TIMEOUT = 120  # 🌙 Moon Dev - Increased to 120s for more reliability
+MODEL_TIMEOUT = 120  # 🕉️ Karma Dev - Increased to 120s for more reliability
 
 # Consensus Reviewer - Synthesizes all responses into a clean summary
 CONSENSUS_REVIEWER_MODEL = ("gemini", "gemini-2.5-pro")  # Using DeepSeek Chat (fast)
@@ -109,7 +109,7 @@ RESULTS_DIR = Path(project_root) / "src" / "data" / "swarm_agent"
 # ============================================
 
 class SwarmAgent:
-    """Moon Dev's Swarm Agent for multi-model consensus"""
+    """Karma Dev's Swarm Agent for multi-model consensus"""
 
     def __init__(self, custom_models: Optional[Dict] = None):
         """
@@ -130,7 +130,7 @@ class SwarmAgent:
         self._initialize_models()
 
         cprint("\n" + "="*60, "cyan")
-        cprint("♾️ Moon Dev's Swarm Agent Initialized ♾️", "cyan", attrs=['bold'])
+        cprint("♾️ Karma Dev's Swarm Agent Initialized ♾️", "cyan", attrs=['bold'])
         cprint("="*60, "cyan")
         cprint(f"\n♾️ Active Models in Swarm: {len(self.active_models)}", "green")
         for name in self.active_models.keys():
@@ -319,7 +319,7 @@ class SwarmAgent:
                             "error": f"Global timeout - no response received",
                             "response_time": MODEL_TIMEOUT
                         }
-                # 🌙 Moon Dev - Don't raise, continue with partial results
+                # 🕉️ Karma Dev - Don't raise, continue with partial results
                 cprint(f"♾️ Continuing with {len([r for r in all_responses.values() if r['success']])} successful responses", "green")
 
         # Generate consensus review summary (with model mapping)
@@ -525,7 +525,7 @@ class SwarmAgent:
 def main():
     """Simple interactive swarm query"""
     cprint("\n" + "="*60, "cyan")
-    cprint("♾️ Moon Dev's Swarm Agent ♾️", "cyan", attrs=['bold'])
+    cprint("♾️ Karma Dev's Swarm Agent ♾️", "cyan", attrs=['bold'])
     cprint("="*60, "cyan")
 
     # Initialize swarm
@@ -533,7 +533,7 @@ def main():
 
     # Ask for prompt
     cprint("\n💭 What would you like to ask the AI swarm?", "yellow")
-    prompt = input("🌙 Prompt > ").strip()
+    prompt = input("🕉️ Prompt > ").strip()
 
     if not prompt:
         cprint("❌ No prompt provided. Exiting.", "red")

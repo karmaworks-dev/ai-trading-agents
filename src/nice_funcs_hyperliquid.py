@@ -1,7 +1,7 @@
 """
-🌙 HyperLiquid Trading Functions
+🕉️ HyperLiquid Trading Functions
 Focused functions for HyperLiquid perps trading
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 
 LEVERAGE & POSITION SIZING:
 - All 'amount' parameters represent NOTIONAL position size (total exposure)
@@ -378,7 +378,7 @@ def limit_order(coin, is_buy, sz, limit_px, reduce_only, account):
     rounding = get_sz_px_decimals(coin)[0]
     sz = round(sz, rounding)
 
-    print(f"🌙 Moon Dev placing order:")
+    print(f"🕉️ Karma Dev placing order:")
     print(f"Symbol: {coin}")
     print(f"Side: {'BUY' if is_buy else 'SELL'}")
     print(f"Size: {sz}")
@@ -938,7 +938,7 @@ def add_technical_indicators(df):
 
 def get_data(symbol, timeframe='15m', bars=100, add_indicators=True):
     """
-    🌙 Moon Dev's Hyperliquid Data Fetcher
+    🕉️ Karma Dev's Hyperliquid Data Fetcher
 
     Args:
         symbol (str): Trading pair symbol (e.g., 'BTC', 'ETH')
@@ -950,7 +950,7 @@ def get_data(symbol, timeframe='15m', bars=100, add_indicators=True):
         pd.DataFrame: OHLCV data with columns [timestamp, open, high, low, close, volume]
                      and technical indicators if requested
     """
-    print("\n🌙 Moon Dev's Hyperliquid Data Fetcher")
+    print("\n🕉️ Karma Dev's Hyperliquid Data Fetcher")
     print(f"🎯 Symbol: {symbol}")
     print(f"⏰ Timeframe: {timeframe}")
     print(f"📊 Requested bars: {min(bars, MAX_ROWS)}")
@@ -983,7 +983,7 @@ def get_data(symbol, timeframe='15m', bars=100, add_indicators=True):
         print("\n📊 Data summary:")
         print(f"📈 Total candles: {len(df)}")
         print(f"📅 Range: {df['timestamp'].min()} to {df['timestamp'].max()}")
-        print("✨ Thanks for using Moon Dev's Data Fetcher! ✨")
+        print("✨ Thanks for using Karma Dev's Data Fetcher! ✨")
 
     return df
 

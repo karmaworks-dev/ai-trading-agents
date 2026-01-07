@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's CopyBot Agent
+🕉️ Karma Dev's CopyBot Agent
 Analyzes current copybot positions to identify opportunities for increased position sizes
 
 video for copy bot: https://youtu.be/tQPRW19Qcak?si=b6rAGpz4CuXKXyzn
@@ -23,16 +23,16 @@ from src.config import *
 from src import nice_funcs as n
 from src.data.ohlcv_collector import collect_all_tokens, collect_token_data
 
-# 🌙 Moon Dev: Calculate paths dynamically
+# 🕉️ Karma Dev: Calculate paths dynamically
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 GITHUB_DIR = PROJECT_ROOT.parent  # Parent folder containing all repos
 
-# Data path for current copybot portfolio - 🌙 Moon Dev: External repo (sibling)
+# Data path for current copybot portfolio - 🕉️ Karma Dev: External repo (sibling)
 COPYBOT_PORTFOLIO_PATH = GITHUB_DIR / "solana-copy-trader" / "csvs" / "current_portfolio.csv"
 
 # LLM Prompts
 PORTFOLIO_ANALYSIS_PROMPT = """
-You are Moon Dev's CopyBot Agent 🌙
+You are Karma Dev's CopyBot Agent 🕉️
 
 Your task is to analyze the current copybot portfolio positions and market data to identify which positions deserve larger allocations.
 
@@ -68,14 +68,14 @@ Remember:
 """
 
 class CopyBotAgent:
-    """Moon Dev's CopyBot Agent"""
+    """Karma Dev's CopyBot Agent"""
 
     def __init__(self):
         """Initialize the CopyBot agent with LLM"""
         load_dotenv()
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_KEY"))
         self.recommendations_df = pd.DataFrame(columns=['token', 'action', 'confidence', 'reasoning'])
-        print("Moon Dev's CopyBot Agent initialized!")
+        print("Karma Dev's CopyBot Agent initialized!")
         
     def load_portfolio_data(self):
         """Load current copybot portfolio data"""
@@ -139,7 +139,7 @@ class CopyBotAgent:
             print(full_prompt)
             print("=" * 80)
 
-            print("\n🧠 Sending data to Moon Dev's AI for analysis...")
+            print("\n🧠 Sending data to Karma Dev's AI for analysis...")
 
             # Get LLM analysis
             message = self.client.messages.create(
@@ -202,7 +202,7 @@ class CopyBotAgent:
     def execute_position_updates(self):
         """Execute position size updates based on analysis"""
         try:
-            print("\n🚀 Moon Dev executing position updates...")
+            print("\n🚀 Karma Dev executing position updates...")
             
             for _, row in self.recommendations_df.iterrows():
                 token = row['token']
@@ -282,7 +282,7 @@ class CopyBotAgent:
     def run_analysis_cycle(self):
         """Run a complete portfolio analysis cycle"""
         try:
-            print("\n🌙 Starting Moon Dev CopyBot Portfolio Analysis...")
+            print("\n🕉️ Starting Karma Dev CopyBot Portfolio Analysis...")
             
             # Load portfolio data
             if not self.load_portfolio_data():

@@ -248,4 +248,4 @@ TOKEN_EXCHANGE_MAP = {
 ✅ **Automatic handling** of differences (leverage, parameters, etc.)
 ✅ **Backward compatible** with existing code
 
-🌙 Trade anywhere with Moon Dev's Exchange Manager! 🚀
+🕉️ Trade anywhere with Karma Dev's Exchange Manager! 🚀

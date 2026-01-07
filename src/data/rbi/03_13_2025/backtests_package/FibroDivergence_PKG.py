@@ -1,6 +1,3 @@
-Here's the fixed code with all the necessary changes to remove any `backtesting.lib` imports and ensure proper indicator usage:
-
-```python
 from backtesting import Backtest, Strategy
 import pandas as pd
 import numpy as np
@@ -32,15 +29,15 @@ class FibroDivergence(Strategy):
     divergence_window = 5
 
     def init(self):
-        # Core indicators 🌙
+        # Core indicators
         self.rsi = self.I(talib.RSI, self.data.Close, timeperiod=self.rsi_period)
         self.atr = self.I(talib.ATR, self.data.High, self.data.Low, self.data.Close, timeperiod=self.atr_period)
         
-        # Swing points for Fibonacci ✨
+        # Swing points for Fibonacci
         self.swing_high = self.I(talib.MAX, self.data.High, timeperiod=self.swing_period)
         self.swing_low = self.I(talib.MIN, self.data.Low, timeperiod=self.swing_period)
         
-        # Divergence detection indicators 🔍
+        # Divergence detection indicators
         self.price_swing_high = self.I(talib.MAX, self.data.High, timeperiod=self.divergence_window)
         self.price_swing_low = self.I(talib.MIN, self.data.Low, timeperiod=self.divergence_window)
         self.rsi_swing_high = self.I(talib.MAX, self.rsi, timeperiod=self.divergence_window)
@@ -48,16 +45,16 @@ class FibroDivergence(Strategy):
 
     def next(self):
         if self.position:
-            return  # Hold position if already in trade 🌙
+            return  # Hold position if already in trade
 
-        # Current market conditions 📊
+        # Current market conditions
         close = self.data.Close[-1]
         prev_close = self.data.Close[-2]
         atr = self.atr[-1]
         swing_high = self.swing_high[-1]
         swing_low = self.swing_low[-1]
 
-        # Fibonacci calculations 🔺
+        # Fibonacci calculations
         fib_levels = []
         if swing_high > swing_low:
             fib_range = swing_high - swing_low
@@ -67,10 +64,10 @@ class FibroDivergence(Strategy):
                 swing_high - fib_range * 0.618
             ]
         
-        # Check Fib proximity (1% threshold) 📍
+        # Check Fib proximity (1% threshold)
         near_fib = any(abs(close - level)/close < 0.01 for level in fib_levels) if fib_levels else False
 
-        # Divergence detection logic 🤖
+        # Divergence detection logic
         bullish_div = bearish_div = False
         if len(self.rsi_swing_low) > 2 and len(self.price_swing_low) > 2:
             bullish_div = (self.price_swing_low[-1] < self.price_swing_low[-2] and 
@@ -80,12 +77,28 @@ class FibroDivergence(Strategy):
             bearish_div = (self.price_swing_high[-1] > self.price_swing_high[-2] and 
                           self.rsi_swing_high[-1] < self.rsi_swing_high[-2])
 
-        # Trade execution logic 🚀
+        # Trade execution logic
         if near_fib:
             if bullish_div and close > prev_close:
-                # Long entry with Moon Dev flair 🌙
+                # Long entry with proper position sizing
                 sl = close - atr * 1
                 risk = close - sl
                 position_size = int(round((self.risk_per_trade * self.equity) / risk))
                 if position_size > 0:
-                    print(f"🌙✨ BULLISH CONFIRM
+                    self.buy(size=position_size, sl=sl)
+                    print(f"Long entry at {close:.2f}, SL: {sl:.2f}, Size: {position_size}")
+
+            elif bearish_div and close < prev_close:
+                # Short entry with proper position sizing
+                sl = close + atr * 1
+                risk = sl - close
+                position_size = int(round((self.risk_per_trade * self.equity) / risk))
+                if position_size > 0:
+                    self.sell(size=position_size, sl=sl)
+                    print(f"Short entry at {close:.2f}, SL: {sl:.2f}, Size: {position_size}")
+
+# Run the backtest
+bt = Backtest(data, FibroDivergence, cash=100000, commission=0.002)
+stats = bt.run()
+print(stats)
+bt.plot()

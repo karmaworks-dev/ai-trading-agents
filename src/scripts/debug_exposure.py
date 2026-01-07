@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Exposure % Debug Script 🚀
+🕉️ Karma Dev's Exposure % Debug Script 🚀
 Tests backtest output to debug why Exposure % is showing as N/A
 """
 
@@ -11,7 +11,7 @@ from pathlib import Path
 TEST_FILE = "/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi_pp_multi/10_27_2025/backtests_package/T13_BandedOscillator_PKG.py"
 
 print("="*80)
-print("🌙 Moon Dev's Exposure % Debugger")
+print("🕉️ Karma Dev's Exposure % Debugger")
 print("="*80)
 print(f"\n📂 Testing file: {TEST_FILE}\n")
 
@@ -91,5 +91,5 @@ except Exception as e:
     traceback.print_exc()
 
 print("\n" + "="*80)
-print("🌙 Debug complete!")
+print("🕉️ Debug complete!")
 print("="*80)

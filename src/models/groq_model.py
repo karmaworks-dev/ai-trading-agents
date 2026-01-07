@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Groq Model Implementation
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Groq Model Implementation
+Built with love by Karma Dev 🚀
 """
 
 from groq import Groq

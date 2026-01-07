@@ -1,6 +1,6 @@
 """
-💰 Moon Dev's Funding Rate Monitor
-Built with love by Moon Dev 🚀
+💰 Karma Dev's Funding Rate Monitor
+Built with love by Karma Dev 🚀
 
 Fran the Funding Agent tracks funding rate changes across different timeframes and announces significant changes via OpenAI TTS.
 
@@ -27,7 +27,7 @@ import anthropic
 from pathlib import Path
 from src import nice_funcs as n
 from src import nice_funcs_hyperliquid as hl
-from src.agents.api import MoonDevAPI
+from src.agents.api import KarmaDevAPI
 from collections import deque
 from src.agents.base_agent import BaseAgent
 import traceback
@@ -123,15 +123,15 @@ class FundingAgent(BaseAgent):
                     api_key=deepseek_key,
                     base_url=DEEPSEEK_BASE_URL
                 )
-                cprint("🚀 Moon Dev's Funding Agent using DeepSeek override!", "green")
+                cprint("🚀 Karma Dev's Funding Agent using DeepSeek override!", "green")
             else:
                 self.deepseek_client = None
                 cprint("⚠️ DEEPSEEK_KEY not found - DeepSeek model will not be available", "yellow")
         else:
             self.deepseek_client = None
-            cprint(f"🎯 Moon Dev's Funding Agent using Claude model: {self.active_model}!", "green")
+            cprint(f"🎯 Karma Dev's Funding Agent using Claude model: {self.active_model}!", "green")
         
-        self.api = MoonDevAPI()
+        self.api = KarmaDevAPI()
         
         # Create data directories if they don't exist
         self.audio_dir = PROJECT_ROOT / "src" / "audio"
@@ -328,13 +328,13 @@ class FundingAgent(BaseAgent):
                     messages.append(
                         f"{token_name} has negative funding at {rate:.2f}% annual. "
                         f"AI suggests {action} with {confidence}% confidence. "
-                        f"Analysis: {analysis} 🌙"
+                        f"Analysis: {analysis} 🕉️"
                     )
                 elif rate > POSITIVE_THRESHOLD:
                     messages.append(
                         f"{token_name} has high funding at {rate:.2f}% annual. "
                         f"AI suggests {action} with {confidence}% confidence. "
-                        f"Analysis: {analysis} 🌙"
+                        f"Analysis: {analysis} 🕉️"
                     )
                 
             if messages:
@@ -478,7 +478,7 @@ class FundingAgent(BaseAgent):
             
             # Always print the final box after any announcements
             print("\n" + "╔" + "═" * 50 + "╗")
-            print("║         🌙 Moon Dev's Funding Party 🎉          ║")
+            print("║         🕉️ Karma Dev's Funding Party 🎉          ║")
             print("╠" + "═" * 50 + "╣")
             print("║  Symbol  │  Annual Rate  │      Status      ║")
             print("╟" + "─" * 50 + "╢")

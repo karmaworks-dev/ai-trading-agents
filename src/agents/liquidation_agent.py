@@ -1,6 +1,6 @@
 """
-🌊 Moon Dev's Liquidation Monitor
-Built with love by Moon Dev 🚀
+🌊 Karma Dev's Liquidation Monitor
+Built with love by Karma Dev 🚀
 
 Luna the Liquidation Agent tracks sudden increases in liquidation volume and announces when she sees potential market moves
 
@@ -18,7 +18,7 @@ import anthropic
 from pathlib import Path
 from src import nice_funcs as n
 from src import nice_funcs_hyperliquid as hl
-from src.agents.api import MoonDevAPI
+from src.agents.api import KarmaDevAPI
 from collections import deque
 from src.agents.base_agent import BaseAgent
 import traceback
@@ -129,7 +129,7 @@ class LiquidationAgent(BaseAgent):
         openai.api_key = openai_key
         self.client = anthropic.Anthropic(api_key=anthropic_key)
         
-        self.api = MoonDevAPI()
+        self.api = KarmaDevAPI()
         
         # Create data directories if they don't exist
         self.audio_dir = PROJECT_ROOT / "src" / "audio"
@@ -184,7 +184,7 @@ class LiquidationAgent(BaseAgent):
 
             if df is not None and not df.empty:
                 # Debug: Print actual column count and types
-                print(f"🔍 Moon Dev Debug: DataFrame has {len(df.columns)} columns")
+                print(f"🔍 Karma Dev Debug: DataFrame has {len(df.columns)} columns")
                 print(f"📋 Original column names: {list(df.columns)}")
                 print(f"📊 First row sample: {df.iloc[0].tolist()}")
 
@@ -264,7 +264,7 @@ class LiquidationAgent(BaseAgent):
                 
                 # Print fun box with liquidation info
                 print("\n" + "╔" + "═" * 70 + "╗")
-                print("║                🌙 Moon Dev's Liquidation Party 💦                 ║")
+                print("║                🕉️ Karma Dev's Liquidation Party 💦                 ║")
                 print("╠" + "═" * 70 + "╣")
                 
                 # Format each line based on which window is active
@@ -448,7 +448,7 @@ class LiquidationAgent(BaseAgent):
                     f"ayo moon dev seven seven seven! "
                     f"Massive {liq_type} liquidations detected! "
                     f"{change_msg} in the last period! "
-                    f"AI suggests {analysis['action']} with {analysis['confidence']}% confidence 🌙"
+                    f"AI suggests {analysis['action']} with {analysis['confidence']}% confidence 🕉️"
                 )
                 return message
             return None
@@ -550,7 +550,7 @@ class LiquidationAgent(BaseAgent):
                                     
                                     # Print detailed analysis
                                     print("\n" + "╔" + "═" * 50 + "╗")
-                                    print("║        🌙 Moon Dev's Liquidation Analysis 💦       ║")
+                                    print("║        🕉️ Karma Dev's Liquidation Analysis 💦       ║")
                                     print("╠" + "═" * 50 + "╣")
                                     print(f"║  Action: {analysis['action']:<41} ║")
                                     print(f"║  Confidence: {analysis['confidence']}%{' '*36} ║")

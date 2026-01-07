@@ -9,7 +9,7 @@ change your x y coordinates by using the script in the scripts folder called fin
 """
 
 """
-🚀 Moon Dev's Code Executor Agent
+🚀 Karma Dev's Code Executor Agent
 Moves to position, executes code, and captures screenshot
 
 1 - move mouse to code editor and hit command + return to run the code
@@ -32,12 +32,12 @@ from Quartz import CoreGraphics as CG
 import AppKit
 import subprocess
 import base64
-from src.models import model_factory  # Import Moon Dev's model factory
+from src.models import model_factory  # Import Karma Dev's model factory
 import traceback
 from Cocoa import NSURL
 import time
 
-# Configuration - Moon Dev's target coordinates (DO NOT ADJUST THESE)
+# Configuration - Karma Dev's target coordinates (DO NOT ADJUST THESE)
 CODE_EDITOR_X = -2686
 CODE_EDITOR_Y = -1144
 
@@ -72,7 +72,7 @@ ACTIVATION_PAUSE = 1.0    # Pause after click to ensure window activation
 EXECUTE_PAUSE = 8       # Pause after cmd+return before screenshot
 MOVEMENT_SPEED = 1.0      # Speed of cursor movement (seconds)
 
-# New configuration constants added by Moon Dev 💫
+# New configuration constants added by Karma Dev 💫
 WAIT_AI_FIX_SECONDS = 30  # Wait time in seconds for AI to fix the code 💫
 CODE_FIX_PROMPT = "please fix my code - if it looks like it is done and running successfully, just output 100 emoojis in a block. done is considered when the backtesting.py stats are in the output and i can clearly see Return, drawdown and all other things"  # Code fix prompt for AI debug 🛠️
 TYPING_SPEED = 0.0001  # Delay between keystrokes in seconds (lower = faster)
@@ -323,7 +323,7 @@ def send_command_apostrophe():
         cmd_up = CG.CGEventCreateKeyboardEvent(None, 0x37, False)
         CG.CGEventPost(CG.kCGHIDEventTap, cmd_up)
 
-        cprint(f"⌨️ {APPLY_FIX_COMMAND['name']} sent successfully! 🚀 Moon Dev 🙏", "cyan")
+        cprint(f"⌨️ {APPLY_FIX_COMMAND['name']} sent successfully! 🚀 Karma Dev 🙏", "cyan")
         return True
     except Exception as e:
         cprint(f"❌ Error sending {APPLY_FIX_COMMAND['name']}: {e}", "red")
@@ -729,7 +729,7 @@ def analyze_composer_screenshot(screenshot_path: str) -> bool:
 def execute_and_capture():
     """Move to position, execute code, and capture screenshot"""
     try:
-        cprint("\n🎯 Moon Dev's Code Executor Starting...", "cyan")
+        cprint("\n🎯 Karma Dev's Code Executor Starting...", "cyan")
         
         # Store initial position
         initial_pos = CG.CGEventGetLocation(CG.CGEventCreate(None))
@@ -867,7 +867,7 @@ def execute_and_capture():
                 # Check for completion
                 if analyze_composer_screenshot(screenshot_path):
                     cprint("\n✨ Task completed! Found 20+ emojis!", "green")
-                    cprint("👋 Moon Dev's Code Executor shutting down...", "yellow")
+                    cprint("👋 Karma Dev's Code Executor shutting down...", "yellow")
                     return
                 
                 # Not complete - move to code editor & apply fix

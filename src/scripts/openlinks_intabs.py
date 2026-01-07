@@ -25,7 +25,7 @@ def count_browser_tabs():
     return 0
 
 def open_wallet_tabs(csv_path, batch_size=OPENS_PER_BATCH):
-    print("🌙 Moon Dev's Smart Tab Opener Starting Up! 🚀")
+    print("🕉️ Karma Dev's Smart Tab Opener Starting Up! 🚀")
     print(f"📂 Opening CSV file: {csv_path}")
     
     # Verify file exists
@@ -93,11 +93,11 @@ def open_wallet_tabs(csv_path, batch_size=OPENS_PER_BATCH):
                 print(f"❌ Error opening {url}: {str(e)}")
                 current_index += 1  # Skip problematic URLs
         else:
-            user_input = input("\n🌜 Moon Dev says: Press Enter after closing some tabs... " +
+            user_input = input("\n🌜 Karma Dev says: Press Enter after closing some tabs... " +
                              f"({len(urls) - current_index} links remaining)\n")
             opened_tabs = 0  # Reset the counter after user closes tabs
     
-    print("🎉 All done! Moon Dev's tab opener completed successfully!")
+    print("🎉 All done! Karma Dev's tab opener completed successfully!")
     print("💫 Remember to smash that like button and follow for more tools!")
 
 if __name__ == "__main__":

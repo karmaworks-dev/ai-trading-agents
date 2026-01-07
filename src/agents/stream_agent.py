@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Stream Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Stream Agent
+Built with love by Karma Dev 🚀
 
 This agent continuously listens to voice, generates titles and thumbnails for livestreams.
 """
@@ -45,16 +45,16 @@ NUM_THUMBNAILS = 3  # Number of thumbnails to generate
 DOWNLOADS_DIR = Path.home() / "Downloads"
 
 # Master prompts
-TITLE_MASTER_PROMPT = """You are Gilfoyle from Silicon Valley generating stream titles. Based on Moon Dev's livestream transcript, generate exactly {num_titles} self-deprecating, sarcastic titles.
+TITLE_MASTER_PROMPT = """You are Gilfoyle from Silicon Valley generating stream titles. Based on Karma Dev's livestream transcript, generate exactly {num_titles} self-deprecating, sarcastic titles.
 
 Rules:
 - Each title MUST be 10 words or less
-- Make fun of Moon Dev (the streamer) in a funny way
+- Make fun of Karma Dev (the streamer) in a funny way
 - Be sarcastic like Gilfoyle would be
 - Self-deprecating humor about coding/trading attempts
 - Short, punchy, and slightly mean but funny
 - NO NUMBERING, just the titles
-- Act like Moon Dev is trying too hard or missing obvious things
+- Act like Karma Dev is trying too hard or missing obvious things
 
 Example format:
 Watch Me Lose Money With Bad Code
@@ -67,7 +67,7 @@ Professional Bug Creator Makes Trading Bots
 TRANSCRIPT:
 {transcript}"""
 
-THUMBNAIL_MASTER_PROMPT = """Create a YouTube thumbnail for Moon Dev's coding livestream. The stream is about: {context}
+THUMBNAIL_MASTER_PROMPT = """Create a YouTube thumbnail for Karma Dev's coding livestream. The stream is about: {context}
 
 IMPORTANT REQUIREMENTS:
 - LANDSCAPE orientation (16:9 aspect ratio)
@@ -75,7 +75,7 @@ IMPORTANT REQUIREMENTS:
 - THERE MUST BE SOME SORT OF LINE CHART IN THE THUMBNAIL GOING UP 
 - NO MORE THAN 3 ELEMENTS IN THE THUMBNAIL TO KEEP IT SIMPLE
 
-The thumbnail should visually represent Moon Dev building trading algorithms live."""
+The thumbnail should visually represent Karma Dev building trading algorithms live."""
 
 class StreamAgent:
     def __init__(self):
@@ -194,7 +194,7 @@ class StreamAgent:
         
         try:
             # Create context from transcript and titles
-            context = f"Moon Dev is coding trading algorithms. Topics discussed: {transcript[:500]}... Key themes from titles: {', '.join(titles[:3])}"
+            context = f"Karma Dev is coding trading algorithms. Topics discussed: {transcript[:500]}... Key themes from titles: {', '.join(titles[:3])}"
             
             for i in range(NUM_THUMBNAILS):
                 try:

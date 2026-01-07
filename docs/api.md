@@ -1,4 +1,4 @@
-# 🌙 Moon Dev Market Data API Documentation
+# 🕉️ Karma Dev Market Data API Documentation
 
 ## Table of Contents
 - [Overview](#overview)
@@ -11,7 +11,7 @@
 
 ## Overview
 
-The Moon Dev Market Data API (`src/agents/api.py`) provides access to real-time market data. The API is designed to be easy to use while providing powerful features for market analysis and automated trading.
+The Karma Dev Market Data API (`src/agents/api.py`) provides access to real-time market data. The API is designed to be easy to use while providing powerful features for market analysis and automated trading.
 
 ## Installation
 
@@ -22,7 +22,7 @@ pip install requests pandas python-dotenv termcolor
 
 2. Set up your environment variables:
 ```bash
-# Create a .env file and add your Moon Dev API key
+# Create a .env file and add your Karma Dev API key
 MOONDEV_API_KEY=your_api_key_here
 ```
 
@@ -31,10 +31,10 @@ MOONDEV_API_KEY=your_api_key_here
 The API uses an API key for authentication. This key should be stored in your `.env` file and will be automatically loaded when initializing the API client.
 
 ```python
-from src.agents.api import MoonDevAPI
+from src.agents.api import KarmaDevAPI
 
 # Initialize the API client
-api = MoonDevAPI()  # Automatically loads API key from .env
+api = KarmaDevAPI()  # Automatically loads API key from .env
 ```
 
 ## Market Data Methods
@@ -99,11 +99,11 @@ available_files = api.list_available_files()
 Here's a complete example showing how to use the API:
 
 ```python
-from src.agents.api import MoonDevAPI
+from src.agents.api import KarmaDevAPI
 import time
 
 # Initialize API
-api = MoonDevAPI()
+api = KarmaDevAPI()
 
 # Get BTC data
 symbol = "BTC"
@@ -148,4 +148,4 @@ The API includes built-in error handling and will:
 5. Rate limiting is handled automatically
 
 ---
-*Built with 🌙 by Moon Dev - Making trading data accessible and beautiful*
+*Built with 🕉️ by Karma Dev - Making trading data accessible and beautiful*

@@ -1,6 +1,6 @@
 # Web Search Research Agent
 
-**Created by Moon Dev**
+**Created by Karma Dev**
 
 The Web Search Research Agent is an autonomous AI system that searches the web for trading strategies, scrapes content, and extracts individual strategies into clean, backtest-ready markdown files.
 
@@ -507,9 +507,9 @@ Possible improvements:
 
 ---
 
-**Made with ❤️ by Moon Dev**
+**Made with ❤️ by Karma Dev**
 
-*Part of the Moon Dev AI Agents for Trading project*
+*Part of the Karma Dev AI Agents for Trading project*
 
 **Related Documentation**:
 - [RBI Agent](rbi_agent.md) - Backtest the extracted strategies

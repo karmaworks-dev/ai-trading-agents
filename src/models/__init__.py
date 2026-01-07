@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Model System
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Model System
+Built with love by Karma Dev 🚀
 
 This module performs best-effort imports of optional model adapters
 so the package can be imported even when some provider SDKs are

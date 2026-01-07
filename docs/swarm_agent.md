@@ -1,6 +1,6 @@
 # Swarm Agent
 
-🌙 Moon Dev's Multi-Model AI Consensus System
+🕉️ Karma Dev's Multi-Model AI Consensus System
 
 ## Overview
 The Swarm Agent queries multiple AI models in parallel and returns:
@@ -26,7 +26,7 @@ python src/agents/swarm_agent.py
 
 # It will prompt you:
 # 💭 What would you like to ask the AI swarm?
-# 🌙 Prompt > [type your question here]
+# 🕉️ Prompt > [type your question here]
 
 # Then shows all individual responses + consensus
 ```
@@ -224,4 +224,4 @@ for ai_num, provider in result["model_mapping"].items():
 - **Import and use in other agents** - perfect for validating trading decisions with AI consensus
 - All queries are automatically saved to `src/data/swarm_agent/` for later review
 
-Built by Moon Dev - Harnessing collective AI intelligence 🌙
+Built by Karma Dev - Harnessing collective AI intelligence 🕉️

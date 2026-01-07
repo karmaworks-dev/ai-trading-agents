@@ -1,7 +1,7 @@
 """
-Moon Dev's Order Book Data Feed
+Karma Dev's Order Book Data Feed
 Real-time Level 2 orderbook data from Hyperliquid WebSocket
-Built with love by Moon Dev
+Built with love by Karma Dev
 
 Features:
 - Real-time L2 order book updates

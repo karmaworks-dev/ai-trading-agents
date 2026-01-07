@@ -26,7 +26,7 @@ FUNDING_ARB_MINIMUM = 0.05      # Min spread to trade
 ```
 
 ## Data Source
-Moon Dev API: `/api/funding-data`
+Karma Dev API: `/api/funding-data`
 
 ## Output
 `src/data/funding_agent/[date]/funding_rates.csv`

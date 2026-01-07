@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Chat Question Generator
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Chat Question Generator
+Built with love by Karma Dev 🚀
 
 This agent analyzes recent chat messages and generates relevant questions
 that could be asked based on the conversation context.
@@ -62,7 +62,7 @@ Generate SHORT questions (10 words max!) that viewers might ask. Format each que
 class ChatQuestionGenerator:
     def __init__(self):
         """Initialize the Question Generator"""
-        cprint("\n🤔 Initializing Moon Dev's Chat Question Generator...", "cyan")
+        cprint("\n🤔 Initializing Karma Dev's Chat Question Generator...", "cyan")
         
         # Set up data directory and file paths
         self.data_dir = Path(project_root) / "src" / "data" / "chat_agent"

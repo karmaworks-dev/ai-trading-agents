@@ -70,7 +70,7 @@ all of my videos you can use: https://www.dropbox.com/scl/fo/d0rjdyus9q3pok5nbmo
 - you can also download the videos from my channel: https://www.youtube.com/@moondevonyt/videos
 '''
 
-# Moon Dev's Video Splitter Agent🎬
+# Karma Dev's Video Splitter Agent🎬
 import sys
 from pathlib import Path
 import os
@@ -143,7 +143,7 @@ class ClipsAgent:
         self._setup_directories()
         self._setup_ai()
         self._setup_voice()
-        cprint("🎬 Moon Dev's Clips Agent initialized!", "green")
+        cprint("🎬 Karma Dev's Clips Agent initialized!", "green")
         
     def _setup_directories(self):
         """Ensure input and output directories exist"""
@@ -395,7 +395,7 @@ class ClipsAgent:
 
     def run(self):
         """Main processing loop"""
-        cprint("\n🎬 Moon Dev's Clips Agent starting...", "cyan")
+        cprint("\n🎬 Karma Dev's Clips Agent starting...", "cyan")
         cprint(f"⚙️ Min clip duration: {MIN_CLIP_DURATION}s (5 mins)", "cyan")
         cprint(f"⚙️ Max clip duration: {MAX_CLIP_DURATION}s (20 mins)", "cyan")
         
@@ -571,7 +571,7 @@ class ClipsAgent:
             # For Ollama model, we handle the response directly
             if MODEL_TYPE == "ollama":
                 response = self.model.generate_response(
-                    system_prompt="You are Moon Dev's Hype AI. You write short, exciting video intros.",
+                    system_prompt="You are Karma Dev's Hype AI. You write short, exciting video intros.",
                     user_content=formatted_prompt,
                     temperature=0.7
                 )
@@ -597,7 +597,7 @@ class ClipsAgent:
                             
                             # Use the same prompt but with a new temperature
                             response = self.model.generate_response(
-                                system_prompt="You are Moon Dev's Hype AI. You write short, exciting video intros.",
+                                system_prompt="You are Karma Dev's Hype AI. You write short, exciting video intros.",
                                 user_content=formatted_prompt,
                                 temperature=0.7 + (retry_count * 0.1)  # Increase temperature slightly each retry
                             )
@@ -625,7 +625,7 @@ class ClipsAgent:
             else:
                 # For other models, use the standard generate_response
                 response = self.model.generate_response(
-                    system_prompt="You are Moon Dev's Hype AI. You write short, exciting video intros.",
+                    system_prompt="You are Karma Dev's Hype AI. You write short, exciting video intros.",
                     user_content=formatted_prompt
                 )
                 

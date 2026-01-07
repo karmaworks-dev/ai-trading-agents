@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Model Interface
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Model Interface
+Built with love by Karma Dev 🚀
 
 This module defines the base interface for all AI models.
 """

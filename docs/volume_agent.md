@@ -1,6 +1,6 @@
 # Hyperliquid Volume Agent - AI Swarm Edition
 
-**Built by Moon Dev**
+**Built by Karma Dev**
 
 An autonomous AI-powered agent that monitors Hyperliquid's top 15 highest-volume altcoins every 4 hours and uses a multi-model AI swarm to identify the best trading opportunities before they blow up on Crypto Twitter.
 
@@ -241,7 +241,7 @@ AI swarm analysis logs with:
 
 ## Trading Strategy Ideas
 
-### Moon Dev's Approach: "Data Dog Mode"
+### Karma Dev's Approach: "Data Dog Mode"
 1. Watch all day - Terminal always open
 2. AI swarm validation - If 3+ AIs agree, high conviction
 3. Volume + Price confirmation - Both must align
@@ -263,7 +263,7 @@ AI swarm analysis logs with:
 pip install requests termcolor
 ```
 
-### Moon Dev Framework
+### Karma Dev Framework
 - `src/agents/swarm_agent.py` - Multi-model AI swarm
 - `src/models/model_factory.py` - Unified model interface
 
@@ -356,7 +356,7 @@ Planned features:
 
 ## Support
 
-Built by Moon Dev for the Data Dogs
+Built by Karma Dev for the Data Dogs
 
 **Location**: `/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/agents/volume_agent.py`
 
@@ -364,6 +364,6 @@ Built by Moon Dev for the Data Dogs
 
 ---
 
-Built with Moon Dev 🌙
+Built with Karma Dev 🕉️
 
 *"Catch the pumps BEFORE Crypto Twitter"*

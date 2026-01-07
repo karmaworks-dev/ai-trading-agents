@@ -1,12 +1,12 @@
-# Moon Dev Trading Agents - Claude Skill
+# Karma Dev Trading Agents - Claude Skill
 
-**Claude skill for mastering Moon Dev's AI trading system.**
+**Claude skill for mastering Karma Dev's AI trading system.**
 
 ---
 
 ## What This Skill Does
 
-Provides Claude with expert knowledge about Moon Dev's trading system:
+Provides Claude with expert knowledge about Karma Dev's trading system:
 - 48+ specialized AI agents
 - Multi-exchange support (Hyperliquid, BirdEye, Extended)
 - LLM provider abstraction (6 providers)
@@ -112,6 +112,6 @@ Update skill files as the system evolves:
 
 ---
 
-**Built with 🌙 by Moon Dev**
+**Built with 🕉️ by Karma Dev**
 
 *Skills enable Claude to master complex systems instantly.*

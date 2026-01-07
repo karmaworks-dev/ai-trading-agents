@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Aster DEX Functions (fixed)
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Aster DEX Functions (fixed)
+Built with love by Karma Dev 🚀
 
 Notes:
 - This version normalizes API responses (tuple/dict) so `.get()` won't raise

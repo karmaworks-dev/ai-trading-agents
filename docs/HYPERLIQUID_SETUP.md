@@ -1,6 +1,6 @@
 # 🚀 Complete HyperLiquid Setup Guide
 
-Step-by-step guide to get your Moon Dev agents trading on HyperLiquid.
+Step-by-step guide to get your Karma Dev agents trading on HyperLiquid.
 
 ## Prerequisites
 
@@ -270,9 +270,9 @@ for symbol in ['BTC', 'ETH', 'SOL']:
 ## Support
 
 - **HyperLiquid Docs**: https://hyperliquid.gitbook.io
-- **Discord**: Join Moon Dev's community
+- **Discord**: Join Karma Dev's community
 - **Issues**: Report bugs on GitHub
 
 ---
 
-🌙 Happy trading with HyperLiquid and Moon Dev! 🚀
+🕉️ Happy trading with HyperLiquid and Karma Dev! 🚀

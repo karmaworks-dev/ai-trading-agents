@@ -64,11 +64,11 @@ Use these search terms to train your TikTok algorithm to show more relevant cont
 39. "Products with cult following" - Items with strong consumer loyalty
 40. "This company is done" - Early warnings of declining brands
 
-🌙 Moon Dev tip: Search 3-5 terms daily and interact extensively with relevant content to rapidly train the algorithm! 💰
+🕉️ Karma Dev tip: Search 3-5 terms daily and interact extensively with relevant content to rapidly train the algorithm! 💰
 '''
 
 """
-🚀 Moon Dev's TikTok Alpha Scraper
+🚀 Karma Dev's TikTok Alpha Scraper
 Navigates TikTok, captures video and comment screenshots for trading insights
 
 1. Opens TikTok URL in browser
@@ -113,7 +113,7 @@ import random
 import webbrowser
 import pandas as pd
 import base64
-from src.models import model_factory  # Import Moon Dev's model factory
+from src.models import model_factory  # Import Karma Dev's model factory
 
 # ===== CONFIGURATION (ADJUST THESE FOR YOUR SETUP) =====
 
@@ -445,8 +445,8 @@ def capture_screenshot(video_number):
             cprint(f"✨ Screenshot saved successfully: {screenshot_path}", "green")
             cprint(f"📊 File size: {file_size} bytes", "cyan")
             
-            # Add a fun Moon Dev easter egg message
-            cprint(f"🌙 Moon Dev says: Alpha secured from TikTok video #{video_number}! 💰", "magenta")
+            # Add a fun Karma Dev easter egg message
+            cprint(f"🕉️ Karma Dev says: Alpha secured from TikTok video #{video_number}! 💰", "magenta")
             
             return str(screenshot_path)
             
@@ -474,7 +474,7 @@ def analyze_screenshot(screenshot_path, video_number, video_url=None):
             raise FileNotFoundError(f"Screenshot file not found: {screenshot_path}")
         
         # Use the imported model_factory instance directly - it's already initialized
-        cprint("🏭 Using Moon Dev's Model Factory singleton...", "cyan")
+        cprint("🏭 Using Karma Dev's Model Factory singleton...", "cyan")
         # No need to create a new instance, model_factory is already the instance
         model = model_factory.get_model(MODEL_TYPE, MODEL_NAME)
         
@@ -564,7 +564,7 @@ def analyze_screenshot(screenshot_path, video_number, video_url=None):
             except:
                 cprint("❌ Failed to save backup CSV as well", "red")
         
-        cprint(f"🌙 Moon Dev says: Alpha extracted from video #{video_number}! 💸", "magenta")
+        cprint(f"🕉️ Karma Dev says: Alpha extracted from video #{video_number}! 💸", "magenta")
         
         # Return the original analysis for any other use
         return analysis_text
@@ -712,8 +712,8 @@ def detect_share_button():
         
         cprint(f"🔍 AI response: {result_text}", "cyan")
         
-        # Add a fun Moon Dev easter egg message
-        cprint(f"🌙 Moon Dev says: {'Share button detected! Using alternate comment position.' if has_share_button else 'No share button found. Using standard comment position.'} 🔍", "magenta")
+        # Add a fun Karma Dev easter egg message
+        cprint(f"🕉️ Karma Dev says: {'Share button detected! Using alternate comment position.' if has_share_button else 'No share button found. Using standard comment position.'} 🔍", "magenta")
         
         return has_share_button
         
@@ -857,8 +857,8 @@ def copy_current_url():
                     cprint(f"🖱️ Moving back to browser area ({BROWSER_X}, {BROWSER_Y})", "cyan")
                     move_mouse_cg(BROWSER_X, BROWSER_Y)
                     
-                    # Add a fun Moon Dev easter egg message
-                    cprint(f"🌙 Moon Dev says: URL captured successfully! 🔗", "magenta")
+                    # Add a fun Karma Dev easter egg message
+                    cprint(f"🕉️ Karma Dev says: URL captured successfully! 🔗", "magenta")
                     
                     return clipboard_content
                 else:
@@ -919,8 +919,8 @@ def is_live_video(url=None):
         print("=" * 60)
         print("\n")
         
-        # Add a fun Moon Dev easter egg message
-        cprint(f"🌙 Moon Dev says: {'Live video detected! Skipping processing.' if is_live else 'Regular video detected. Will process this one!'} 🔍", "magenta")
+        # Add a fun Karma Dev easter egg message
+        cprint(f"🕉️ Karma Dev says: {'Live video detected! Skipping processing.' if is_live else 'Regular video detected. Will process this one!'} 🔍", "magenta")
         
         return is_live
         
@@ -1019,7 +1019,7 @@ def safe_navigate_from_live(video_number):
         random_wait = random.uniform(0.5, 1.5)
         time.sleep(random_wait)
         
-        cprint(f"🌙 Moon Dev says: Safely navigated away from live video #{video_number}! 🚀", "magenta")
+        cprint(f"🕉️ Karma Dev says: Safely navigated away from live video #{video_number}! 🚀", "magenta")
         return True
         
     except Exception as e:
@@ -1030,7 +1030,7 @@ def safe_navigate_from_live(video_number):
 def scrape_tiktok():
     """Main function to scrape TikTok videos and comments"""
     try:
-        cprint("\n🚀 Moon Dev's TikTok Alpha Scraper Starting...", "cyan")
+        cprint("\n🚀 Karma Dev's TikTok Alpha Scraper Starting...", "cyan")
         
         # Store initial position
         initial_pos = CG.CGEventGetLocation(CG.CGEventCreate(None))
@@ -1209,7 +1209,7 @@ def scrape_tiktok():
         cprint(f"📊 Scraped {MAX_VIDEOS} TikTok videos", "green")
         cprint(f"📁 Screenshots saved to: {SCREENSHOT_DIR}", "green")
         cprint(f"📊 Analysis saved to: {ANALYSIS_CSV}", "green")
-        cprint("\n🌙 Moon Dev says: All the alpha has been collected! Time to find those trading opportunities! 💰", "magenta")
+        cprint("\n🕉️ Karma Dev says: All the alpha has been collected! Time to find those trading opportunities! 💰", "magenta")
         
         # Return to initial mouse position
         move_mouse_cg(int(initial_pos.x), int(initial_pos.y))

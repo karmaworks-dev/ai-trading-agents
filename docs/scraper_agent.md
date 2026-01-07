@@ -1,6 +1,6 @@
 # Scraper Agent
 
-**Built by Moon Dev** 🌙
+**Built by Karma Dev** 🕉️
 
 ## What It Does
 
@@ -34,13 +34,13 @@ python src/agents/scraper_agent.py
 ### Default Prompt
 Enter URLs only - uses default prompt:
 ```
-🌙 Enter URLs > https://site1.com https://site2.com https://site3.com
+🕉️ Enter URLs > https://site1.com https://site2.com https://site3.com
 ```
 
 ### Custom Prompt Override
 Add your question after the URLs:
 ```
-🌙 Enter URLs > https://site1.com https://site2.com what are their pricing models
+🕉️ Enter URLs > https://site1.com https://site2.com what are their pricing models
 
 🔴 CUSTOM PROMPT: what are their pricing models
 ```
@@ -121,33 +121,33 @@ Selenium launches a real headless browser, executes JavaScript, waits for conten
 
 **Single URL with default prompt:**
 ```
-🌙 Enter URLs > anthropic.com
+🕉️ Enter URLs > anthropic.com
 📝 Using default prompt
 ```
 
 **Multiple URLs with default prompt:**
 ```
-🌙 Enter URLs > anthropic.com openai.com deepseek.com
+🕉️ Enter URLs > anthropic.com openai.com deepseek.com
 📝 Using default prompt
 ```
 
 **Custom prompt:**
 ```
-🌙 Enter URLs > anthropic.com openai.com what are their API rate limits
+🕉️ Enter URLs > anthropic.com openai.com what are their API rate limits
 🔴 CUSTOM PROMPT: what are their API rate limits
 ```
 
 **Another custom prompt:**
 ```
-🌙 Enter URLs > site1.com site2.com compare their security features
+🕉️ Enter URLs > site1.com site2.com compare their security features
 🔴 CUSTOM PROMPT: compare their security features
 ```
 
 **Exit:**
 ```
-🌙 Enter URLs > quit
+🕉️ Enter URLs > quit
 ```
 
 ---
 
-**Moon Dev's Scraper Agent** - Scrape any site, ask anything! 🚀
+**Karma Dev's Scraper Agent** - Scrape any site, ask anything! 🚀

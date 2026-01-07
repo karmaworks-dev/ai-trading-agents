@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's RBI Batch Backtester (GPT-5 Edition)
+🕉️ Karma Dev's RBI Batch Backtester (GPT-5 Edition)
 
 - Scans a research folder of strategy writeups
 - Generates backtesting.py code for each strategy using your RBI prompts (no changes to RBI agent)
@@ -42,14 +42,14 @@ MAX_DEBUG_ATTEMPTS = 3
 def ensure_output_dir(research_dir: Path) -> Path:
     output_dir = research_dir / OUTPUT_SUBDIR_NAME
     output_dir.mkdir(parents=True, exist_ok=True)
-    print(f"📂🌙 MOON DEV: Output directory ready at: {output_dir} ✨")
+    print(f"📂🕉️ MOON DEV: Output directory ready at: {output_dir} ✨")
     return output_dir
 
 
 def read_strategy(file_path: Path) -> str:
     with open(file_path, "r") as f:
         content = f.read()
-    print(f"📝🌙 MOON DEV: Loaded strategy text from {file_path.name} ({len(content)} chars) 📚")
+    print(f"📝🕉️ MOON DEV: Loaded strategy text from {file_path.name} ({len(content)} chars) 📚")
     return content
 
 
@@ -73,12 +73,12 @@ def derive_strategy_name(file_path: Path, content: str) -> str:
     import re as _re
     name = _re.sub(r"[^\w\s-]", "", name)
     name = _re.sub(r"[\s]+", "", name)
-    print(f"🏷️🌙 MOON DEV: Strategy name resolved: {name}")
+    print(f"🏷️🕉️ MOON DEV: Strategy name resolved: {name}")
     return name
 
 
 def generate_backtest_code(strategy_text: str) -> str:
-    print("🌙 MOON DEV: Generating backtest code via BACKTEST prompt... 🚀")
+    print("🕉️ MOON DEV: Generating backtest code via BACKTEST prompt... 🚀")
     content = f"Create a backtest for this strategy:\n\n{strategy_text}"
 
     # Try primary config, then fallbacks if unavailable
@@ -95,7 +95,7 @@ def generate_backtest_code(strategy_text: str) -> str:
     raw = None
     last_error = None
     for cfg in candidate_configs:
-        print(f"🛰️🌙 MOON DEV: Attempting model {cfg['type']} :: {cfg['name']} for codegen ✨")
+        print(f"🛰️🕉️ MOON DEV: Attempting model {cfg['type']} :: {cfg['name']} for codegen ✨")
         try:
             raw = rbi_agent.chat_with_model(
                 rbi_agent.BACKTEST_PROMPT,
@@ -106,7 +106,7 @@ def generate_backtest_code(strategy_text: str) -> str:
                 break
         except Exception as e:
             last_error = str(e)
-            print(f"⚠️🌙 MOON DEV: Model attempt failed: {last_error}")
+            print(f"⚠️🕉️ MOON DEV: Model attempt failed: {last_error}")
 
     if not raw:
         msg = "Backtest generation returned empty response from all model candidates"
@@ -115,12 +115,12 @@ def generate_backtest_code(strategy_text: str) -> str:
         raise RuntimeError(msg)
 
     code = rbi_agent.clean_model_output(raw, "code")
-    print("✅🌙 MOON DEV: Initial backtest code generated (cleaned from markdown) ✨")
+    print("✅🕉️ MOON DEV: Initial backtest code generated (cleaned from markdown) ✨")
     return code
 
 
 def package_fix_code(code: str) -> str:
-    print("📦🌙 MOON DEV: Running package-check to remove forbidden backtesting.lib usage... 🧹")
+    print("📦🕉️ MOON DEV: Running package-check to remove forbidden backtesting.lib usage... 🧹")
     content = f"Check and fix indicator packages in this code:\n\n{code}"
 
     candidate_configs = [
@@ -135,7 +135,7 @@ def package_fix_code(code: str) -> str:
 
     raw = None
     for cfg in candidate_configs:
-        print(f"🛰️🌙 MOON DEV: Package-fix model attempt {cfg['type']} :: {cfg['name']}")
+        print(f"🛰️🕉️ MOON DEV: Package-fix model attempt {cfg['type']} :: {cfg['name']}")
         try:
             raw = rbi_agent.chat_with_model(
                 rbi_agent.PACKAGE_PROMPT,
@@ -150,12 +150,12 @@ def package_fix_code(code: str) -> str:
     if not raw:
         return code
     fixed = rbi_agent.clean_model_output(raw, "code")
-    print("✅🌙 MOON DEV: Package-check completed ✨")
+    print("✅🕉️ MOON DEV: Package-check completed ✨")
     return fixed or code
 
 
 def debug_fix_code(code: str, strategy_text: str | None = None) -> str:
-    print("🔧🌙 MOON DEV: Running debug pass to fix technical issues... 🐛")
+    print("🔧🕉️ MOON DEV: Running debug pass to fix technical issues... 🐛")
     context = f"Here's the backtest code to debug:\n\n{code}"
     if strategy_text:
         context += f"\n\nOriginal strategy for reference:\n{strategy_text}"
@@ -172,7 +172,7 @@ def debug_fix_code(code: str, strategy_text: str | None = None) -> str:
 
     raw = None
     for cfg in candidate_configs:
-        print(f"🛰️🌙 MOON DEV: Debug model attempt {cfg['type']} :: {cfg['name']}")
+        print(f"🛰️🕉️ MOON DEV: Debug model attempt {cfg['type']} :: {cfg['name']}")
         try:
             raw = rbi_agent.chat_with_model(
                 rbi_agent.DEBUG_PROMPT,
@@ -187,7 +187,7 @@ def debug_fix_code(code: str, strategy_text: str | None = None) -> str:
     if not raw:
         return code
     fixed = rbi_agent.clean_model_output(raw, "code")
-    print("✅🌙 MOON DEV: Debug pass produced updated code ✨")
+    print("✅🕉️ MOON DEV: Debug pass produced updated code ✨")
     return fixed or code
 
 
@@ -195,7 +195,7 @@ def write_code(output_dir: Path, strategy_name: str, code: str) -> Path:
     out_file = output_dir / f"{strategy_name}_BT.py"
     with open(out_file, "w") as f:
         f.write(code)
-    print(f"💾🌙 MOON DEV: Saved backtest code to {out_file}")
+    print(f"💾🕉️ MOON DEV: Saved backtest code to {out_file}")
     return out_file
 
 
@@ -206,12 +206,12 @@ def save_text_outputs(output_dir: Path, strategy_name: str, stdout: str, stderr:
         f.write(stdout or "")
     with open(stderr_file, "w") as f:
         f.write(stderr or "")
-    print(f"💾🌙 MOON DEV: Saved stdout/stderr to {stdout_file.name} / {stderr_file.name}")
+    print(f"💾🕉️ MOON DEV: Saved stdout/stderr to {stdout_file.name} / {stderr_file.name}")
 
 
 def run_one_strategy(research_dir: Path, file_path: Path, conda_env: str) -> None:
     print("\n" + "=" * 80)
-    print(f"🌙 MOON DEV RUN: Processing {file_path.name} 📜")
+    print(f"🕉️ MOON DEV RUN: Processing {file_path.name} 📜")
     print("=" * 80)
 
     output_dir = ensure_output_dir(research_dir)
@@ -232,7 +232,7 @@ def run_one_strategy(research_dir: Path, file_path: Path, conda_env: str) -> Non
 
     while (not result.get("success")) and attempt < MAX_DEBUG_ATTEMPTS:
         attempt += 1
-        print(f"❌🌙 MOON DEV: Run failed. Attempting auto-fix #{attempt} 🔁")
+        print(f"❌🕉️ MOON DEV: Run failed. Attempting auto-fix #{attempt} 🔁")
         # Try debug fix
         code = debug_fix_code(code, strategy_text)
         # Package fix again (ensure compliance after debug)
@@ -241,19 +241,19 @@ def run_one_strategy(research_dir: Path, file_path: Path, conda_env: str) -> Non
         result = run_backtest_in_conda(str(code_path), conda_env)
 
     # 4) Finalize outputs
-    print("\n📊🌙 MOON DEV: EXECUTION RESULTS (raw)")
+    print("\n📊🕉️ MOON DEV: EXECUTION RESULTS (raw)")
     print(json.dumps({k: v for k, v in result.items() if k != "stdout" and k != "stderr"}, indent=2))
 
     # Always print stdout (the stats) to terminal per requirement
     stdout = result.get("stdout", "")
     stderr = result.get("stderr", "")
     if stdout:
-        print("\n📈🌙 MOON DEV: STANDARD OUTPUT (stats)")
+        print("\n📈🕉️ MOON DEV: STANDARD OUTPUT (stats)")
         print("-" * 60)
         print(stdout)
         print("-" * 60)
     if stderr:
-        print("\n⚠️🌙 MOON DEV: ERRORS/WARNINGS")
+        print("\n⚠️🕉️ MOON DEV: ERRORS/WARNINGS")
         print("-" * 60)
         print(stderr)
         print("-" * 60)
@@ -263,9 +263,9 @@ def run_one_strategy(research_dir: Path, file_path: Path, conda_env: str) -> Non
     save_text_outputs(output_dir, strategy_name, stdout, stderr)
 
     if result.get("success"):
-        print("✅🌙 MOON DEV: Backtest completed successfully! To the moon! 🚀")
+        print("✅🕉️ MOON DEV: Backtest completed successfully! To the moon! 🚀")
     else:
-        print("💥🌙 MOON DEV: Backtest still failing after auto-fixes. Needs manual review.")
+        print("💥🕉️ MOON DEV: Backtest still failing after auto-fixes. Needs manual review.")
 
 
 def main():
@@ -288,26 +288,26 @@ def main():
             if candidate.exists() and candidate.is_dir():
                 research_dir = candidate
             i += 1
-    print(f"\n🌙 MOON DEV: Batch Backtester starting for research dir: {research_dir}")
+    print(f"\n🕉️ MOON DEV: Batch Backtester starting for research dir: {research_dir}")
 
     # Collect strategy files
     txt_files = sorted([p for p in research_dir.glob("*.txt") if p.is_file()])
     if only_file is not None:
         if not only_file.exists():
-            print(f"❌🌙 MOON DEV: --file not found: {only_file}")
+            print(f"❌🕉️ MOON DEV: --file not found: {only_file}")
             return
         if only_file.is_file():
             txt_files = [only_file]
         else:
-            print(f"❌🌙 MOON DEV: --file must be a file: {only_file}")
+            print(f"❌🕉️ MOON DEV: --file must be a file: {only_file}")
             return
-    print(f"🔎🌙 MOON DEV: Found {len(txt_files)} strategies to process ✍️")
+    print(f"🔎🕉️ MOON DEV: Found {len(txt_files)} strategies to process ✍️")
 
     for idx, file_path in enumerate(txt_files, start=1):
-        print(f"\n➡️🌙 MOON DEV: [{idx}/{len(txt_files)}] {file_path.name}")
+        print(f"\n➡️🕉️ MOON DEV: [{idx}/{len(txt_files)}] {file_path.name}")
         run_one_strategy(research_dir, file_path, CONDA_ENV_NAME)
 
-    print("\n🎉🌙 MOON DEV: Batch run complete. Check the GPT-5 folder for code and outputs. ✨🚀")
+    print("\n🎉🕉️ MOON DEV: Batch run complete. Check the GPT-5 folder for code and outputs. ✨🚀")
 
 
 if __name__ == "__main__":

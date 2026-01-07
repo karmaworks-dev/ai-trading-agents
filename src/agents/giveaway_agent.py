@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-🌙 Moon Dev's Giveaway Agent 🌙
+🕉️ Karma Dev's Giveaway Agent 🕉️
 
 Tracks chat participation across YouTube, Twitch, and X via Restream.
 - Monitors chat messages and awards points for participation
 - Collects and stores Solana wallet addresses
 - Maintains point leaderboard for giveaway eligibility
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import sys
 from pathlib import Path
 
-# 🌙 Moon Dev: Dynamic path calculation
+# 🕉️ Karma Dev: Dynamic path calculation
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "src" / "data"
 
@@ -70,7 +70,7 @@ POLL_INTERVAL = 0.1  # 100ms for responsiveness
 
 
 class GiveawayAgent:
-    """🌙 Moon Dev's Giveaway Agent for tracking chat participation"""
+    """🕉️ Karma Dev's Giveaway Agent for tracking chat participation"""
 
     def __init__(self):
         """Initialize the Giveaway Agent"""

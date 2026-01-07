@@ -1,7 +1,7 @@
 """
-Moon Dev's WebSocket Data Manager
+Karma Dev's WebSocket Data Manager
 Unified interface for real-time market data that replaces API polling
-Built with love by Moon Dev
+Built with love by Karma Dev
 
 DATA SOURCE ARCHITECTURE:
 ========================

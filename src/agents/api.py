@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's API Handler
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's API Handler
+Built with love by Karma Dev 🚀
 
 disclaimer: this is not financial advice and there is no guarantee of any kind. use at your own risk.
 
@@ -18,13 +18,13 @@ Quick Start Guide:
 
 3. Basic Usage:
    ```python
-   from agents.api import MoonDevAPI
+   from agents.api import KarmaDevAPI
 
    # Initialize with env variable (recommended)
-   api = MoonDevAPI()
+   api = KarmaDevAPI()
 
    # Or initialize with direct key
-   api = MoonDevAPI(api_key="your_key_here")
+   api = KarmaDevAPI(api_key="your_key_here")
 
    # Get limited liquidation data (recommended for testing)
    liquidations = api.get_liquidation_data(limit=50000)  # Last 50,000 rows
@@ -48,7 +48,7 @@ Available Methods:
 - get_token_addresses(): Get new Solana token launches and their addresses
 - get_oi_data(): Get detailed open interest data for ETH or BTC individually
 - get_oi_total(): Get total open interest data for ETH & BTC combined
-- get_copybot_follow_list(): Get Moon Dev's personal copy trading follow list (for reference only - DYOR!)
+- get_copybot_follow_list(): Get Karma Dev's personal copy trading follow list (for reference only - DYOR!)
 - get_copybot_recent_transactions(): Get recent transactions from the followed wallets above
 - get_agg_positions_hlp(): Get aggregated positions on HLP data
 - get_positions_hlp(): Get detailed positions on HLP data
@@ -60,7 +60,7 @@ Data Details:
 - Funding Rates: Current funding rates across different tokens
 - Token Addresses: New token launches on Solana with contract addresses
 - Open Interest: Both detailed (per-token) and combined OI metrics
-- CopyBot Data: Moon Dev's personal trading signals (use as reference only, always DYOR!)
+- CopyBot Data: Karma Dev's personal trading signals (use as reference only, always DYOR!)
 
 Rate Limits:
 -----------
@@ -73,7 +73,7 @@ Rate Limits:
 2. There are no guarantees of any kind
 3. Use at your own risk
 4. Always do your own research (DYOR)
-5. The copybot follow list is Moon Dev's personal list and should not be used alone
+5. The copybot follow list is Karma Dev's personal list and should not be used alone
 
 Need an API key? for a limited time, bootcamp members get free api keys for claude, openai, helius, birdeye & quant elite gets access to the moon dev api. join here: https://algotradecamp.com
 """
@@ -96,7 +96,7 @@ load_dotenv()
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
-class MoonDevAPI:
+class KarmaDevAPI:
     def __init__(self, api_key=None, base_url="http://api.moondev.com:8000"):
         """Initialize the API handler"""
         # Simplified data directory path
@@ -166,7 +166,7 @@ class MoonDevAPI:
 
     def _fetch_liquidation_chunked(self, limit=None):
         """
-        🌙 Moon Dev Enhanced Liquidation Data Download
+        🕉️ Karma Dev Enhanced Liquidation Data Download
 
         Downloads liquidation data efficiently. For limited requests, uses existing API.
         For full data, downloads and sorts chronologically like OHLCV data.
@@ -174,7 +174,7 @@ class MoonDevAPI:
         try:
             if limit is not None:
                 # For limited requests, use the existing efficient API
-                print(f"🎯 Moon Dev: Getting last {limit:,} liquidation records...")
+                print(f"🎯 Karma Dev: Getting last {limit:,} liquidation records...")
                 df = self._fetch_csv("liq_data.csv", limit=limit)
 
                 if df is not None:
@@ -198,17 +198,17 @@ class MoonDevAPI:
                         df['datetime'] = pd.to_datetime(df[timestamp_col], unit='ms')
                         # Sort oldest first (like OHLCV data)
                         df = df.sort_values('datetime', ascending=True)
-                        print(f"✅ Moon Dev: Got {len(df):,} records")
+                        print(f"✅ Karma Dev: Got {len(df):,} records")
                         print(f"📅 Date range: {df['datetime'].min()} → {df['datetime'].max()}")
                         print(f"🎯 Data sorted chronologically (oldest→newest like OHLCV)")
                     else:
-                        print(f"✅ Moon Dev: Got {len(df):,} records (timestamp column not identified)")
+                        print(f"✅ Karma Dev: Got {len(df):,} records (timestamp column not identified)")
 
                 return df
 
             else:
                 # For unlimited requests, use proven CHUNKED download approach
-                print("🌙 Moon Dev: Downloading FULL liquidation dataset (1.5GB+)...")
+                print("🕉️ Karma Dev: Downloading FULL liquidation dataset (1.5GB+)...")
                 print("🚀 Using proven chunked download approach from file END")
 
                 return self._download_complete_chunked_dataset()
@@ -235,7 +235,7 @@ class MoonDevAPI:
             return None
 
         except Exception as e:
-            print(f"💥 Moon Dev error getting file size: {e}")
+            print(f"💥 Karma Dev error getting file size: {e}")
             return None
 
     def _download_chunk_range(self, url, start_byte, end_byte, chunk_number):
@@ -251,11 +251,11 @@ class MoonDevAPI:
             elif response.status_code == 200:
                 return response.content
             else:
-                print(f"💥 Moon Dev unexpected status code: {response.status_code}")
+                print(f"💥 Karma Dev unexpected status code: {response.status_code}")
                 return None
 
         except Exception as e:
-            print(f"💥 Moon Dev error downloading chunk {chunk_number}: {e}")
+            print(f"💥 Karma Dev error downloading chunk {chunk_number}: {e}")
             return None
 
     def _parse_liquidation_chunk(self, chunk_bytes):
@@ -293,17 +293,17 @@ class MoonDevAPI:
             return records
 
         except Exception as e:
-            print(f"💥 Moon Dev error parsing chunk: {e}")
+            print(f"💥 Karma Dev error parsing chunk: {e}")
             return []
 
     def _download_complete_chunked_dataset(self):
         """
-        🌙 Moon Dev's NEW streaming download for complete 1.5GB dataset
+        🕉️ Karma Dev's NEW streaming download for complete 1.5GB dataset
         Uses chunked transfer encoding - no Content-Length header required!
         """
         url = f'{self.base_url}/files/liq_data.csv'
 
-        print(f"🚀 Moon Dev: Starting NEW chunked streaming download...")
+        print(f"🚀 Karma Dev: Starting NEW chunked streaming download...")
         print(f"✨ Using server's chunked transfer encoding - no file size needed!")
 
         try:
@@ -311,19 +311,19 @@ class MoonDevAPI:
             response = self.session.get(url, headers=self.headers, stream=True, timeout=(30, None))
             response.raise_for_status()
 
-            print(f"📡 Moon Dev: Connected! Status: {response.status_code}")
+            print(f"📡 Karma Dev: Connected! Status: {response.status_code}")
             print(f"📋 Transfer-Encoding: {response.headers.get('Transfer-Encoding', 'not chunked')}")
 
             # Save to file using streaming
             full_data_path = self.base_dir / "liq_data_full.csv"
-            print(f"💾 Moon Dev: Saving to {full_data_path}")
+            print(f"💾 Karma Dev: Saving to {full_data_path}")
 
             chunk_size = 65536  # 64KB chunks as recommended by server team
             chunk_count = 0
             total_bytes = 0
 
             with open(full_data_path, 'wb') as f:
-                print("🚀 Moon Dev: Starting chunked download...")
+                print("🚀 Karma Dev: Starting chunked download...")
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:
                         f.write(chunk)
@@ -333,17 +333,17 @@ class MoonDevAPI:
                         # Progress update every 1000 chunks (~64MB)
                         if chunk_count % 1000 == 0:
                             mb_downloaded = total_bytes / (1024**2)
-                            print(f"📡 Moon Dev: Downloaded {chunk_count} chunks ({mb_downloaded:.1f} MB so far)... 🌙")
+                            print(f"📡 Karma Dev: Downloaded {chunk_count} chunks ({mb_downloaded:.1f} MB so far)... 🕉️")
 
-            print(f"✅ Moon Dev: Download complete! {chunk_count} chunks, {total_bytes:,} total bytes")
+            print(f"✅ Karma Dev: Download complete! {chunk_count} chunks, {total_bytes:,} total bytes")
 
             # Verify file was saved and load as DataFrame
             if full_data_path.exists():
                 file_size_mb = full_data_path.stat().st_size / (1024**2)
-                print(f"📊 Moon Dev: File saved successfully! Size: {file_size_mb:.1f} MB")
+                print(f"📊 Karma Dev: File saved successfully! Size: {file_size_mb:.1f} MB")
 
                 # Load into DataFrame
-                print("📈 Moon Dev: Loading data into DataFrame...")
+                print("📈 Karma Dev: Loading data into DataFrame...")
                 df = pd.read_csv(full_data_path)
 
                 # Check for datetime column and sort
@@ -356,34 +356,34 @@ class MoonDevAPI:
                     df = df.sort_values('datetime', ascending=True)
                     print(f"📅 Date range: {df['datetime'].min()} → {df['datetime'].max()}")
 
-                print(f"✅ Moon Dev COMPLETE DATASET SUCCESS!")
+                print(f"✅ Karma Dev COMPLETE DATASET SUCCESS!")
                 print(f"   📊 Total records: {len(df):,}")
                 print(f"   💾 File size: {file_size_mb:.1f} MB")
                 print(f"   🎯 Data sorted chronologically (oldest→newest like OHLCV)")
 
                 return df
             else:
-                print("💥 Moon Dev: File was not saved properly!")
+                print("💥 Karma Dev: File was not saved properly!")
                 return None
 
         except requests.exceptions.Timeout:
-            print("⏰ Moon Dev: Request timed out - server may be processing large file")
+            print("⏰ Karma Dev: Request timed out - server may be processing large file")
             print("💡 Try again or contact server admin to increase timeout")
             return None
 
         except requests.exceptions.ChunkedEncodingError as e:
-            print(f"📦 Moon Dev: Chunk encoding error - partial download may have occurred")
+            print(f"📦 Karma Dev: Chunk encoding error - partial download may have occurred")
             print(f"Error: {str(e)[:200]}")
             return None
 
         except Exception as e:
-            print(f"💥 Moon Dev error downloading full dataset: {str(e)}")
+            print(f"💥 Karma Dev error downloading full dataset: {str(e)}")
             print(f"📋 Stack trace:\n{traceback.format_exc()}")
             return None
 
     def get_liquidation_data(self, limit=None):
         """
-        🌙 Moon Dev Enhanced Liquidation Data
+        🕉️ Karma Dev Enhanced Liquidation Data
 
         Get historical liquidation data with advanced chunked downloading.
         Downloads recent data first for efficiency.
@@ -398,7 +398,7 @@ class MoonDevAPI:
             pandas.DataFrame: Liquidation data sorted chronologically (oldest first)
         """
         try:
-            print(f"🌙 Moon Dev: Getting liquidation data (limit={limit})...")
+            print(f"🕉️ Karma Dev: Getting liquidation data (limit={limit})...")
 
             # Use the chunked API approach for better performance
             return self._fetch_liquidation_chunked(limit=limit)
@@ -469,7 +469,7 @@ class MoonDevAPI:
     def get_copybot_follow_list(self):
         """Get current copy trading follow list"""
         try:
-            print("📋 Moon Dev CopyBot: Fetching follow list...")
+            print("📋 Karma Dev CopyBot: Fetching follow list...")
             if not self.api_key:
                 print("❗ API key is required for copybot endpoints")
                 return None
@@ -504,7 +504,7 @@ class MoonDevAPI:
     def get_copybot_recent_transactions(self):
         """Get recent copy trading transactions"""
         try:
-            print("🔄 Moon Dev CopyBot: Fetching recent transactions...")
+            print("🔄 Karma Dev CopyBot: Fetching recent transactions...")
             if not self.api_key:
                 print("❗ API key is required for copybot endpoints")
                 return None
@@ -548,7 +548,7 @@ class MoonDevAPI:
     def get_whale_addresses(self):
         """Get list of whale addresses"""
         try:
-            print("🐋 Moon Dev API: Fetching whale addresses...")
+            print("🐋 Karma Dev API: Fetching whale addresses...")
 
             url = f'{self.base_url}/files/whale_addresses.txt'
             response = self.session.get(url, headers=self.headers)
@@ -572,11 +572,11 @@ class MoonDevAPI:
             return None
 
 if __name__ == "__main__":
-    print("🌙 Moon Dev API Test Suite 🚀")
+    print("🕉️ Karma Dev API Test Suite 🚀")
     print("=" * 50)
 
     # Initialize API
-    api = MoonDevAPI()
+    api = KarmaDevAPI()
 
     # Test Historical Liquidation Data
     print("\n💥 Testing Liquidation Data...")
@@ -584,5 +584,5 @@ if __name__ == "__main__":
     if liq_data is not None:
         print(f"✨ Latest Liquidation Data Preview:\n{liq_data.head()}")
 
-    print("\n✨ Moon Dev API Test Complete! ✨")
+    print("\n✨ Karma Dev API Test Complete! ✨")
     print("\n💡 Note: Make sure to set MOONDEV_API_KEY in your .env file")

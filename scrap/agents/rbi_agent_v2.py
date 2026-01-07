@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's RBI AI v2.0 (Research-Backtest-Implement-Execute)
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's RBI AI v2.0 (Research-Backtest-Implement-Execute)
+Built with love by Karma Dev 🚀
 
 NEW IN v2.0: EXECUTION LOOP! 
 - Automatically executes backtests
@@ -110,7 +110,7 @@ for dir in [DATA_DIR, TODAY_DIR, RESEARCH_DIR, BACKTEST_DIR, PACKAGE_DIR,
 
 # All prompts (same as v1)
 RESEARCH_PROMPT = """
-You are Moon Dev's Research AI 🌙
+You are Karma Dev's Research AI 🕉️
 
 IMPORTANT NAMING RULES:
 1. Create a UNIQUE TWO-WORD NAME for this specific strategy
@@ -150,7 +150,7 @@ Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
 """
 
 BACKTEST_PROMPT = """
-You are Moon Dev's Backtest AI 🌙 ONLY SEND BACK CODE, NO OTHER TEXT.
+You are Karma Dev's Backtest AI 🕉️ ONLY SEND BACK CODE, NO OTHER TEXT.
 Create a backtesting.py implementation for the strategy.
 USE BACKTESTING.PY
 Include:
@@ -201,7 +201,7 @@ Example fix:
 RISK MANAGEMENT:
 1. Always calculate position sizes based on risk percentage
 2. Use proper stop loss and take profit calculations
-4. Print entry/exit signals with Moon Dev themed messages
+4. Print entry/exit signals with Karma Dev themed messages
 
 If you need indicators use TA lib or pandas TA. 
 
@@ -211,14 +211,14 @@ datetime, open, high, low, close, volume,
 2023-01-01 00:00:00, 16531.83, 16532.69, 16509.11, 16510.82, 231.05338022,
 2023-01-01 00:15:00, 16509.78, 16534.66, 16509.11, 16533.43, 308.12276951,
 
-Always add plenty of Moon Dev themed debug prints with emojis to make debugging easier! 🌙 ✨ 🚀
+Always add plenty of Karma Dev themed debug prints with emojis to make debugging easier! 🕉️ ✨ 🚀
 
 FOR THE PYTHON BACKTESTING LIBRARY USE BACKTESTING.PY AND SEND BACK ONLY THE CODE, NO OTHER TEXT.
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 DEBUG_PROMPT = """
-You are Moon Dev's Debug AI 🌙
+You are Karma Dev's Debug AI 🕉️
 Fix technical issues in the backtest code WITHOUT changing the strategy logic.
 
 CRITICAL ERROR TO FIX:
@@ -269,12 +269,12 @@ Focus on:
 
 DO NOT change strategy logic, entry/exit conditions, or risk management rules.
 
-Return the complete fixed code with Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 PACKAGE_PROMPT = """
-You are Moon Dev's Package AI 🌙
+You are Karma Dev's Package AI 🕉️
 Your job is to ensure the backtest code NEVER uses ANY backtesting.lib imports or functions.
 
 ❌ STRICTLY FORBIDDEN:
@@ -308,7 +308,7 @@ Example conversions:
 ✅ self.sma = self.I(talib.SMA, self.data.Close, timeperiod=20)
 
 IMPORTANT: Scan the ENTIRE code for any backtesting.lib usage and replace ALL instances!
-Return the complete fixed code with proper Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with proper Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
@@ -406,7 +406,7 @@ def log_processed_idea(idea: str, strategy_name: str = "Unknown") -> None:
     if not PROCESSED_IDEAS_LOG.exists():
         PROCESSED_IDEAS_LOG.parent.mkdir(parents=True, exist_ok=True)
         with open(PROCESSED_IDEAS_LOG, 'w') as f:
-            f.write("# Moon Dev's RBI AI - Processed Ideas Log 🌙\n")
+            f.write("# Karma Dev's RBI AI - Processed Ideas Log 🕉️\n")
             f.write("# Format: hash,timestamp,strategy_name,idea_snippet\n")
     
     # Add the entry
@@ -535,7 +535,7 @@ def animate_progress(agent_name, stop_event):
         "analyzing data 🔍",
         "making magic ✨",
         "trading secrets 🤫",
-        "Moon Dev approved 🌙",
+        "Karma Dev approved 🕉️",
         "to the moon! 🚀"
     ]
     
@@ -678,7 +678,7 @@ def process_trading_idea_with_execution(idea: str) -> None:
     THE NEW PROCESS WITH EXECUTION LOOP! 🚀
     Research -> Backtest -> Package -> Execute -> Debug (loop) -> Success!
     """
-    print("\n🚀 Moon Dev's RBI AI v2.0 Processing New Idea!")
+    print("\n🚀 Karma Dev's RBI AI v2.0 Processing New Idea!")
     print("🌟 Now with EXECUTION LOOP!")
     print(f"📝 Processing idea: {idea[:100]}...")
     
@@ -808,7 +808,7 @@ def process_trading_idea_with_execution(idea: str) -> None:
 
 def main():
     """Main function - process ideas from file"""
-    cprint(f"\n🌟 Moon Dev's RBI AI v2.0 Starting Up!", "green")
+    cprint(f"\n🌟 Karma Dev's RBI AI v2.0 Starting Up!", "green")
     cprint(f"📅 Today's Date: {TODAY_DATE}", "magenta")
     cprint(f"🔄 EXECUTION LOOP ENABLED!", "yellow")
     cprint(f"🐍 Using conda env: {CONDA_ENV}", "cyan")
@@ -856,7 +856,7 @@ def main():
             continue
         
         cprint(f"\n{'='*50}", "yellow")
-        cprint(f"🌙 Processing idea {i}/{total_ideas}", "cyan")
+        cprint(f"🕉️ Processing idea {i}/{total_ideas}", "cyan")
         cprint(f"📝 Idea: {idea[:100]}{'...' if len(idea) > 100 else ''}", "yellow")
         cprint(f"{'='*50}\n", "yellow")
         

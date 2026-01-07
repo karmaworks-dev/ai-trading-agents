@@ -1,5 +1,5 @@
 """
-🎯 Moon Dev's Coordinate Finder
+🎯 Karma Dev's Coordinate Finder
 A simple tool to find screen coordinates and test cursor movements
 """
 
@@ -14,7 +14,7 @@ from pathlib import Path
 # pyautogui.FAILSAFE = False
 
 def print_position():
-    """Print current mouse position with Moon Dev style"""
+    """Print current mouse position with Karma Dev style"""
     try:
         print("\n🎯 Press Ctrl+C to save current position or quit")
         while True:
@@ -35,7 +35,7 @@ def print_position():
         save = input("\nSave this position? (y/n): ").lower().strip()
         if save == 'y':
             save_position(*pyautogui.position())
-        print("\n👋 Moon Dev's Coordinate Finder shutting down...")
+        print("\n👋 Karma Dev's Coordinate Finder shutting down...")
 
 def save_position(x, y):
     """Save current position to config file"""
@@ -103,13 +103,13 @@ def test_movement():
         print(f"\n❌ Error testing movement: {e}")
 
 def main():
-    """Main function with Moon Dev style intro"""
+    """Main function with Karma Dev style intro"""
     # Clear screen
     print('\033c')
     
     # Print fancy header
     cprint("=" * 60, "cyan")
-    cprint("🌙 Moon Dev's Coordinate Finder 🎯", "cyan")
+    cprint("🕉️ Karma Dev's Coordinate Finder 🎯", "cyan")
     cprint("=" * 60, "cyan")
     cprint("\n📍 Move your cursor to find coordinates", "yellow")
     cprint("Instructions:", "yellow")

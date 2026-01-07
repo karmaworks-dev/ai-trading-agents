@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🌙 Moon Dev's Scraper Agent 🌙
+🕉️ Karma Dev's Scraper Agent 🕉️
 
 Scrapes websites and analyzes them using AI swarms!
 
@@ -29,7 +29,7 @@ Usage:
 
     Everything after the last URL becomes the custom prompt!
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os
@@ -48,7 +48,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-# 🌙 Moon Dev: Dynamic path calculation
+# 🕉️ Karma Dev: Dynamic path calculation
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "src" / "data"
 
@@ -56,7 +56,7 @@ DATA_DIR = PROJECT_ROOT / "src" / "data"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-# Import Moon Dev's agents and models
+# Import Karma Dev's agents and models
 from src.agents.swarm_agent import SwarmAgent
 from src.models.model_factory import model_factory
 
@@ -88,7 +88,7 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 
 class ScraperAgent:
-    """🌙 Moon Dev's Scraper Agent for website analysis"""
+    """🕉️ Karma Dev's Scraper Agent for website analysis"""
 
     def __init__(self, use_swarm: bool = USE_SWARM, prompt: Optional[str] = None):
         """
@@ -106,7 +106,7 @@ class ScraperAgent:
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
         cprint("\n" + "="*60, "cyan")
-        cprint("🌙 Moon Dev's Scraper Agent Initialized 🌙", "cyan", attrs=['bold'])
+        cprint("🕉️ Karma Dev's Scraper Agent Initialized 🕉️", "cyan", attrs=['bold'])
         cprint("="*60, "cyan")
 
         # Initialize AI models
@@ -564,14 +564,14 @@ Content:
         while True:
             try:
                 # Get input from user
-                user_input = input(colored("🌙 Enter URLs > ", "cyan", attrs=['bold'])).strip()
+                user_input = input(colored("🕉️ Enter URLs > ", "cyan", attrs=['bold'])).strip()
 
                 if not user_input:
                     continue
 
                 # Check for exit commands
                 if user_input.lower() in ['quit', 'exit', 'q']:
-                    cprint("\n👋 Goodbye Moon Dev! 🌙", "green", attrs=['bold'])
+                    cprint("\n👋 Goodbye Karma Dev! 🕉️", "green", attrs=['bold'])
                     break
 
                 # Parse URLs and custom prompt
@@ -668,7 +668,7 @@ Content:
 
             except KeyboardInterrupt:
                 cprint("\n\n⚠️ Interrupted by user", "yellow")
-                cprint("👋 Goodbye Moon Dev! 🌙", "cyan", attrs=['bold'])
+                cprint("👋 Goodbye Karma Dev! 🕉️", "cyan", attrs=['bold'])
                 break
             except Exception as e:
                 cprint(f"\n❌ Error: {str(e)}", "red")

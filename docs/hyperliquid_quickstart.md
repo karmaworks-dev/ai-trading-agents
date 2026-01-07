@@ -133,6 +133,6 @@ python src/agents/example_unified_agent.py
 
 ---
 
-**TL;DR**: Change one line in config.py, and your bots trade anywhere! 🌙🚀
+**TL;DR**: Change one line in config.py, and your bots trade anywhere! 🕉️🚀
 
-*Built with love by Moon Dev*
+*Built with love by Karma Dev*

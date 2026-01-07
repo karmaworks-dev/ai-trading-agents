@@ -35,8 +35,8 @@ _dedup_lock = threading.Lock()
 _recent_logs = OrderedDict()
 
 # Deduplication settings
-DEDUP_WINDOW_SECONDS = 2.0  # Window to consider logs as duplicates
-DEDUP_CACHE_MAX_SIZE = 100  # Maximum number of entries in cache
+DEDUP_WINDOW_SECONDS = 0.5  # Window to consider logs as duplicates (reduced from 2.0)
+DEDUP_CACHE_MAX_SIZE = 200  # Maximum number of entries in cache (increased from 100)
 
 
 def _get_log_hash(message: str, level: str) -> str:

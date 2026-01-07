@@ -1,6 +1,6 @@
-# 🌙 Prompt Enhancement Agent
+# 🕉️ Prompt Enhancement Agent
 
-**Built by Moon Dev**
+**Built by Karma Dev**
 
 An AI-powered prompt enhancement agent that transforms basic prompts into professional, production-ready prompts using best practices from top prompt design resources (Parahelp & Cursor).
 
@@ -55,7 +55,7 @@ When you run the agent, you'll see:
 
 ```
 ╔════════════════════════════════════════════════════════════╗
-║  🌙 Moon Dev's Prompt Enhancement Agent 🌙                ║
+║  🕉️ Karma Dev's Prompt Enhancement Agent 🕉️                ║
 ║                                                            ║
 ║  Transform basic prompts into professional masterpieces   ║
 ║  Using best practices from Parahelp & Cursor              ║
@@ -220,7 +220,7 @@ Edit settings at the top of `src/agents/prompt_agent.py`:
 
 ```python
 # Model Configuration
-GLM_MODEL = "z-ai/glm-4.6"  # Default: Zhipu AI GLM - Moon Dev's choice!
+GLM_MODEL = "z-ai/glm-4.6"  # Default: Zhipu AI GLM - Karma Dev's choice!
 
 # Alternative models you can use:
 # GLM_MODEL = "meta-llama/llama-3.3-70b-instruct:free"  # Llama 3.3 70B (free, reliable English)
@@ -413,9 +413,9 @@ Get more thorough analysis with comprehensive prompts.
 
 ---
 
-## 🤝 Integration with Moon Dev Ecosystem
+## 🤝 Integration with Karma Dev Ecosystem
 
-The Prompt Agent works seamlessly with all other Moon Dev agents:
+The Prompt Agent works seamlessly with all other Karma Dev agents:
 
 - **RBI Agent**: Generate better strategy descriptions for backtesting
 - **Trading Agent**: Create clearer trading agent instructions
@@ -531,7 +531,7 @@ function to fetch stock data
 
 ---
 
-## 🌙 Moon Dev's Pro Tips
+## 🕉️ Karma Dev's Pro Tips
 
 1. **Keep Iterating**: Don't settle for first enhancement. Refine further if needed.
 
@@ -577,9 +577,9 @@ function to fetch stock data
 
 ---
 
-**🌙 Built with love by Moon Dev - Democratizing AI agent development**
+**🕉️ Built with love by Karma Dev - Democratizing AI agent development**
 
-*Part of the Moon Dev AI Agents for Trading ecosystem - 48+ specialized agents, all open source.*
+*Part of the Karma Dev AI Agents for Trading ecosystem - 48+ specialized agents, all open source.*
 
 ---
 
@@ -588,4 +588,4 @@ function to fetch stock data
 - **Cursor Prompt Design**: https://cursor.com/blog/prompt-design
 - **Parahelp Framework**: https://parahelp.com/blog/prompt-design
 - **OpenRouter Docs**: https://openrouter.ai/docs
-- **Moon Dev YouTube**: Weekly AI agent tutorials
+- **Karma Dev YouTube**: Weekly AI agent tutorials

@@ -1,5 +1,5 @@
 '''
-🌙 Moon Dev's Token Scanner - Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Token Scanner - Built with love by Karma Dev 🚀
 Watches for new Solana token launches and displays them with fun animations!
 
 
@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 
-# 🌙 Moon Dev: Calculate project root dynamically
+# 🕉️ Karma Dev: Calculate project root dynamically
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 GITHUB_DIR = PROJECT_ROOT.parent  # Parent folder containing all repos
 
@@ -52,7 +52,7 @@ DATA_FOLDER = Path(__file__).parent.parent / "data" / "sniper_agent"  # Folder f
 ATTENTION_EMOJIS = [
     "🚨", "💫", "⚡", "🔥", "✨", "💥",  # Attention-grabbing
     "🎯", "🎪", "🎢", "🎡", "🎠",       # Fun & festive
-    "🌈", "🦄", "🌟", "💎", "🚀"        # Moon Dev specials
+    "🌈", "🦄", "🌟", "💎", "🚀"        # Karma Dev specials
 ]
 
 # Background colors for token announcements
@@ -62,7 +62,7 @@ BACKGROUND_COLORS = [
 ]
 
 LAUNCH_EMOJIS = [
-    "🚀", "💎", "🌙", "⭐", "🔥", "💫", "✨", "🌟", "💰", "🎯",  # Classic crypto
+    "🚀", "💎", "🕉️", "⭐", "🔥", "💫", "✨", "🌟", "💰", "🎯",  # Classic crypto
     "🎆", "🌠", "⚡", "🌈", "🎨", "🎪", "🎭", "🎡", "🎢", "🎠",  # Fun & festive
     "🦁", "🐉", "🦊", "🦄", "🐋", "🦈", "🦅", "🦚", "🦜", "🦋",  # Cool animals
     "🏆", "🎮", "🎲", "🎱", "🎳", "🎪", "🎨", "🎭", "🎪", "🎢",  # Games & fun
@@ -70,7 +70,7 @@ LAUNCH_EMOJIS = [
     "💥", "🌪️", "⚡", "☄️", "🌠", "🎇", "🎆", "✨", "💫", "⭐",  # Energy & explosions
 ]
 
-# Sound effects paths - 🌙 Moon Dev: External repo (sibling to this repo)
+# Sound effects paths - 🕉️ Karma Dev: External repo (sibling to this repo)
 SOUND_EFFECTS = [
     str(GITHUB_DIR / "Untitled" / "sounds" / "pownew.MP3"),
     str(GITHUB_DIR / "Untitled" / "sounds" / "Shining.wav"),
@@ -80,7 +80,7 @@ SOUND_EFFECTS = [
 
 class TokenScanner:
     def __init__(self):
-        """🌙 Moon Dev's Token Scanner - Built with love by Moon Dev 🚀"""
+        """🕉️ Karma Dev's Token Scanner - Built with love by Karma Dev 🚀"""
         self.base_dir = Path(__file__).parent / "api_data"
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir = DATA_FOLDER

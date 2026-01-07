@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Base Strategy Class
+🕉️ Karma Dev's Base Strategy Class
 All custom strategies should inherit from this
 """
 

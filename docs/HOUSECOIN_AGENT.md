@@ -134,4 +134,4 @@ Exit Target: $1.68
 
 ---
 
-🌙 *Built with love by Moon Dev - Remember: 1 House = 1 Housecoin!*
+🕉️ *Built with love by Karma Dev - Remember: 1 House = 1 Housecoin!*

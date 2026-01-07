@@ -108,7 +108,7 @@ Examples:
 - Uses OpenAI-compatible SDK (`openai` package)
 - Base URL: `https://openrouter.ai/api/v1`
 - Follows same pattern as other model providers
-- Fully integrated with Moon Dev's ModelFactory
+- Fully integrated with Karma Dev's ModelFactory
 
 ## Files
 - `src/models/openrouter_model.py` - OpenRouter implementation

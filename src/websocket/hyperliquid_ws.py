@@ -1,7 +1,7 @@
 """
-Moon Dev's Hyperliquid WebSocket Client
+Karma Dev's Hyperliquid WebSocket Client
 Real-time data feed for trading agents
-Built with love by Moon Dev
+Built with love by Karma Dev
 
 Features:
 - Real-time order book, trades, and candle data
@@ -668,7 +668,7 @@ def _example_disconnect_handler(was_clean: bool):
 def test_websocket():
     """Test the WebSocket client"""
     cprint("\n" + "=" * 60, "cyan")
-    cprint("Moon Dev's Hyperliquid WebSocket Test", "cyan")
+    cprint("Karma Dev's Hyperliquid WebSocket Test", "cyan")
     cprint("=" * 60 + "\n", "cyan")
 
     # Create client with callbacks

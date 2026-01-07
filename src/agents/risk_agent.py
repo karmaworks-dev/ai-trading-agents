@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Risk Management Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Risk Management Agent
+Built with love by Karma Dev 🚀
 """
 
 # Model override settings - Adding DeepSeek support
@@ -9,7 +9,7 @@ DEEPSEEK_BASE_URL = "https://api.deepseek.com"  # Base URL for DeepSeek API
 
 # 🛡️ Risk Override Prompt - The Secret Sauce!
 RISK_OVERRIDE_PROMPT = """
-You are Moon Dev's Risk Management AI 🛡️
+You are Karma Dev's Risk Management AI 🛡️
 
 We've hit a {limit_type} limit and need to decide whether to override it.
 
@@ -63,7 +63,7 @@ load_dotenv()
 
 class RiskAgent(BaseAgent):
     def __init__(self):
-        """Initialize Moon Dev's Risk Agent 🛡️"""
+        """Initialize Karma Dev's Risk Agent 🛡️"""
         super().__init__('risk')  # Initialize base agent with type
 
         # Set AI parameters from config
@@ -116,7 +116,7 @@ class RiskAgent(BaseAgent):
         total_value = 0.0
         
         try:
-            print("\n🔍 Moon Dev's Portfolio Value Calculator Starting... 🚀")
+            print("\n🔍 Karma Dev's Portfolio Value Calculator Starting... 🚀")
             
             # Get USDC balance first
             print("💵 Getting USDC balance...")
@@ -150,7 +150,7 @@ class RiskAgent(BaseAgent):
                         print("🔍 Full error trace:")
                         traceback.print_exc()
             
-            print(f"\n💎 Moon Dev's Total Portfolio Value: ${total_value:.2f} 🌙")
+            print(f"\n💎 Karma Dev's Total Portfolio Value: ${total_value:.2f} 🕉️")
             return total_value
             
         except Exception as e:
@@ -281,7 +281,7 @@ class RiskAgent(BaseAgent):
                 response = self.deepseek_client.chat.completions.create(
                     model="deepseek-chat",
                     messages=[
-                        {"role": "system", "content": "You are Moon Dev's Risk Management AI. Analyze positions and respond with OVERRIDE or RESPECT_LIMIT."},
+                        {"role": "system", "content": "You are Karma Dev's Risk Management AI. Analyze positions and respond with OVERRIDE or RESPECT_LIMIT."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=self.ai_max_tokens,
@@ -497,7 +497,7 @@ Then explain your reasoning.
                 response = self.deepseek_client.chat.completions.create(
                     model="deepseek-chat",
                     messages=[
-                        {"role": "system", "content": "You are Moon Dev's Risk Management AI. Analyze the breach and decide whether to close positions."},
+                        {"role": "system", "content": "You are Karma Dev's Risk Management AI. Analyze the breach and decide whether to close positions."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=self.ai_max_tokens,
@@ -619,7 +619,7 @@ def main():
             break
         except Exception as e:
             print(f"❌ Error: {str(e)}")
-            print("🔧 Moon Dev suggests checking the logs and trying again!")
+            print("🔧 Karma Dev suggests checking the logs and trying again!")
             time.sleep(300)  # Still sleep on error
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ COPYBOT_DELAY_SECONDS = 5      # Wait 5s after their trade
 - Stop copying after 3 losses
 
 ## Data Source
-Moon Dev API: `/api/copybot-follow-list`
+Karma Dev API: `/api/copybot-follow-list`
 
 ## Output
 `src/data/copybot_agent/[date]/copied_trades.csv`

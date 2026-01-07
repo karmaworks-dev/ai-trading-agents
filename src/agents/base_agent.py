@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Base Agent
+🕉️ Karma Dev's Base Agent
 Parent class for all trading agents with unified exchange support
 """
 

@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's RBI AI v3.0 (Research-Backtest-Implement-Execute-OPTIMIZE)
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's RBI AI v3.0 (Research-Backtest-Implement-Execute-OPTIMIZE)
+Built with love by Karma Dev 🚀
 
 🎯 THE PROFIT TARGET HUNTER 🎯
 
@@ -148,7 +148,7 @@ for dir in [DATA_DIR, TODAY_DIR, RESEARCH_DIR, BACKTEST_DIR, PACKAGE_DIR,
 
 # All prompts (same as v1)
 RESEARCH_PROMPT = """
-You are Moon Dev's Research AI 🌙
+You are Karma Dev's Research AI 🕉️
 
 IMPORTANT NAMING RULES:
 1. Create a UNIQUE TWO-WORD NAME for this specific strategy
@@ -188,7 +188,7 @@ Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
 """
 
 BACKTEST_PROMPT = """
-You are Moon Dev's Backtest AI 🌙 ONLY SEND BACK CODE, NO OTHER TEXT.
+You are Karma Dev's Backtest AI 🕉️ ONLY SEND BACK CODE, NO OTHER TEXT.
 Create a backtesting.py implementation for the strategy.
 USE BACKTESTING.PY
 Include:
@@ -239,7 +239,7 @@ Example fix:
 RISK MANAGEMENT:
 1. Always calculate position sizes based on risk percentage
 2. Use proper stop loss and take profit calculations
-4. Print entry/exit signals with Moon Dev themed messages
+4. Print entry/exit signals with Karma Dev themed messages
 
 If you need indicators use TA lib or pandas TA. 
 
@@ -249,19 +249,19 @@ datetime, open, high, low, close, volume,
 2023-01-01 00:00:00, 16531.83, 16532.69, 16509.11, 16510.82, 231.05338022,
 2023-01-01 00:15:00, 16509.78, 16534.66, 16509.11, 16533.43, 308.12276951,
 
-Always add plenty of Moon Dev themed debug prints with emojis to make debugging easier! 🌙 ✨ 🚀
+Always add plenty of Karma Dev themed debug prints with emojis to make debugging easier! 🕉️ ✨ 🚀
 
 MULTI-DATA TESTING REQUIREMENT:
 At the VERY END of your code (after all strategy definitions), you MUST add this EXACT block:
 
 ```python
-# 🌙 MOON DEV'S MULTI-DATA TESTING FRAMEWORK 🚀
+# 🕉️ MOON DEV'S MULTI-DATA TESTING FRAMEWORK 🚀
 # Tests this strategy on 25+ data sources automatically!
 if __name__ == "__main__":
     import sys
     import os
 
-    # Import the multi-data tester from Moon Dev's trading bots repo
+    # Import the multi-data tester from Karma Dev's trading bots repo
     # Note: Update this path to your moon-dev-trading-bots location if different
     trading_bots_path = Path(__file__).parent.parent.parent.parent / "moon-dev-trading-bots" / "backtests"
     sys.path.append(str(trading_bots_path))
@@ -290,7 +290,7 @@ ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 DEBUG_PROMPT = """
-You are Moon Dev's Debug AI 🌙
+You are Karma Dev's Debug AI 🕉️
 Fix technical issues in the backtest code WITHOUT changing the strategy logic.
 
 CRITICAL ERROR TO FIX:
@@ -341,12 +341,12 @@ Focus on:
 
 DO NOT change strategy logic, entry/exit conditions, or risk management rules.
 
-Return the complete fixed code with Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 PACKAGE_PROMPT = """
-You are Moon Dev's Package AI 🌙
+You are Karma Dev's Package AI 🕉️
 Your job is to ensure the backtest code NEVER uses ANY backtesting.lib imports or functions.
 
 ❌ STRICTLY FORBIDDEN:
@@ -380,12 +380,12 @@ Example conversions:
 ✅ self.sma = self.I(talib.SMA, self.data.Close, timeperiod=20)
 
 IMPORTANT: Scan the ENTIRE code for any backtesting.lib usage and replace ALL instances!
-Return the complete fixed code with proper Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with proper Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 OPTIMIZE_PROMPT = """
-You are Moon Dev's Optimization AI 🌙
+You are Karma Dev's Optimization AI 🕉️
 Your job is to IMPROVE the strategy to achieve higher returns while maintaining good risk management.
 
 CURRENT PERFORMANCE:
@@ -426,14 +426,14 @@ OPTIMIZATION TECHNIQUES TO CONSIDER:
 
 IMPORTANT RULES:
 - DO NOT break the code structure
-- Keep all Moon Dev debug prints
+- Keep all Karma Dev debug prints
 - Maintain proper backtesting.py format
 - Use self.I() for all indicators
 - Position sizes must be int or fraction (0-1)
 - Focus on REALISTIC improvements (no curve fitting!)
 - Explain your optimization changes in comments
 
-Return the COMPLETE optimized code with Moon Dev themed comments explaining what you improved! 🌙 ✨
+Return the COMPLETE optimized code with Karma Dev themed comments explaining what you improved! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
@@ -550,7 +550,7 @@ def log_processed_idea(idea: str, strategy_name: str = "Unknown") -> None:
     if not PROCESSED_IDEAS_LOG.exists():
         PROCESSED_IDEAS_LOG.parent.mkdir(parents=True, exist_ok=True)
         with open(PROCESSED_IDEAS_LOG, 'w') as f:
-            f.write("# Moon Dev's RBI AI - Processed Ideas Log 🌙\n")
+            f.write("# Karma Dev's RBI AI - Processed Ideas Log 🕉️\n")
             f.write("# Format: hash,timestamp,strategy_name,idea_snippet\n")
     
     # Add the entry
@@ -679,7 +679,7 @@ def animate_progress(agent_name, stop_event):
         "analyzing data 🔍",
         "making magic ✨",
         "trading secrets 🤫",
-        "Moon Dev approved 🌙",
+        "Karma Dev approved 🕉️",
         "to the moon! 🚀"
     ]
     
@@ -853,7 +853,7 @@ def process_trading_idea_with_execution(idea: str) -> None:
     THE NEW V3.0 PROCESS WITH OPTIMIZATION LOOP! 🚀🎯
     Research -> Backtest -> Package -> Execute -> Debug (loop) -> OPTIMIZE (loop) -> Target Hit!
     """
-    print("\n🚀 Moon Dev's RBI AI v3.0 Processing New Idea!")
+    print("\n🚀 Karma Dev's RBI AI v3.0 Processing New Idea!")
     print("🎯 Now with OPTIMIZATION LOOP!")
     print(f"🎯 Target Return: {TARGET_RETURN}%")
     print(f"📝 Processing idea: {idea[:100]}...")
@@ -1099,7 +1099,7 @@ def process_trading_idea_with_execution(idea: str) -> None:
 
 def main():
     """Main function - process ideas from file"""
-    cprint(f"\n🌟 Moon Dev's RBI AI v3.0 Starting Up!", "green")
+    cprint(f"\n🌟 Karma Dev's RBI AI v3.0 Starting Up!", "green")
     cprint(f"📅 Today's Date: {TODAY_DATE}", "magenta")
     cprint(f"🎯 OPTIMIZATION LOOP ENABLED!", "yellow")
     cprint(f"🎯 Target Return: {TARGET_RETURN}%", "green")
@@ -1149,7 +1149,7 @@ def main():
             continue
         
         cprint(f"\n{'='*50}", "yellow")
-        cprint(f"🌙 Processing idea {i}/{total_ideas}", "cyan")
+        cprint(f"🕉️ Processing idea {i}/{total_ideas}", "cyan")
         cprint(f"📝 Idea: {idea[:100]}{'...' if len(idea) > 100 else ''}", "yellow")
         cprint(f"{'='*50}\n", "yellow")
         

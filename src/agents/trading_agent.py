@@ -1,5 +1,5 @@
 """
-LLM Trading Agent
+🕉️ Karma Dev's LLM Trading Agent 🕉️
 
 DUAL-MODE AI TRADING SYSTEM:
 
@@ -13,6 +13,8 @@ SWARM MODE (Consensus - ~45-60 seconds per token):
    - Models vote: "Buy", "Sell", or "Do Nothing"
    - Majority decision wins with confidence percentage
    - Best for: Higher confidence trades, 15-minute+ timeframes
+
+Built with love by Karma Dev 🚀 | KUDOS to Moon Dev for the foundation
 """
 
 import os
@@ -363,7 +365,7 @@ Remember:
 """
 
 ALLOCATION_PROMPT = """
-You are our Portfolio Allocation Assistant 🌙
+You are our Portfolio Allocation Assistant 🕉️
 
 Given the total portfolio size and trading recommendations, allocate capital efficiently.
 Consider:
@@ -1570,7 +1572,7 @@ Return ONLY valid JSON with the following structure:
         return validated_decisions
 
     def execute_position_closes(self, close_decisions):
-        """Execute closes for positions marked by AI"""
+        """Execute closes for positions marked by AI with verification"""
         if not close_decisions:
             return
 
@@ -1579,6 +1581,7 @@ Return ONLY valid JSON with the following structure:
         cprint("=" * 60, "red")
 
         closed_count = 0
+        failed_closes = []
 
         for symbol, decision in close_decisions.items():
             if decision["action"] == "CLOSE":
@@ -1586,21 +1589,52 @@ Return ONLY valid JSON with the following structure:
                     cprint(f"\n   📉 Closing {symbol}...", "yellow")
                     cprint(f"   💡 Reason: {decision['reasoning']}", "white")
 
+                    # Execute close
                     close_result = n.close_complete_position(symbol, self.account)
 
                     if close_result:
-                        # Remove from position tracker
-                        if POSITION_TRACKER_AVAILABLE:
-                            remove_position(symbol)
-                            cprint(f"   📍 Removed {symbol} from position tracker", "cyan")
+                        # Verify position is actually closed
+                        verification_attempts = 0
+                        max_verification_attempts = 5
+                        position_closed = False
+                        
+                        while verification_attempts < max_verification_attempts:
+                            time.sleep(1)  # Wait 1 second between checks
+                            verification_attempts += 1
+                            
+                            try:
+                                # Check if position is actually closed
+                                pos_data = n.get_position(symbol, self.account)
+                                _, im_in_pos, pos_size, _, _, _, _ = pos_data
+                                
+                                if not im_in_pos or pos_size == 0:
+                                    position_closed = True
+                                    break
+                                else:
+                                    cprint(f"   ⏳ Verifying {symbol} closure... (attempt {verification_attempts}/{max_verification_attempts})", "yellow")
+                                    
+                            except Exception as verify_error:
+                                cprint(f"   ⚠️ Verification error for {symbol}: {verify_error}", "yellow")
+                                break
+                        
+                        if position_closed:
+                            # Remove from position tracker
+                            if POSITION_TRACKER_AVAILABLE:
+                                remove_position(symbol)
+                                cprint(f"   📍 Removed {symbol} from position tracker", "cyan")
 
-                        cprint(f"✅ {symbol} position closed successfully", "green", attrs=["bold"])
-                        add_console_log(f"✅ Closed {symbol} | Reason: {decision['reasoning']}", "success")
-
-                        closed_count += 1
+                            cprint(f"✅ {symbol} position closed successfully", "green", attrs=["bold"])
+                            add_console_log(f"✅ Closed {symbol} | Reason: {decision['reasoning']}", "success")
+                            closed_count += 1
+                        else:
+                            cprint(f"   ❌ {symbol} position close verification FAILED", "red", attrs=["bold"])
+                            cprint(f"   ⚠️ Position may still be open - will retry next cycle", "yellow")
+                            add_console_log(f"❌ {symbol} close verification failed - position may still be open", "error")
+                            failed_closes.append(symbol)
                     else:
                         cprint(f"   ⚠️ Position close returned False for {symbol}", "yellow")
                         add_console_log(f"⚠️ Close may have failed for {symbol}", "warning")
+                        failed_closes.append(symbol)
 
                     time.sleep(2)
 
@@ -1608,6 +1642,7 @@ Return ONLY valid JSON with the following structure:
                     cprint(f"   ❌ Error closing {symbol}: {e}", "red")
                     import traceback
                     traceback.print_exc()
+                    failed_closes.append(symbol)
 
         if closed_count > 0:
             cprint(
@@ -1618,6 +1653,10 @@ Return ONLY valid JSON with the following structure:
             )
         else:
             cprint("\n   ℹ️  No positions needed closing", "cyan")
+
+        if failed_closes:
+            cprint(f"\n⚠️ Failed to close {len(failed_closes)} positions: {', '.join(failed_closes)}", "red")
+            cprint("💡 These will be retried in the next cycle", "yellow")
 
         cprint("=" * 60 + "\n", "red")
 

@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev - Fix CSV Link Columns Script
+🕉️ Karma Dev - Fix CSV Link Columns Script
 Moves the 'link' or 'market_link' column to be the LAST column in CSVs
 This makes links clickable when opening in Excel/Numbers/etc.
 """
@@ -16,7 +16,7 @@ PREDICTIONS_CSV = os.path.join(PROJECT_ROOT, "src/data/polymarket/predictions.cs
 
 def fix_csv_link_column(csv_path, link_column_name):
     """
-    🌙 Moon Dev - Move link column to the end of CSV
+    🕉️ Karma Dev - Move link column to the end of CSV
 
     Args:
         csv_path: Path to CSV file
@@ -69,9 +69,9 @@ def fix_csv_link_column(csv_path, link_column_name):
         traceback.print_exc()
 
 def main():
-    """🌙 Moon Dev - Main script"""
+    """🕉️ Karma Dev - Main script"""
     cprint("\n" + "="*80, "cyan")
-    cprint("🌙 Moon Dev - Fix CSV Link Columns", "cyan", attrs=['bold'])
+    cprint("🕉️ Karma Dev - Fix CSV Link Columns", "cyan", attrs=['bold'])
     cprint("="*80 + "\n", "cyan")
 
     cprint("This script moves 'link' columns to the END of CSVs", "white")

@@ -1,5 +1,5 @@
 """
-Moon Dev's WebSocket Module
+Karma Dev's WebSocket Module
 Real-time data feeds for trading agents
 
 DATA SOURCE ARCHITECTURE:

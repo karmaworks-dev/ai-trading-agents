@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Chat Agent with Ad Support
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Chat Agent with Ad Support
+Built with love by Karma Dev 🚀
 
 This agent monitors Restream chat and shows ads after a countdown unless enough chats come in.
 """
@@ -87,11 +87,11 @@ RESTREAM_EVENT_SOURCES = {
 
 
 # Chat prompts - for responding to message
-CHAT_PROMPT = """You are Moon Dev's Live Stream Chat AI Agent. 
-You help users learn about coding, algo trading, and Moon Dev's content.
+CHAT_PROMPT = """You are Karma Dev's Live Stream Chat AI Agent. 
+You help users learn about coding, algo trading, and Karma Dev's content.
 Keep responses short, friendly, and include emojis.
 
-Key points about Moon Dev:
+Key points about Karma Dev:
 - Passionate about AI, trading, and coding
 - Streams coding sessions on YouTube
 - Built multiple AI trading agents
@@ -172,7 +172,7 @@ MESSAGE_COOLDOWN = 3  # Reduce from 10 to 3 seconds
 
 # Update config defaults
 DEFAULT_CONFIG = {
-    "response_prefix": "Moon Dev AI: ",
+    "response_prefix": "Karma Dev AI: ",
     "ignored_users": ["Nightbot", "StreamElements"],
     "command_prefix": "!",
     "initial_chats": DEFAULT_INITIAL_CHATS,
@@ -433,7 +433,7 @@ class RestreamChatHandler:
             cprint(username.strip(), "white", "on_blue", end="")
             print(f": {text}")
             print(f"🧠 ", end="")
-            cprint("Moon Dev AI", "white", "on_green", end="")
+            cprint("Karma Dev AI", "white", "on_green", end="")
             print(": ", end="")
             cprint(ai_response, "white", "on_cyan")
             print()  # Add spacing
@@ -458,7 +458,7 @@ class RestreamChatHandler:
 class ChatAgentAd:
     def __init__(self):
         """Initialize the Chat Agent with Ad functionality"""
-        cprint("\n⚙️ Initializing Moon Dev's Chat Agent with Ad Support...", "cyan")
+        cprint("\n⚙️ Initializing Karma Dev's Chat Agent with Ad Support...", "cyan")
         
         # Ad tracking variables
         self.chat_count = 0
@@ -523,7 +523,7 @@ class ChatAgentAd:
         cprint(f"  • Chats to prevent ad: {CHATS_TO_PREVENT_AD}", "yellow")
         cprint(f"  • Videos: {len(AD_VIDEO_PATHS)} available", "yellow")
         
-        cprint("🎯 Moon Dev's Chat Agent with Ad Support initialized!", "green")
+        cprint("🎯 Karma Dev's Chat Agent with Ad Support initialized!", "green")
         
         # Add tracking for 777 counts
         self.daily_777_counts = {}  # Format: {username: {'count': int, 'last_reset': datetime}}
@@ -718,7 +718,7 @@ class ChatAgentAd:
             cprint(username.strip(), "white", "on_blue", end="")
             print(f": {text}")
             print(f"🧠 ", end="")
-            cprint("Moon Dev AI", "white", "on_green", end="")
+            cprint("Karma Dev AI", "white", "on_green", end="")
             print(": ", end="")
             cprint(ai_response, "white", "on_cyan")
             print()  # Add spacing
@@ -783,7 +783,7 @@ class ChatAgentAd:
     def _get_random_quote_or_verse(self):
         """Get a random quote, verse or parable"""
         if not self.quotes_and_verses:
-            return "🌟 Stay positive and keep pushing forward! - Moon Dev"
+            return "🌟 Stay positive and keep pushing forward! - Karma Dev"
             
         return random.choice(self.quotes_and_verses)
 
@@ -854,7 +854,7 @@ class ChatAgentAd:
 
     def _get_leaderboard(self):
         """
-        🌙 MOON DEV SAYS: Let's see who's leading the chat! 🏆
+        🕉️ MOON DEV SAYS: Let's see who's leading the chat! 🏆
         """
         try:
             # Read chat history
@@ -871,7 +871,7 @@ class ChatAgentAd:
             
     def _format_leaderboard_message(self, scores):
         """
-        🌙 MOON DEV SAYS: Format that leaderboard with style! 🎨
+        🕉️ MOON DEV SAYS: Format that leaderboard with style! 🎨
         """
         if len(scores) == 0:
             return None
@@ -899,7 +899,7 @@ class ChatAgentAd:
         
     def _show_leaderboard(self):
         """
-        🌙 MOON DEV SAYS: Time to show off those chat skills! 🚀
+        🕉️ MOON DEV SAYS: Time to show off those chat skills! 🚀
         """
         scores = self._get_leaderboard()
         if len(scores) == 0:
@@ -911,7 +911,7 @@ class ChatAgentAd:
         
     def run(self):
         """Main loop for monitoring chat"""
-        cprint("\n🎯 Moon Dev's Chat Agent with Ad Support starting...", "cyan", attrs=['bold'])
+        cprint("\n🎯 Karma Dev's Chat Agent with Ad Support starting...", "cyan", attrs=['bold'])
         print()
         
         cprint(f"📝 Will process last {DEFAULT_INITIAL_CHATS} messages on startup", "cyan")
@@ -943,7 +943,7 @@ class ChatAgentAd:
 
     def _get_user_chat_history(self, username):
         """
-        🌙 MOON DEV SAYS: Let's get that chat history! 📚
+        🕉️ MOON DEV SAYS: Let's get that chat history! 📚
         """
         try:
             df = pd.read_csv(self.chat_log_path)
@@ -956,7 +956,7 @@ class ChatAgentAd:
 
     def save_chat_history(self, username, message, score):
         """
-        🌙 MOON DEV SAYS: Saving chat history with scores! 📊
+        🕉️ MOON DEV SAYS: Saving chat history with scores! 📊
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -972,7 +972,7 @@ class ChatAgentAd:
 
 def is_meaningful_chat(new_message, chat_history, threshold=0.3):
     """
-    🌙 MOON DEV SAYS: Let's keep chats meaningful and fun!
+    🕉️ MOON DEV SAYS: Let's keep chats meaningful and fun!
     """
     # Ensure new_message is a string
     new_message = str(new_message)
@@ -997,7 +997,7 @@ def is_meaningful_chat(new_message, chat_history, threshold=0.3):
 
 def update_chat_score(username, message, chat_history):
     """
-    🌙 MOON DEV SAYS: Let's track those chat points! 
+    🕉️ MOON DEV SAYS: Let's track those chat points! 
     """
     # Skip if message isn't meaningful
     if not is_meaningful_chat(message, chat_history):

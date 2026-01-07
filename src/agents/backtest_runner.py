@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Backtest Execution Runner
+🕉️ Karma Dev's Backtest Execution Runner
 Proof of concept for running backtests in conda environment
 """
 
@@ -25,7 +25,7 @@ def run_backtest_in_conda(file_path: str, conda_env: str = "tflow"):
     - execution_time: How long it took
     """
     
-    print(f"\n🚀 Moon Dev's Backtest Runner Starting!")
+    print(f"\n🚀 Karma Dev's Backtest Runner Starting!")
     print(f"📂 File: {file_path}")
     print(f"🐍 Conda env: {conda_env}")
     print("=" * 60)
@@ -172,7 +172,7 @@ def save_results(output: dict, file_path: str):
 def main():
     """Run the backtest and demonstrate output capture"""
     
-    print("🌙 Moon Dev's Backtest Execution Proof of Concept")
+    print("🕉️ Karma Dev's Backtest Execution Proof of Concept")
     print("=" * 60)
     print(f"🎯 Target file: {BACKTEST_FILE}")
     print(f"🐍 Using conda env: {CONDA_ENV}")

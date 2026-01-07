@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 '''
-🌙 Moon Dev's Countdown Demo 🌙
+🕉️ Karma Dev's Countdown Demo 🕉️
 A simple demonstration of the colorful countdown animation used in the Research Agent.
 
-Created with ❤️ by Moon Dev
+Created with ❤️ by Karma Dev
 '''
 
 import time
@@ -37,7 +37,7 @@ def demo_countdown(seconds=15):
     cprint("✨ MOON DEV'S COUNTDOWN DEMO FINISHED! ✨", "white", "on_green")
 
 if __name__ == "__main__":
-    print("🌙 Moon Dev's Countdown Demo 🌙")
+    print("🕉️ Karma Dev's Countdown Demo 🕉️")
     print("This script demonstrates the colorful countdown animation used in the Research Agent.")
     
     # Run the demo

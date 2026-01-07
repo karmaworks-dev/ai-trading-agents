@@ -30,7 +30,7 @@ LIQUIDATION_SPIKE_THRESHOLD = 10000000  # $10M in 1hr
 ```
 
 ## Data Source
-Moon Dev API: `/api/liquidation-data`
+Karma Dev API: `/api/liquidation-data`
 
 ## Output
 `src/data/liquidation_agent/[date]/liquidations.json`

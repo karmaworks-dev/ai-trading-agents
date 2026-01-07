@@ -1,7 +1,7 @@
 """
-🌙 Moon Dev's AI Agent Backtests Dashboard 🚀
+🕉️ Karma Dev's AI Agent Backtests Dashboard 🚀
 FastAPI web interface for viewing backtest results from rbi_agent_pp_multi.py
-Built with love by Moon Dev
+Built with love by Karma Dev
 
 ================================================================================
 📋 HOW TO USE THIS DASHBOARD:
@@ -49,11 +49,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 import traceback
 import logging
 
-# Import MoonDevAPI from this project
+# Import KarmaDevAPI from this project
 from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-from src.agents.api import MoonDevAPI
+from src.agents.api import KarmaDevAPI
 import websockets
 import json
 
@@ -78,7 +78,7 @@ USER_FOLDERS_DIR = TEMPLATE_BASE_DIR / "user_folders"
 TARGET_RETURN = 50  # % - Optimization goal
 SAVE_IF_OVER_RETURN = 1.0  # % - Minimum return to save to CSV
 
-# 📊 Data Portal Configuration - Moon Dev
+# 📊 Data Portal Configuration - Karma Dev
 DATA_DIR = TEMPLATE_BASE_DIR / "downloads"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -105,7 +105,7 @@ LIQUIDATIONS_GRAND_CSV = PROJECT_ROOT.parent / "Untitled" / "binance.csv"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Moon Dev's AI Agent Backtests")
+app = FastAPI(title="Karma Dev's AI Agent Backtests")
 
 # Create user_folders directory if it doesn't exist
 USER_FOLDERS_DIR.mkdir(exist_ok=True)
@@ -113,8 +113,8 @@ USER_FOLDERS_DIR.mkdir(exist_ok=True)
 # Track running backtests
 running_backtests = {}
 
-# 🌙 Moon Dev Data API Integration
-moon_api = MoonDevAPI()
+# 🕉️ Karma Dev Data API Integration
+moon_api = KarmaDevAPI()
 
 # Track data update status
 data_status = {
@@ -127,7 +127,7 @@ app.mount("/static", StaticFiles(directory=str(TEMPLATE_BASE_DIR / "static")), n
 templates = Jinja2Templates(directory=str(TEMPLATE_BASE_DIR / "templates"))
 
 
-# 🌙 Moon Dev: Request models for folder operations
+# 🕉️ Karma Dev: Request models for folder operations
 class AddToFolderRequest(BaseModel):
     folder_name: str
     backtests: List[Dict[str, Any]]
@@ -143,7 +143,7 @@ class BacktestRunRequest(BaseModel):
 
 
 # ============================================================================
-# 🌙 MOON DEV DATA API FUNCTIONS
+# 🕉️ MOON DEV DATA API FUNCTIONS
 # ============================================================================
 
 def format_file_size(size_bytes):
@@ -158,7 +158,7 @@ def format_file_size(size_bytes):
 
 
 async def fetch_liquidation_data():
-    """Fetch liquidation data from Moon Dev API"""
+    """Fetch liquidation data from Karma Dev API"""
     try:
         if TEST_MODE:
             logger.info("🧪 TEST MODE: Creating sample liquidation data...")
@@ -185,7 +185,7 @@ async def fetch_liquidation_data():
 
             logger.info(f"✅ TEST MODE: Sample liquidation data created: {format_file_size(file_size)}")
         else:
-            logger.info("🌙 Fetching liquidation data...")
+            logger.info("🕉️ Fetching liquidation data...")
             data_status["liquidations"]["status"] = "fetching"
 
             # Fetch ALL liquidation data (no limit for full dataset)
@@ -212,7 +212,7 @@ async def fetch_liquidation_data():
 
 
 async def fetch_oi_data():
-    """Fetch open interest data from Moon Dev API"""
+    """Fetch open interest data from Karma Dev API"""
     try:
         if TEST_MODE:
             logger.info("🧪 TEST MODE: Creating sample OI data...")
@@ -265,7 +265,7 @@ async def fetch_oi_data():
 
 
 async def fetch_all_data():
-    """Fetch all data from Moon Dev API"""
+    """Fetch all data from Karma Dev API"""
     logger.info("🚀 Starting data fetch for all datasets...")
 
     try:
@@ -287,7 +287,7 @@ async def background_data_fetch():
 
 
 # ============================================================================
-# 🌙 ROUTES
+# 🕉️ ROUTES
 # ============================================================================
 
 @app.get("/", response_class=HTMLResponse)
@@ -306,7 +306,7 @@ async def get_backtests():
                 "message": "No backtest data found yet. Run rbi_agent_pp_multi.py to generate results!"
             })
 
-        # 🌙 Moon Dev: Read CSV with proper header handling
+        # 🕉️ Karma Dev: Read CSV with proper header handling
         # Check if header needs updating (old format without Exposure %)
         with open(STATS_CSV, 'r') as f:
             header_line = f.readline().strip()
@@ -347,7 +347,7 @@ async def get_backtests():
         for record in df.to_dict('records'):
             cleaned_record = {}
             for key, value in record.items():
-                # 🌙 Moon Dev - Cap Return % display at 10,000+%
+                # 🕉️ Karma Dev - Cap Return % display at 10,000+%
                 if key == 'Return %' and isinstance(value, (float, np.floating)):
                     if not (np.isnan(value) or np.isinf(value)) and value > 10000:
                         cleaned_record[key] = "10,000+%"
@@ -395,7 +395,7 @@ async def get_stats():
                 "message": "No data yet"
             })
 
-        # 🌙 Moon Dev: Read CSV with proper header handling
+        # 🕉️ Karma Dev: Read CSV with proper header handling
         with open(STATS_CSV, 'r') as f:
             header_line = f.readline().strip()
 
@@ -437,7 +437,7 @@ async def get_stats():
             except:
                 return default
 
-        # 🌙 Moon Dev - Filter out extreme outliers (Return % > 10,000) for stats calculation
+        # 🕉️ Karma Dev - Filter out extreme outliers (Return % > 10,000) for stats calculation
         df_filtered = df.copy()
         if 'Return %' in df_filtered.columns:
             # Keep only rows where Return % <= 10,000 (exclude bad data from stats)
@@ -447,7 +447,7 @@ async def get_stats():
             print(f"📊 Filtered {len(df) - len(df_filtered)} extreme outliers (>10,000%) from stats calculation")
 
         stats = {
-            "total_backtests": len(df),  # 🌙 Use original count (includes all data)
+            "total_backtests": len(df),  # 🕉️ Use original count (includes all data)
             "unique_strategies": df['Strategy Name'].nunique() if 'Strategy Name' in df.columns else 0,
             "unique_data_sources": df['Data'].nunique() if 'Data' in df.columns else 0,
             "avg_return": safe_stat(df_filtered['Return %'], lambda s: s.mean()) if 'Return %' in df_filtered.columns else 0,
@@ -466,7 +466,7 @@ async def get_stats():
 
 @app.get("/api/folders")
 async def get_folders():
-    """🌙 Moon Dev: Get list of all folder names"""
+    """🕉️ Karma Dev: Get list of all folder names"""
     try:
         folders = [f.name for f in USER_FOLDERS_DIR.iterdir() if f.is_dir()]
         return JSONResponse({"folders": sorted(folders)})
@@ -477,7 +477,7 @@ async def get_folders():
 
 @app.get("/api/folders/list")
 async def list_folders_with_details():
-    """🌙 Moon Dev: Get folders with backtest counts"""
+    """🕉️ Karma Dev: Get folders with backtest counts"""
     try:
         folders_info = []
 
@@ -506,7 +506,7 @@ async def list_folders_with_details():
 
 @app.get("/api/folders/dates")
 async def list_date_folders():
-    """🌙 Moon Dev: Get auto-generated date folders from backtest Time column"""
+    """🕉️ Karma Dev: Get auto-generated date folders from backtest Time column"""
     try:
         if not STATS_CSV.exists():
             return JSONResponse({"dates": [], "message": "No backtest data found"})
@@ -569,7 +569,7 @@ async def list_date_folders():
 
 @app.get("/api/backtests/by-date/{date}")
 async def get_backtests_by_date(date: str):
-    """🌙 Moon Dev: Get backtests filtered by date (MM-DD-YYYY format)"""
+    """🕉️ Karma Dev: Get backtests filtered by date (MM-DD-YYYY format)"""
     try:
         if not STATS_CSV.exists():
             return JSONResponse({
@@ -639,7 +639,7 @@ async def get_backtests_by_date(date: str):
         for record in df_filtered.to_dict('records'):
             cleaned_record = {}
             for key, value in record.items():
-                # 🌙 Moon Dev - Cap Return % display at 10,000+%
+                # 🕉️ Karma Dev - Cap Return % display at 10,000+%
                 if key == 'Return %' and isinstance(value, (float, np.floating)):
                     if not (np.isnan(value) or np.isinf(value)) and value > 10000:
                         cleaned_record[key] = "10,000+%"
@@ -669,7 +669,7 @@ async def get_backtests_by_date(date: str):
 
 @app.post("/api/folders/add")
 async def add_to_folder(request: AddToFolderRequest):
-    """🌙 Moon Dev: Add backtests to a folder (duplicates rows, doesn't move)"""
+    """🕉️ Karma Dev: Add backtests to a folder (duplicates rows, doesn't move)"""
     try:
         folder_name = request.folder_name
         backtests = request.backtests
@@ -711,7 +711,7 @@ async def add_to_folder(request: AddToFolderRequest):
 
 @app.get("/api/folders/{folder_name}/paths")
 async def get_folder_paths(folder_name: str):
-    """🌙 Moon Dev: Get all file paths from a folder"""
+    """🕉️ Karma Dev: Get all file paths from a folder"""
     try:
         folder_path = USER_FOLDERS_DIR / folder_name
         csv_path = folder_path / "backtest_stats.csv"
@@ -755,7 +755,7 @@ async def get_folder_paths(folder_name: str):
 
 @app.get("/api/backtest/status/{run_name}")
 async def get_backtest_status(run_name: str):
-    """🌙 Moon Dev: Check status of a running backtest"""
+    """🕉️ Karma Dev: Check status of a running backtest"""
     try:
         if run_name not in running_backtests:
             return JSONResponse({
@@ -780,7 +780,7 @@ async def get_backtest_status(run_name: str):
 
 @app.post("/api/folders/delete")
 async def delete_folder(request: DeleteFolderRequest):
-    """🌙 Moon Dev: Delete a folder and all its contents"""
+    """🕉️ Karma Dev: Delete a folder and all its contents"""
     try:
         folder_name = request.folder_name
         folder_path = USER_FOLDERS_DIR / folder_name
@@ -813,7 +813,7 @@ async def delete_folder(request: DeleteFolderRequest):
 
 @app.post("/api/backtest/run")
 async def run_backtest(request: BacktestRunRequest):
-    """🌙 Moon Dev: Run rbi_agent_pp_multi.py with custom ideas"""
+    """🕉️ Karma Dev: Run rbi_agent_pp_multi.py with custom ideas"""
     try:
         ideas = request.ideas
         run_name = request.run_name
@@ -922,7 +922,7 @@ async def run_backtest(request: BacktestRunRequest):
 
 
 # ============================================================================
-# 🌙 DATA PORTAL ROUTES
+# 🕉️ DATA PORTAL ROUTES
 # ============================================================================
 
 @app.get("/data", response_class=HTMLResponse)
@@ -939,7 +939,7 @@ async def download_liquidations():
         return FileResponse(
             file_path,
             media_type="text/csv",
-            filename="moon_dev_liquidations.csv"
+            filename="karma_dev_liquidations.csv"
         )
     return JSONResponse({"error": "Data not available yet"}, status_code=404)
 
@@ -952,7 +952,7 @@ async def download_oi():
         return FileResponse(
             file_path,
             media_type="text/csv",
-            filename="moon_dev_oi.csv"
+            filename="karma_dev_oi.csv"
         )
     return JSONResponse({"error": "Data not available yet"}, status_code=404)
 
@@ -960,7 +960,7 @@ async def download_oi():
 @app.get("/download/testdata/{dataset_name}")
 async def download_test_data(dataset_name: str):
     """Download test dataset for backtesting"""
-    # 🌙 Moon Dev: Serve historical test datasets for backtesting
+    # 🕉️ Karma Dev: Serve historical test datasets for backtesting
     file_path = TEST_DATA_DIR / f"{dataset_name}.csv"
 
     if not file_path.exists():
@@ -1078,7 +1078,7 @@ async def get_polymarket_expiring():
 
 
 # ============================================================================
-# 🌙 LIQUIDATIONS API ENDPOINTS
+# 🕉️ LIQUIDATIONS API ENDPOINTS
 # ============================================================================
 
 @app.get("/liquidations")
@@ -1089,12 +1089,12 @@ async def liquidations_page(request: Request):
 
 @app.get("/api/liquidations/recent")
 async def get_recent_liquidations(hours: int = 24):
-    """🌙 Moon Dev: Get stats from historical API data"""
+    """🕉️ Karma Dev: Get stats from historical API data"""
     try:
-        print(f"🌙 Moon Dev: Loading liquidations for stats calculation...")
+        print(f"🕉️ Karma Dev: Loading liquidations for stats calculation...")
 
-        # Initialize MoonDev API
-        api = MoonDevAPI()
+        # Initialize KarmaDev API
+        api = KarmaDevAPI()
 
         # Get last 100k liquidations from API (ensures full 24h coverage)
         df = api.get_liquidation_data(limit=100000)
@@ -1154,7 +1154,7 @@ async def get_recent_liquidations(hours: int = 24):
             except:
                 continue
 
-        print(f"✅ Moon Dev: Calculated stats - 1h: ${stats['1h']['volume']:,.2f}, 4h: ${stats['4h']['volume']:,.2f}, 12h: ${stats['12h']['volume']:,.2f}, 24h: ${stats['24h']['volume']:,.2f}")
+        print(f"✅ Karma Dev: Calculated stats - 1h: ${stats['1h']['volume']:,.2f}, 4h: ${stats['4h']['volume']:,.2f}, 12h: ${stats['12h']['volume']:,.2f}, 24h: ${stats['24h']['volume']:,.2f}")
 
         return JSONResponse({
             "mini": [],
@@ -1181,16 +1181,16 @@ async def get_recent_liquidations(hours: int = 24):
 
 @app.websocket("/ws/liquidations")
 async def websocket_liquidations(websocket: WebSocket):
-    """🌙 Moon Dev: WebSocket endpoint for LIVE Binance liquidations streaming"""
+    """🕉️ Karma Dev: WebSocket endpoint for LIVE Binance liquidations streaming"""
     await websocket.accept()
-    print("🌙 Moon Dev: Client connected to liquidations WebSocket")
+    print("🕉️ Karma Dev: Client connected to liquidations WebSocket")
 
     binance_ws_url = "wss://fstream.binance.com/ws/!forceOrder@arr"
     client_connected = True
 
     try:
         async with websockets.connect(binance_ws_url) as binance_ws:
-            print("🔗 Moon Dev: Connected to Binance liquidations stream")
+            print("🔗 Karma Dev: Connected to Binance liquidations stream")
 
             async for message in binance_ws:
                 # Check if client is still connected
@@ -1249,7 +1249,7 @@ async def websocket_liquidations(websocket: WebSocket):
                     continue
 
     except WebSocketDisconnect:
-        print("🌙 Moon Dev: Client disconnected from liquidations WebSocket")
+        print("🕉️ Karma Dev: Client disconnected from liquidations WebSocket")
     except Exception as e:
         if "send" not in str(e).lower():
             print(f"❌ Error in liquidations WebSocket: {e}")
@@ -1260,15 +1260,15 @@ async def websocket_liquidations(websocket: WebSocket):
                 await websocket.close()
         except:
             pass
-        print("✅ Moon Dev: Liquidations WebSocket cleaned up")
+        print("✅ Karma Dev: Liquidations WebSocket cleaned up")
 
 
 # ============================================================================
-# 🌙 BACKTEST FOLDER OPERATIONS
+# 🕉️ BACKTEST FOLDER OPERATIONS
 # ============================================================================
 
 def auto_add_to_folder(run_name: str, csv_before_path: str) -> int:
-    """🌙 Moon Dev: Automatically add new winning backtests to a folder"""
+    """🕉️ Karma Dev: Automatically add new winning backtests to a folder"""
     try:
         print(f"📁 Auto-adding results to folder '{run_name}'...")
 
@@ -1327,13 +1327,13 @@ def auto_add_to_folder(run_name: str, csv_before_path: str) -> int:
 
 
 # ============================================================================
-# 🌙 STARTUP EVENT
+# 🕉️ STARTUP EVENT
 # ============================================================================
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize scheduler and fetch data on startup"""
-    logger.info("🌙 Moon Dev's AI Agent Backtests Dashboard starting up...")
+    logger.info("🕉️ Karma Dev's AI Agent Backtests Dashboard starting up...")
     if TEST_MODE:
         logger.info("🧪 TEST MODE ENABLED - Using sample data for Data Portal")
     logger.info("")
@@ -1365,7 +1365,7 @@ async def startup_event():
 
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("🌙 Moon Dev's AI Agent Backtests Dashboard 🚀")
+    print("🕉️ Karma Dev's AI Agent Backtests Dashboard 🚀")
     print("="*80)
     print(f"\n📊 CSV Path: {STATS_CSV}")
     print(f"📁 Templates: {TEMPLATE_BASE_DIR}")

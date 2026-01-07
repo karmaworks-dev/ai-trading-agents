@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🏠 Moon Dev's Housecoin DCA Agent with AI Decision Making 🏠
+🏠 Karma Dev's Housecoin DCA Agent with AI Decision Making 🏠
 
 ⚠️ NOT FINANCIAL ADVICE ⚠️
 This is an experimental DCA (Dollar Cost Average) bot for Housecoin.
@@ -16,7 +16,7 @@ Strategy:
 - Above 20-day SMA: Buy only near daily lows
 - AI Confirmation: Every buy must be approved by the AI model
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os
@@ -36,7 +36,7 @@ project_root = str(Path(__file__).parent.parent.parent)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-# Import Moon Dev modules
+# Import Karma Dev modules
 from src.config import EXCHANGE, MONITORED_TOKENS
 from src import nice_funcs as n
 from src.models.model_factory import model_factory
@@ -478,7 +478,7 @@ class HousecoinAgent:
 
                 # Check trading hours
                 if not self.is_trading_hours():
-                    cprint(f"\n🌙 Outside trading hours ({TRADING_START_HOUR}:00 AM - {TRADING_END_HOUR-12}:00 PM ET)", "blue")
+                    cprint(f"\n🕉️ Outside trading hours ({TRADING_START_HOUR}:00 AM - {TRADING_END_HOUR-12}:00 PM ET)", "blue")
                     print(f"  Current price: ${current_price:.8f}")
                     print(f"  20-Day SMA: ${sma_20:.8f}")
                     time.sleep(300)  # Check every 5 minutes when outside hours

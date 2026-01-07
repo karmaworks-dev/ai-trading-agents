@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Chat Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Chat Agent
+Built with love by Karma Dev 🚀
 
 This agent monitors Restream chat and answers questions using a knowledge base.
 """
@@ -83,7 +83,7 @@ MESSAGE_COOLDOWN = 3  # Reduce from 10 to 3 seconds
 
 # Update config defaults
 DEFAULT_CONFIG = {
-    "response_prefix": "Moon Dev AI: ",
+    "response_prefix": "Karma Dev AI: ",
     "ignored_users": ["Nightbot", "StreamElements"],
     "command_prefix": "!",
     "initial_chats": DEFAULT_INITIAL_CHATS,
@@ -296,7 +296,7 @@ class RestreamChatHandler:
             cprint(username.strip(), "white", "on_blue", end="")
             print(f": {text}")
             print(f"{random.choice(AI_EMOJIS)} ", end="")
-            cprint("Moon Dev AI", "white", "on_green", end="")
+            cprint("Karma Dev AI", "white", "on_green", end="")
             print(": ", end="")
             cprint(ai_response, "white", "on_cyan")
             print()  # Add spacing
@@ -313,7 +313,7 @@ class RestreamChatHandler:
 class ChatAgent:
     def __init__(self):
         """Initialize the Chat Agent"""
-        cprint("\n⚙️ Initializing Moon Dev's Chat Agent...", "cyan")
+        cprint("\n⚙️ Initializing Karma Dev's Chat Agent...", "cyan")
         
         # Remove knowledge base initialization
         self.data_dir = Path(project_root) / "src" / "data" / "chat_agent"
@@ -351,7 +351,7 @@ class ChatAgent:
         self.restream_handler.connect()
         cprint("🎮 Restream chat integration enabled!", "green")
         
-        cprint("🎯 Moon Dev's Chat Agent initialized!", "green")
+        cprint("🎯 Karma Dev's Chat Agent initialized!", "green")
         
         # Add tracking for 777 counts
         self.daily_777_counts = {}  # Format: {username: {'count': int, 'last_reset': datetime}}
@@ -431,7 +431,7 @@ class ChatAgent:
             cprint(username.strip(), "white", "on_blue", end="")
             print(f": {text}")
             print(f"{random.choice(AI_EMOJIS)} ", end="")
-            cprint("Moon Dev AI", "white", "on_green", end="")
+            cprint("Karma Dev AI", "white", "on_green", end="")
             print(": ", end="")
             cprint(ai_response, "white", "on_cyan")
             print()  # Add spacing
@@ -488,7 +488,7 @@ class ChatAgent:
     def _get_random_quote_or_verse(self):
         """Get a random quote, verse or parable"""
         if not self.quotes_and_verses:
-            return "🌟 Stay positive and keep pushing forward! - Moon Dev"
+            return "🌟 Stay positive and keep pushing forward! - Karma Dev"
             
         return random.choice(self.quotes_and_verses)
 
@@ -527,7 +527,7 @@ class ChatAgent:
 
     def _get_leaderboard(self):
         """
-        🌙 MOON DEV SAYS: Let's see who's leading the chat! 🏆
+        🕉️ MOON DEV SAYS: Let's see who's leading the chat! 🏆
         """
         try:
             # Read chat history
@@ -544,7 +544,7 @@ class ChatAgent:
             
     def _format_leaderboard_message(self, scores):
         """
-        🌙 MOON DEV SAYS: Format that leaderboard with style! 🎨
+        🕉️ MOON DEV SAYS: Format that leaderboard with style! 🎨
         """
         if len(scores) == 0:
             return None
@@ -572,7 +572,7 @@ class ChatAgent:
         
     def _show_leaderboard(self):
         """
-        🌙 MOON DEV SAYS: Time to show off those chat skills! 🚀
+        🕉️ MOON DEV SAYS: Time to show off those chat skills! 🚀
         """
         scores = self._get_leaderboard()
         if len(scores) == 0:
@@ -584,7 +584,7 @@ class ChatAgent:
         
     def run(self):
         """Main loop for monitoring chat"""
-        cprint("\n🎯 Moon Dev's Chat Agent starting...", "cyan", attrs=['bold'])
+        cprint("\n🎯 Karma Dev's Chat Agent starting...", "cyan", attrs=['bold'])
         print()
         
         cprint(f"📝 Will process last {DEFAULT_INITIAL_CHATS} messages on startup", "cyan")
@@ -615,7 +615,7 @@ class ChatAgent:
 
     def _get_user_chat_history(self, username):
         """
-        🌙 MOON DEV SAYS: Let's get that chat history! 📚
+        🕉️ MOON DEV SAYS: Let's get that chat history! 📚
         """
         try:
             df = pd.read_csv(self.chat_log_path)
@@ -628,7 +628,7 @@ class ChatAgent:
 
     def save_chat_history(self, username, message, score):
         """
-        🌙 MOON DEV SAYS: Saving chat history with scores! 📊
+        🕉️ MOON DEV SAYS: Saving chat history with scores! 📊
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         

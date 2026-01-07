@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-🌙 Moon Dev's Example Unified Trading Agent
+🕉️ Karma Dev's Example Unified Trading Agent
 Shows how to use Exchange Manager for both Solana and HyperLiquid
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import sys
@@ -166,7 +166,7 @@ Current Settings:
 
     def run(self):
         """Main agent execution"""
-        cprint(f"\n🌙 Moon Dev's Unified Agent Running on {EXCHANGE.upper()} 🚀",
+        cprint(f"\n🕉️ Karma Dev's Unified Agent Running on {EXCHANGE.upper()} 🚀",
                "cyan", attrs=['bold'])
         cprint("="*60, "cyan")
 

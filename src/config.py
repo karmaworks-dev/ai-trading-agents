@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Configuration File
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Configuration File
+Built with love by Karma Dev 🚀
 Updated for Hyperliquid Small Account ($10)
 """
 

@@ -1,6 +1,6 @@
 """
-💰 Moon Dev's HyperLiquid Funding Rate Scanner
-Built with love by Moon Dev 🚀
+💰 Karma Dev's HyperLiquid Funding Rate Scanner
+Built with love by Karma Dev 🚀
 
 This agent scans ALL HyperLiquid symbols for funding rate anomalies and announces the top 5 biggest and smallest with AI voice.
 
@@ -32,7 +32,7 @@ VOICE_NAME = "fable"  # Options: alloy, echo, fable, onyx, nova, shimmer
 VOICE_SPEED = 1.0
 
 class FundingAgent2(BaseAgent):
-    """Moon Dev's HyperLiquid Funding Rate Scanner 💰"""
+    """Karma Dev's HyperLiquid Funding Rate Scanner 💰"""
 
     def __init__(self):
         """Initialize the Funding Agent 2"""
@@ -52,7 +52,7 @@ class FundingAgent2(BaseAgent):
         self.audio_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        cprint("💰 Moon Dev's HyperLiquid Funding Scanner initialized!", "green")
+        cprint("💰 Karma Dev's HyperLiquid Funding Scanner initialized!", "green")
 
     def get_all_symbols(self):
         """Get all available symbols from HyperLiquid"""
@@ -171,7 +171,7 @@ class FundingAgent2(BaseAgent):
                     f"{symbol} has a negative funding rate of {annual_rate:.2f} percent annual."
                 )
 
-            message_parts.append("That's all for now! Moon Dev out!")
+            message_parts.append("That's all for now! Karma Dev out!")
 
             return " ".join(message_parts)
 
@@ -186,7 +186,7 @@ class FundingAgent2(BaseAgent):
             return
 
         try:
-            cprint(f"\n📢 Moon Dev is announcing the funding anomalies...", "yellow")
+            cprint(f"\n📢 Karma Dev is announcing the funding anomalies...", "yellow")
 
             # Generate speech
             response = openai.audio.speech.create(
@@ -244,7 +244,7 @@ class FundingAgent2(BaseAgent):
     def run_scan_cycle(self):
         """Run one funding rate scan cycle"""
         try:
-            cprint("\n🚀 Starting Moon Dev's Funding Rate Scan...", "green", attrs=['bold'])
+            cprint("\n🚀 Starting Karma Dev's Funding Rate Scan...", "green", attrs=['bold'])
 
             # Get all funding rates
             df = self.get_all_funding_rates()
@@ -270,15 +270,15 @@ class FundingAgent2(BaseAgent):
 
             if top_3_positive is not None and top_3_negative is not None:
                 # Print fancy tables
-                self.print_fancy_table(top_3_positive, "🌙 Top 3 MOST POSITIVE Funding Rates (Moon Dev) 🌙")
-                self.print_fancy_table(top_3_negative, "🌙 Top 3 MOST NEGATIVE Funding Rates (Moon Dev) 🌙")
+                self.print_fancy_table(top_3_positive, "🕉️ Top 3 MOST POSITIVE Funding Rates (Karma Dev) 🕉️")
+                self.print_fancy_table(top_3_negative, "🕉️ Top 3 MOST NEGATIVE Funding Rates (Karma Dev) 🕉️")
 
                 # Format and announce
                 message = self.format_announcement(top_3_positive, top_3_negative)
                 if message:
                     self.announce(message)
 
-            cprint("\n✨ Moon Dev's Funding Scanner cycle completed! ✨", "green", attrs=['bold'])
+            cprint("\n✨ Karma Dev's Funding Scanner cycle completed! ✨", "green", attrs=['bold'])
 
         except Exception as e:
             cprint(f"❌ Error in scan cycle: {str(e)}", "red")
@@ -286,7 +286,7 @@ class FundingAgent2(BaseAgent):
 
     def run(self):
         """Run the funding rate scanner continuously"""
-        cprint("\n🚀 Moon Dev's HyperLiquid Funding Scanner Starting...", "green", attrs=['bold'])
+        cprint("\n🚀 Karma Dev's HyperLiquid Funding Scanner Starting...", "green", attrs=['bold'])
         cprint(f"⏰ Scanning every {CHECK_INTERVAL_MINUTES} minutes", "yellow")
         cprint("Press Ctrl+C to stop\n", "yellow")
 
@@ -297,7 +297,7 @@ class FundingAgent2(BaseAgent):
                 time.sleep(CHECK_INTERVAL_MINUTES * 60)
 
             except KeyboardInterrupt:
-                cprint("\n👋 Moon Dev's Funding Scanner shutting down gracefully...", "yellow")
+                cprint("\n👋 Karma Dev's Funding Scanner shutting down gracefully...", "yellow")
                 break
             except Exception as e:
                 cprint(f"❌ Error in main loop: {str(e)}", "red")

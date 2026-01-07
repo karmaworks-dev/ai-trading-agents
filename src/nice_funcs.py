@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Nice Functions - A collection of utility functions for trading
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Nice Functions - A collection of utility functions for trading
+Built with love by Karma Dev 🚀
 """
 
 from src import config
@@ -74,7 +74,7 @@ os.makedirs('temp_data', exist_ok=True)
 
 def cleanup_temp_data():
     if os.path.exists('temp_data'):
-        print("🧹 Moon Dev cleaning up temporary data...")
+        print("🧹 Karma Dev cleaning up temporary data...")
         shutil.rmtree('temp_data')
 
 atexit.register(cleanup_temp_data)
@@ -376,7 +376,7 @@ def get_data(address, days_back_4_data, timeframe):
     # Check temp data first
     temp_file = f"temp_data/{address}_latest.csv"
     if os.path.exists(temp_file):
-        print(f"📂 Moon Dev found cached data for {address[:4]}")
+        print(f"📂 Karma Dev found cached data for {address[:4]}")
         return pd.read_csv(temp_file)
 
     url = f"https://public-api.birdeye.so/defi/ohlcv?address={address}&type={timeframe}&time_from={time_from}&time_to={time_to}"
@@ -406,16 +406,16 @@ def get_data(address, days_back_4_data, timeframe):
 
         # Pad if needed
         if len(df) < 40:
-            print(f"🌙 MoonDev Alert: Padding data to ensure minimum 40 rows for analysis! 🚀")
+            print(f"🕉️ KarmaDev Alert: Padding data to ensure minimum 40 rows for analysis! 🚀")
             rows_to_add = 40 - len(df)
             first_row_replicated = pd.concat([df.iloc[0:1]] * rows_to_add, ignore_index=True)
             df = pd.concat([first_row_replicated, df], ignore_index=True)
 
-        print(f"📊 MoonDev's Data Analysis Ready! Processing {len(df)} candles... 🎯")
+        print(f"📊 KarmaDev's Data Analysis Ready! Processing {len(df)} candles... 🎯")
 
         # Always save to temp for current run
         df.to_csv(temp_file)
-        print(f"🔄 Moon Dev cached data for {address[:4]}")
+        print(f"🔄 Karma Dev cached data for {address[:4]}")
 
         # Calculate indicators
         df['MA20'] = ta.sma(df['Close'], length=20)
@@ -428,7 +428,7 @@ def get_data(address, days_back_4_data, timeframe):
 
         return df
     else:
-        print(f"❌ MoonDev Error: Failed to fetch data for address {address}. Status code: {response.status_code}")
+        print(f"❌ KarmaDev Error: Failed to fetch data for address {address}. Status code: {response.status_code}")
         if response.status_code == 401:
             print("🔑 Check your BIRDEYE_API_KEY in .env file!")
         return pd.DataFrame()
@@ -755,7 +755,7 @@ def chunk_kill(token_mint_address, max_usd_order_size, slippage, address=None):
         slippage: Slippage tolerance
         address: Wallet address (defaults to SOLANA_WALLET_ADDRESS env var)
     """
-    cprint(f"\n🔪 Moon Dev's AI Agent initiating position exit...", "white", "on_cyan")
+    cprint(f"\n🔪 Karma Dev's AI Agent initiating position exit...", "white", "on_cyan")
 
     # Get address from environment if not provided
     if address is None:
@@ -1168,8 +1168,8 @@ def breakout_entry(symbol, BREAKOUT_PRICE):
 
 
 def ai_entry(symbol, amount):
-    """AI agent entry function for Moon Dev's trading system"""
-    cprint("🧠 Moon Dev's AI Trading Agent initiating position entry...", "white", "on_blue")
+    """AI agent entry function for Karma Dev's trading system"""
+    cprint("🧠 Karma Dev's AI Trading Agent initiating position entry...", "white", "on_blue")
     
     # amount passed in is the target allocation (up to 30% of usd_size)
     target_size = amount  # This could be up to $3 (30% of $10)
@@ -1272,7 +1272,7 @@ def ai_entry(symbol, amount):
     cprint("✨ AI Agent completed position entry", "white", "on_blue")
 
 def get_token_balance_usd(token_mint_address):
-    """Get the USD value of a token position for Moon Dev's wallet 🌙"""
+    """Get the USD value of a token position for Karma Dev's wallet 🕉️"""
     try:
         # Get the position data using existing function
         df = fetch_wallet_token_single(address, token_mint_address)  # Using address from config

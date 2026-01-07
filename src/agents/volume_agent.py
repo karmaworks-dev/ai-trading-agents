@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 HYPERLIQUID VOLUME AGENT - SWARM EDITION
-Made by Moon Dev
+Made by Karma Dev
 
 Autonomous agent that monitors top 15 Hyperliquid altcoins every 4 hours.
 Uses AI swarm (via model_factory) to identify best trading opportunities.
@@ -24,11 +24,11 @@ project_root = str(Path(__file__).parent.parent.parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Import Moon Dev's Swarm Agent
+# Import Karma Dev's Swarm Agent
 from src.agents.swarm_agent import SwarmAgent
 
 # ============================================================================
-# CONFIGURATION - Moon Dev
+# CONFIGURATION - Karma Dev
 # ============================================================================
 HYPERLIQUID_API = "https://api.hyperliquid.xyz/info"
 
@@ -44,11 +44,11 @@ EXCLUDED_TOKENS = ['BTC', 'ETH', 'SOL']
 TOP_N = 15
 
 # ============================================================================
-# DATA FETCHING - Moon Dev
+# DATA FETCHING - Karma Dev
 # ============================================================================
 
 def get_all_tokens_volume():
-    """Fetch all Hyperliquid tokens with volume data - Moon Dev"""
+    """Fetch all Hyperliquid tokens with volume data - Karma Dev"""
     try:
         payload = {"type": "metaAndAssetCtxs"}
         response = requests.post(HYPERLIQUID_API, json=payload, timeout=15)
@@ -95,7 +95,7 @@ def get_all_tokens_volume():
         return []
 
 def get_top_altcoins():
-    """Get top altcoins excluding BTC/ETH/SOL - Moon Dev"""
+    """Get top altcoins excluding BTC/ETH/SOL - Karma Dev"""
     tokens = get_all_tokens_volume()
     if not tokens:
         return []
@@ -106,11 +106,11 @@ def get_top_altcoins():
     return altcoins[:TOP_N]
 
 # ============================================================================
-# CHANGE CALCULATION - Moon Dev
+# CHANGE CALCULATION - Karma Dev
 # ============================================================================
 
 def load_previous_snapshot():
-    """Load the previous 4h snapshot from CSV - Moon Dev"""
+    """Load the previous 4h snapshot from CSV - Karma Dev"""
     if not os.path.exists(VOLUME_LOG):
         return {}
 
@@ -145,7 +145,7 @@ def load_previous_snapshot():
         return {}
 
 def load_24h_snapshot():
-    """Load snapshot from 24 hours ago (6 checks back) - Moon Dev"""
+    """Load snapshot from 24 hours ago (6 checks back) - Karma Dev"""
     if not os.path.exists(VOLUME_LOG):
         return {}
 
@@ -183,7 +183,7 @@ def load_24h_snapshot():
         return {}
 
 def calculate_changes(current_tokens, previous_data, data_24h=None):
-    """Calculate 4-hour and 24-hour volume changes - Moon Dev"""
+    """Calculate 4-hour and 24-hour volume changes - Karma Dev"""
     changes = []
 
     for i, token in enumerate(current_tokens):
@@ -228,11 +228,11 @@ def calculate_changes(current_tokens, previous_data, data_24h=None):
     return changes
 
 # ============================================================================
-# DATA LOGGING - Moon Dev
+# DATA LOGGING - Karma Dev
 # ============================================================================
 
 def initialize_data_dir():
-    """Initialize data directory and CSV - Moon Dev"""
+    """Initialize data directory and CSV - Karma Dev"""
     os.makedirs(DATA_DIR, exist_ok=True)
 
     if not os.path.exists(VOLUME_LOG):
@@ -251,7 +251,7 @@ def initialize_data_dir():
             ])
 
 def log_volume_snapshot(tokens):
-    """Log current snapshot to CSV - Moon Dev"""
+    """Log current snapshot to CSV - Karma Dev"""
     timestamp = time.time()
     dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -271,7 +271,7 @@ def log_volume_snapshot(tokens):
             ])
 
 def log_agent_analysis(changes, swarm_result):
-    """Log agent analysis to JSONL - Moon Dev"""
+    """Log agent analysis to JSONL - Karma Dev"""
     log_entry = {
         'timestamp': time.time(),
         'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -283,11 +283,11 @@ def log_agent_analysis(changes, swarm_result):
         f.write(json.dumps(log_entry, default=str) + '\n')
 
 # ============================================================================
-# DISPLAY - Moon Dev
+# DISPLAY - Karma Dev
 # ============================================================================
 
 def format_volume(volume):
-    """Format volume for display - Moon Dev"""
+    """Format volume for display - Karma Dev"""
     if volume >= 1_000_000_000:
         return f"${volume/1_000_000_000:.2f}B"
     elif volume >= 1_000_000:
@@ -296,7 +296,7 @@ def format_volume(volume):
         return f"${volume/1_000:.2f}K"
 
 def display_changes(changes):
-    """Display beautiful change report for the Data Dog - Moon Dev"""
+    """Display beautiful change report for the Data Dog - Karma Dev"""
     cprint("\n" + "=" * 170, "cyan", attrs=['bold'])
     cprint("📊 HYPERLIQUID TOP 15 ALTCOINS - COMPLETE MARKET VIEW 📊", "cyan", attrs=['bold'])
     cprint("=" * 170, "cyan", attrs=['bold'])
@@ -373,7 +373,7 @@ def display_changes(changes):
             fund_color = "white"
             fund_str = f"{funding:.4f}%"
 
-        # Signals - this is what catches Moon Dev's eye
+        # Signals - this is what catches Karma Dev's eye
         signals = []
         if change['is_new_entry']:
             signals.append("🆕NEW")
@@ -427,11 +427,11 @@ def display_changes(changes):
     cprint("\n" + "=" * 170 + "\n", "cyan", attrs=['bold'])
 
 # ============================================================================
-# AI SWARM ANALYSIS - Moon Dev
+# AI SWARM ANALYSIS - Karma Dev
 # ============================================================================
 
 def create_analysis_prompt(changes):
-    """Create prompt for swarm agents - Moon Dev
+    """Create prompt for swarm agents - Karma Dev
 
     VOLUME ONLY - No price, no funding, no open interest.
     Pure volume analysis for the Data Dog.
@@ -493,11 +493,11 @@ Give your pick and explain your reasoning in 2-3 sentences. Focus EXCLUSIVELY on
     return prompt
 
 def run_swarm_analysis(changes):
-    """Run swarm analysis - Moon Dev"""
+    """Run swarm analysis - Karma Dev"""
 
     cprint("\n📊 Running AI Swarm Analysis...\n", "cyan", attrs=['bold'])
 
-    # Initialize swarm with Moon Dev's models
+    # Initialize swarm with Karma Dev's models
     swarm = SwarmAgent()
 
     # Create prompt
@@ -509,13 +509,13 @@ def run_swarm_analysis(changes):
     return result
 
 def display_swarm_results(result):
-    """Display swarm analysis results for the Data Dog - Moon Dev"""
+    """Display swarm analysis results for the Data Dog - Karma Dev"""
 
     cprint("\n" + "=" * 170, "green", attrs=['bold'])
     cprint("🧠 AI SWARM ANALYSIS - INDIVIDUAL RECOMMENDATIONS + CONSENSUS 🧠", "green", attrs=['bold'])
     cprint("=" * 170, "green", attrs=['bold'])
 
-    # Show consensus FIRST - this is what Moon Dev wants to see immediately
+    # Show consensus FIRST - this is what Karma Dev wants to see immediately
     if "consensus_summary" in result:
         cprint("\n" + "─" * 170, "cyan")
         cprint("🎯 CONSENSUS RECOMMENDATION (ALL AIs AGREE):", "cyan", attrs=['bold'])
@@ -533,7 +533,7 @@ def display_swarm_results(result):
         for ai_num, provider in result["model_mapping"].items():
             reverse_mapping[provider.lower()] = ai_num
 
-    # Sort by response time for Moon Dev to see fastest first
+    # Sort by response time for Karma Dev to see fastest first
     sorted_responses = sorted(
         result["responses"].items(),
         key=lambda x: x[1].get("response_time", 999) if x[1].get("success") else 999
@@ -566,7 +566,7 @@ def display_swarm_results(result):
     cprint("\n" + "=" * 170 + "\n", "green", attrs=['bold'])
 
 def display_data_table(changes):
-    """Display clean data table for human analysis - Moon Dev"""
+    """Display clean data table for human analysis - Karma Dev"""
 
     cprint("\n" + "=" * 170, "blue", attrs=['bold'])
     cprint("📊 TOP 15 DATA TABLE - RAW DATA FOR MOON DEV'S ANALYSIS 📊", "blue", attrs=['bold'])
@@ -630,15 +630,15 @@ def display_data_table(changes):
         print(row)
 
     cprint("\n" + "=" * 170, "blue", attrs=['bold'])
-    cprint("💡 Moon Dev Tip: Compare this data with AI consensus to find your edge!", "yellow", attrs=['bold'])
+    cprint("💡 Karma Dev Tip: Compare this data with AI consensus to find your edge!", "yellow", attrs=['bold'])
     cprint("=" * 170 + "\n", "blue", attrs=['bold'])
 
 # ============================================================================
-# MAIN LOOP - Moon Dev
+# MAIN LOOP - Karma Dev
 # ============================================================================
 
 def run_check():
-    """Run one 4-hour check - Moon Dev"""
+    """Run one 4-hour check - Karma Dev"""
 
     cprint("\n" + "=" * 120, "magenta")
     cprint(f"🔄 VOLUME AGENT CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", "magenta", attrs=['bold'])
@@ -684,11 +684,11 @@ def run_check():
     cprint("=" * 120 + "\n", "magenta")
 
 def run_continuous():
-    """Run agent every 4 hours - Moon Dev"""
+    """Run agent every 4 hours - Karma Dev"""
 
     cprint("\n" + "=" * 120, "green")
     cprint("✅ HYPERLIQUID VOLUME AGENT - SWARM EDITION", "green", attrs=['bold'])
-    cprint("Made by Moon Dev", "yellow", attrs=['bold'])
+    cprint("Made by Karma Dev", "yellow", attrs=['bold'])
     cprint("=" * 120, "green")
     cprint("\n⏰ Running every 4 hours", "cyan")
     cprint(f"💾 Data saved to: {DATA_DIR}/", "cyan")
@@ -714,11 +714,11 @@ def run_continuous():
         cprint(f"All data saved to: {DATA_DIR}/\n", "cyan")
 
 # ============================================================================
-# ENTRY POINT - Moon Dev
+# ENTRY POINT - Karma Dev
 # ============================================================================
 
 def main():
-    """Main entry point - Moon Dev"""
+    """Main entry point - Karma Dev"""
     import sys
 
     if len(sys.argv) > 1 and sys.argv[1] == "--once":

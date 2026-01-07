@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's ADX + VWAP Backtest Strategy
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's ADX + VWAP Backtest Strategy
+Built with love by Karma Dev 🚀
 
 Strategy Logic:
 - Uses ADX to measure trend strength
@@ -28,7 +28,7 @@ if not hype_files:
 
 # Get the most recent file
 data_path = max(hype_files, key=lambda x: Path(x).stat().st_mtime)
-print(f"🌙 Moon Dev loading data from: {data_path}")
+print(f"🕉️ Karma Dev loading data from: {data_path}")
 
 # Load the data
 data = pd.read_csv(data_path, parse_dates=['timestamp'])
@@ -44,7 +44,7 @@ print(f"💰 Price range: ${data['Close'].min():.2f} - ${data['Close'].max():.2f
 
 class ADX_VWAP_Strategy(Strategy):
     """
-    Moon Dev's ADX + VWAP Strategy
+    Karma Dev's ADX + VWAP Strategy
 
     Parameters:
     - adx_period: Period for ADX calculation (default: 14)
@@ -113,18 +113,18 @@ class ADX_VWAP_Strategy(Strategy):
 
 
 # Create and configure the backtest
-print("\n🚀 Moon Dev's Backtest Starting...")
+print("\n🚀 Karma Dev's Backtest Starting...")
 bt = Backtest(data, ADX_VWAP_Strategy, cash=100000, commission=0.002)
 
 # Run the backtest with default parameters
 print("\n" + "="*80)
-print("🌙 MOON DEV'S DEFAULT PARAMETERS RESULTS 🌙")
+print("🕉️ MOON DEV'S DEFAULT PARAMETERS RESULTS 🕉️")
 print("="*80)
 stats_default = bt.run()
 print(stats_default)
 
 # Run optimization
-print("\n🔍 Moon Dev's Optimization Running...")
+print("\n🔍 Karma Dev's Optimization Running...")
 print("This may take a few minutes...\n")
 
 optimization_results = bt.optimize(
@@ -138,12 +138,12 @@ optimization_results = bt.optimize(
 
 # Print optimization results
 print("\n" + "="*80)
-print("🌙 MOON DEV'S OPTIMIZED RESULTS 🌙")
+print("🕉️ MOON DEV'S OPTIMIZED RESULTS 🕉️")
 print("="*80)
 print(optimization_results)
 
 print("\n" + "="*80)
-print("🌙 MOON DEV'S BEST PARAMETERS 🌙")
+print("🕉️ MOON DEV'S BEST PARAMETERS 🕉️")
 print("="*80)
 print(f"ADX Period: {optimization_results._strategy.adx_period}")
 print(f"ADX Threshold: {optimization_results._strategy.adx_threshold}")
@@ -151,4 +151,4 @@ print(f"Take Profit: {optimization_results._strategy.take_profit * 100:.1f}%")
 print(f"Stop Loss: {optimization_results._strategy.stop_loss * 100:.1f}%")
 print("="*80)
 
-print("\n✨ Moon Dev's backtest complete! ✨")
+print("\n✨ Karma Dev's backtest complete! ✨")

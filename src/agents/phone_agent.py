@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Phone Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Phone Agent
+Built with love by Karma Dev 🚀
 
 This agent handles real phone calls through Twilio.
 Just run on your VPS and people can call your Twilio number!
@@ -89,7 +89,7 @@ MIN_AUDIO_LENGTH = 0.5  # Minimum audio length in seconds to process
 # Load knowledge base
 KNOWLEDGE_BASE = """
 
-Key points about Moon Dev:
+Key points about Karma Dev:
 - Passionate about AI, trading, and coding
 - Streams coding sessions on YouTube
 - Built github repo with 15+ AI trading agents 
@@ -453,12 +453,12 @@ def log_unknown_question(question):
         cprint(f"❌ Error logging unknown question: {str(e)}", "red")
 
 def needs_knowledge_base(question):
-    """Check if the question is about Moon Dev, Algo Trade Camp, or specific offerings"""
+    """Check if the question is about Karma Dev, Algo Trade Camp, or specific offerings"""
     # Convert to lowercase for matching
     question = question.lower()
     
     # Keywords that indicate we need to verify against knowledge base
-    moon_dev_keywords = {
+    karma_dev_keywords = {
         'moon dev', 'moondev', 'moon', 'bootcamp', 'algo trade camp', 'algotradecamp',
         'course', 'discord', 'stream', 'youtube channel', 'points', 'clips',
         'refund', 'subscription', 'price', 'cost', 'payment', 'lifetime',
@@ -466,7 +466,7 @@ def needs_knowledge_base(question):
     }
     
     # Check if any keywords are in the question
-    return any(keyword in question for keyword in moon_dev_keywords)
+    return any(keyword in question for keyword in karma_dev_keywords)
 
 def is_question_in_knowledge_base(question, knowledge_base):
     """Check if the question can be confidently answered"""
@@ -505,12 +505,12 @@ async def test_conversation():
         
         # Welcome message
         cprint("\n" + "═" * 50, "green")
-        cprint("🌟 Starting Moon Dev's AI Voice Assistant! 🌙", "green")
+        cprint("🌟 Starting Karma Dev's AI Voice Assistant! 🕉️", "green")
         cprint("Press Ctrl+C to end the conversation", "yellow")
         cprint("═" * 50, "green")
         
         # Initial greeting
-        greeting = "Hello! This is Moon Dev's AI Assistant. How can I help you today? 🌙"
+        greeting = "Hello! This is Karma Dev's AI Assistant. How can I help you today? 🕉️"
         cprint("\nAI: " + greeting, "green")
         await play_audio_response(greeting)
         
@@ -519,12 +519,12 @@ async def test_conversation():
         recorder.start_recording()
         
         conversation_history = [
-            {"role": "system", "content": f"""You are Moon Dev's friendly AI assistant. Keep responses very short and concise (1-2 sentences max). Add emojis to make responses fun and engaging.
+            {"role": "system", "content": f"""You are Karma Dev's friendly AI assistant. Keep responses very short and concise (1-2 sentences max). Add emojis to make responses fun and engaging.
 
-Use this knowledge base for Moon Dev specific questions: {KNOWLEDGE_BASE}
+Use this knowledge base for Karma Dev specific questions: {KNOWLEDGE_BASE}
 
 Key guidelines:
-- Use knowledge base for Moon Dev/Algo Trade Camp specific questions
+- Use knowledge base for Karma Dev/Algo Trade Camp specific questions
 - Use your general knowledge for common questions
 - Keep responses under 2 sentences
 - Add relevant emojis
@@ -562,7 +562,7 @@ Key guidelines:
                         log_unknown_question(transcript)
                         
                         # Prepare "I don't know" response
-                        unknown_response = "I apologize, but I'm not sure about that. Please email moon@algotradecamp.com and we'll get that answered ASAP! 🌙✉️"
+                        unknown_response = "I apologize, but I'm not sure about that. Please email moon@algotradecamp.com and we'll get that answered ASAP! 🕉️✉️"
                         cprint("\nAI: " + unknown_response, "yellow")
                         
                         # Play response and add to history
@@ -618,7 +618,7 @@ Key guidelines:
     except KeyboardInterrupt:
         if 'recorder' in locals():
             recorder.stop_recording()
-        cprint("\n\n👋 Call ended. Moon Dev's AI signing off! 🌙", "yellow")
+        cprint("\n\n👋 Call ended. Karma Dev's AI signing off! 🕉️", "yellow")
         
     except Exception as e:
         cprint(f"\n❌ Error in conversation: {str(e)}", "red")
@@ -634,7 +634,7 @@ if not TESTING_MODE:
         resp = VoiceResponse()
         
         # Welcome message
-        resp.say("Welcome to Moon Dev's A.I. Assistant! 🌙", voice=VOICE_NAME)
+        resp.say("Welcome to Karma Dev's A.I. Assistant! 🕉️", voice=VOICE_NAME)
         
         # Gather speech input
         gather = Gather(input='speech', 
@@ -670,7 +670,7 @@ if not TESTING_MODE:
             response = openai.chat.completions.create(
                 model=MODEL_NAME,
                 messages=[
-                    {"role": "system", "content": "You are Moon Dev's friendly AI assistant. Keep responses concise and clear for phone calls."},
+                    {"role": "system", "content": "You are Karma Dev's friendly AI assistant. Keep responses concise and clear for phone calls."},
                     {"role": "user", "content": speech_result}
                 ]
             )
@@ -727,18 +727,18 @@ async def process_message(message):
         if not can_answer:
             # Log the unknown question
             log_unknown_question(message)
-            return "I apologize, but I'm not sure about that. Please email moon@algotradecamp.com and we'll get that answered ASAP! 🌙✉️"
+            return "I apologize, but I'm not sure about that. Please email moon@algotradecamp.com and we'll get that answered ASAP! 🕉️✉️"
         
         # Get AI response
         response = openai.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                {"role": "system", "content": f"""You are Moon Dev's friendly AI assistant. Keep responses very short and concise (1-2 sentences max). Add emojis to make responses fun and engaging.
+                {"role": "system", "content": f"""You are Karma Dev's friendly AI assistant. Keep responses very short and concise (1-2 sentences max). Add emojis to make responses fun and engaging.
 
-Use this knowledge base for Moon Dev specific questions: {KNOWLEDGE_BASE}
+Use this knowledge base for Karma Dev specific questions: {KNOWLEDGE_BASE}
 
 Key guidelines:
-- Use knowledge base for Moon Dev/Algo Trade Camp specific questions
+- Use knowledge base for Karma Dev/Algo Trade Camp specific questions
 - Use your general knowledge for common questions
 - Keep responses under 2 sentences
 - Add relevant emojis
@@ -763,7 +763,7 @@ Key guidelines:
 def start_server():
     """Start the server based on mode"""
     try:
-        cprint("\n🚀 Starting Moon Dev's Phone Agent...", "green")
+        cprint("\n🚀 Starting Karma Dev's Phone Agent...", "green")
         
         if TESTING_MODE:
             # Run Streamlit web interface

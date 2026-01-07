@@ -1,6 +1,6 @@
 """
-📊 Moon Dev's Chart Analysis Agent
-Built with love by Moon Dev 🌙
+📊 Karma Dev's Chart Analysis Agent
+Built with love by Karma Dev 🕉️
 
 Chuck the Chart Agent generates and analyzes trading charts using AI vision capabilities.
 """
@@ -144,7 +144,7 @@ class ChartAnalysisAgent(BaseAgent):
                     style=CHART_STYLE,
                     volume=VOLUME_PANEL,
                     addplot=ap if ap else None,
-                    title=f"\n{symbol} {timeframe} Chart Analysis by Moon Dev 🌙",
+                    title=f"\n{symbol} {timeframe} Chart Analysis by Karma Dev 🕉️",
                     savefig=chart_path)
             
             return chart_path
@@ -268,7 +268,7 @@ class ChartAnalysisAgent(BaseAgent):
             friendly_timeframe = timeframe.replace('m', ' minute').replace('h', ' hour').replace('d', ' day')
                 
             message = (
-                f"hi, Moon Dev seven seven seven! Chart analysis for {symbol} on the {friendly_timeframe} timeframe! "
+                f"hi, Karma Dev seven seven seven! Chart analysis for {symbol} on the {friendly_timeframe} timeframe! "
                 f"The trend is {analysis['direction']}. {analysis['analysis']} "
                 f"AI suggests to {analysis['action']} with {analysis['confidence']}% confidence! "
             )
@@ -338,7 +338,7 @@ class ChartAnalysisAgent(BaseAgent):
             
             # Debug print the chart data
             print("\n" + "╔" + "═" * 60 + "╗")
-            print(f"║    🌙 Chart Data for {symbol} {timeframe} - Last 5 Candles    ║")
+            print(f"║    🕉️ Chart Data for {symbol} {timeframe} - Last 5 Candles    ║")
             print("╠" + "═" * 60 + "╣")
             print(f"║ Time │ Open │ High │ Low │ Close │ Volume │")
             print("╟" + "─" * 60 + "╢")
@@ -380,7 +380,7 @@ class ChartAnalysisAgent(BaseAgent):
                     
                 # Print analysis in a nice box
                 print("\n" + "╔" + "═" * 50 + "╗")
-                print(f"║    🌙 Moon Dev's Chart Analysis - {symbol} {timeframe}   ║")
+                print(f"║    🕉️ Karma Dev's Chart Analysis - {symbol} {timeframe}   ║")
                 print("╠" + "═" * 50 + "╣")
                 print(f"║  Direction: {analysis['direction']:<41} ║")
                 print(f"║  Action: {analysis['action']:<44} ║")
@@ -437,7 +437,7 @@ class ChartAnalysisAgent(BaseAgent):
 
 if __name__ == "__main__":
     # Create and run the agent
-    print("\n🌙 Moon Dev's Chart Analysis Agent Starting Up...")
+    print("\n🕉️ Karma Dev's Chart Analysis Agent Starting Up...")
     print("👋 Hey! I'm Chuck, your friendly chart analysis agent! 📊")
     print(f"🎯 Monitoring {len(SYMBOLS)} symbols: {', '.join(SYMBOLS)}")
     agent = ChartAnalysisAgent()

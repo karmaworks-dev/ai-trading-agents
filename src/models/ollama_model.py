@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Ollama Model Integration
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Ollama Model Integration
+Built with love by Karma Dev 🚀
 
 This module provides integration with locally running Ollama models.
 """

@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's RBI AI (Research-Backtest-Implement)
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's RBI AI (Research-Backtest-Implement)
+Built with love by Karma Dev 🚀
 
 Required Setup:
 1. Create folder structure:
@@ -61,7 +61,7 @@ Remember: Past performance doesn't guarantee future results!
 #     "name": "deepseek-chat"  # Using DeepSeek Chat for package optimization
 # }
 
-# New OpenAI presets using GPT-5 for all agents 🌙🚀
+# New OpenAI presets using GPT-5 for all agents 🕉️🚀
 RESEARCH_CONFIG = {
     "type": "openai",
     "name": "gpt-5"
@@ -142,7 +142,7 @@ PACKAGE_CONFIG = {
 # AI Prompts
 
 RESEARCH_PROMPT = """
-You are Moon Dev's Research AI 🌙
+You are Karma Dev's Research AI 🕉️
 
 IMPORTANT NAMING RULES:
 1. Create a UNIQUE TWO-WORD NAME for this specific strategy
@@ -182,7 +182,7 @@ Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
 """
 
 BACKTEST_PROMPT = """
-You are Moon Dev's Backtest AI 🌙 ONLY SEND BACK CODE, NO OTHER TEXT.
+You are Karma Dev's Backtest AI 🕉️ ONLY SEND BACK CODE, NO OTHER TEXT.
 Create a backtesting.py implementation for the strategy.
 USE BACKTESTING.PY
 Include:
@@ -233,7 +233,7 @@ Example fix:
 RISK MANAGEMENT:
 1. Always calculate position sizes based on risk percentage
 2. Use proper stop loss and take profit calculations
-4. Print entry/exit signals with Moon Dev themed messages
+4. Print entry/exit signals with Karma Dev themed messages
 
 If you need indicators use TA lib or pandas TA. 
 
@@ -243,14 +243,14 @@ datetime, open, high, low, close, volume,
 2023-01-01 00:00:00, 16531.83, 16532.69, 16509.11, 16510.82, 231.05338022,
 2023-01-01 00:15:00, 16509.78, 16534.66, 16509.11, 16533.43, 308.12276951,
 
-Always add plenty of Moon Dev themed debug prints with emojis to make debugging easier! 🌙 ✨ 🚀
+Always add plenty of Karma Dev themed debug prints with emojis to make debugging easier! 🕉️ ✨ 🚀
 
 FOR THE PYTHON BACKTESTING LIBRARY USE BACKTESTING.PY AND SEND BACK ONLY THE CODE, NO OTHER TEXT.
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 DEBUG_PROMPT = """
-You are Moon Dev's Debug AI 🌙
+You are Karma Dev's Debug AI 🕉️
 Fix technical issues in the backtest code WITHOUT changing the strategy logic.
 
 CRITICAL BACKTESTING REQUIREMENTS:
@@ -278,12 +278,12 @@ DO NOT change:
 3. Risk management rules
 4. Parameter values (unless fixing technical issues)
 
-Return the complete fixed code with Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
 PACKAGE_PROMPT = """
-You are Moon Dev's Package AI 🌙
+You are Karma Dev's Package AI 🕉️
 Your job is to ensure the backtest code NEVER uses ANY backtesting.lib imports or functions.
 
 ❌ STRICTLY FORBIDDEN:
@@ -317,7 +317,7 @@ Example conversions:
 ✅ self.sma = self.I(talib.SMA, self.data.Close, timeperiod=20)
 
 IMPORTANT: Scan the ENTIRE code for any backtesting.lib usage and replace ALL instances!
-Return the complete fixed code with proper Moon Dev themed debug prints! 🌙 ✨
+Return the complete fixed code with proper Karma Dev themed debug prints! 🕉️ ✨
 ONLY SEND BACK CODE, NO OTHER TEXT.
 """
 
@@ -337,7 +337,7 @@ try:
     from anthropic import Anthropic
 except ImportError:
     Anthropic = None
-    cprint("⚠️ Anthropic SDK not installed. Claude models will be unavailable. (Moon Dev note)", "yellow")
+    cprint("⚠️ Anthropic SDK not installed. Claude models will be unavailable. (Karma Dev note)", "yellow")
 from pathlib import Path
 import threading
 import itertools
@@ -384,7 +384,7 @@ def init_deepseek_client():
             return None
             
         print("🔑 Initializing DeepSeek client...")
-        print("🌟 Moon Dev's RBI AI is connecting to DeepSeek...")
+        print("🌟 Karma Dev's RBI AI is connecting to DeepSeek...")
         
         client = openai.OpenAI(
             api_key=deepseek_key,
@@ -392,7 +392,7 @@ def init_deepseek_client():
         )
         
         print("✅ DeepSeek client initialized successfully!")
-        print("🚀 Moon Dev's RBI AI ready to roll!")
+        print("🚀 Karma Dev's RBI AI ready to roll!")
         return client
     except Exception as e:
         print(f"❌ Error initializing DeepSeek client: {str(e)}")
@@ -423,7 +423,7 @@ def chat_with_model(system_prompt, user_content, model_config):
             raise ValueError(f"🚨 Could not initialize {model_config['type']} {model_config['name']} model!")
 
         cprint(f"🧠 Using {model_config['type']} model: {model_config['name']}", "cyan")
-        cprint("🌟 Moon Dev's RBI AI is thinking...", "yellow")
+        cprint("🌟 Karma Dev's RBI AI is thinking...", "yellow")
         
         # Debug prints for prompt lengths
         cprint(f"📝 System prompt length: {len(system_prompt)} chars", "cyan")
@@ -559,7 +559,7 @@ def animate_progress(agent_name, stop_event):
         "analyzing data 🔍",
         "making magic ✨",
         "trading secrets 🤫",
-        "Moon Dev approved 🌙",
+        "Karma Dev approved 🕉️",
         "to the moon! 🚀"
     ]
     
@@ -871,7 +871,7 @@ def log_processed_idea(idea: str, strategy_name: str = "Unknown") -> None:
     if not PROCESSED_IDEAS_LOG.exists():
         PROCESSED_IDEAS_LOG.parent.mkdir(parents=True, exist_ok=True)
         with open(PROCESSED_IDEAS_LOG, 'w') as f:
-            f.write("# Moon Dev's RBI AI - Processed Ideas Log 🌙\n")
+            f.write("# Karma Dev's RBI AI - Processed Ideas Log 🕉️\n")
             f.write("# Format: hash,timestamp,strategy_name,idea_snippet\n")
     
     # Append the processed idea to the log
@@ -884,7 +884,7 @@ def log_processed_idea(idea: str, strategy_name: str = "Unknown") -> None:
 
 def process_trading_idea(idea: str) -> None:
     """Process a single trading idea completely independently"""
-    print("\n🚀 Moon Dev's RBI AI Processing New Idea!")
+    print("\n🚀 Karma Dev's RBI AI Processing New Idea!")
     print("🌟 Let's find some alpha in the chaos!")
     print(f"📝 Processing idea: {idea[:100]}...")
     print(f"📅 Saving results to today's folder: {TODAY_DATE}")
@@ -1004,7 +1004,7 @@ def main():
             continue
             
         cprint(f"\n{'='*50}", "yellow")
-        cprint(f"🌙 Processing idea {i}/{total_ideas}", "cyan")
+        cprint(f"🕉️ Processing idea {i}/{total_ideas}", "cyan")
         cprint(f"📝 Idea content: {idea[:100]}{'...' if len(idea) > 100 else ''}", "yellow")
         cprint(f"{'='*50}\n", "yellow")
         
@@ -1033,7 +1033,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        cprint(f"\n🌟 Moon Dev's RBI AI Starting Up!", "green")
+        cprint(f"\n🌟 Karma Dev's RBI AI Starting Up!", "green")
         cprint(f"📅 Today's Date: {TODAY_DATE} - All outputs will be saved in this folder", "magenta")
         cprint(f"🧠 DeepSeek-R1 thinking tags will be automatically removed from outputs", "magenta")
         cprint(f"📋 Processed ideas log: {PROCESSED_IDEAS_LOG}", "magenta")
@@ -1044,6 +1044,6 @@ if __name__ == "__main__":
         cprint(f"📦 Package: {PACKAGE_CONFIG['type']} - {PACKAGE_CONFIG['name']}", "cyan")
         main()
     except KeyboardInterrupt:
-        cprint("\n👋 Moon Dev's RBI AI shutting down gracefully...", "yellow")
+        cprint("\n👋 Karma Dev's RBI AI shutting down gracefully...", "yellow")
     except Exception as e:
         cprint(f"\n❌ Fatal error: {str(e)}", "red")

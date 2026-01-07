@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-🌙 Moon Dev's Real-Time Clips Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Real-Time Clips Agent
+Built with love by Karma Dev 🚀
 
 AI-Powered OBS Clip Creator with Model Factory Integration
 Automatically finds the best moments from your live streams and names your clips!
@@ -160,7 +160,7 @@ whisper_model = whisper.load_model("base")  # Options: tiny, base, small, medium
 cprint("✅ Whisper model loaded!", "green")
 
 class RealtimeClipsAgent:
-    """AI-powered real-time clip creator using Moon Dev's Model Factory"""
+    """AI-powered real-time clip creator using Karma Dev's Model Factory"""
 
     def __init__(self):
         self.obs_folder = Path(OBS_FOLDER)
@@ -698,7 +698,7 @@ def print_help():
     """Print help message."""
     help_text = """
 ╔════════════════════════════════════════════════════════════════════════════════╗
-║             🌙 MOON DEV'S REAL-TIME CLIPS AGENT 🌙                            ║
+║             🕉️ MOON DEV'S REAL-TIME CLIPS AGENT 🕉️                            ║
 ╚════════════════════════════════════════════════════════════════════════════════╝
 
 Commands:
@@ -735,7 +735,7 @@ The AI first finds the best segment, then rates it (1-5).
 Only clips scoring 4+ are saved with AI-generated names!
 
 Model Factory Integration:
-  - Works with ALL Moon Dev models: Claude, GPT, DeepSeek, Groq, Grok, Ollama
+  - Works with ALL Karma Dev models: Claude, GPT, DeepSeek, Groq, Grok, Ollama
   - Configure AI_MODEL_TYPE at the top of the file
   - Default: Groq (fast and cheap!)
 """
@@ -811,7 +811,7 @@ def interactive_loop(agent):
                 cmd = user_input.lower()
 
                 if cmd == '/quit' or cmd == '/exit':
-                    cprint("\n👋 Later, Doctor Data Dawg! 🌙\n", "cyan")
+                    cprint("\n👋 Later, Doctor Data Dawg! 🕉️\n", "cyan")
                     break
 
                 elif cmd == '/help':
@@ -838,7 +838,7 @@ def interactive_loop(agent):
                 cprint("⚠️  Unknown command. Try '5' or 'clip 5' or /help", "yellow")
 
         except KeyboardInterrupt:
-            cprint("\n\n👋 Later, Doctor Data Dawg! 🌙\n", "cyan")
+            cprint("\n\n👋 Later, Doctor Data Dawg! 🕉️\n", "cyan")
             break
         except Exception as e:
             cprint(f"❌ Error: {e}", "red")
@@ -847,7 +847,7 @@ def interactive_loop(agent):
 def main():
     """Main entry point."""
     cprint("\n" + "="*80, "cyan")
-    cprint("🌙 MOON DEV'S REAL-TIME CLIPS AGENT 🌙", "cyan")
+    cprint("🕉️ MOON DEV'S REAL-TIME CLIPS AGENT 🕉️", "cyan")
     cprint("="*80, "cyan")
 
     agent = RealtimeClipsAgent()

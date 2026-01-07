@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's OllamaFreeAPI Model Integration
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's OllamaFreeAPI Model Integration
+Built with love by Karma Dev 🚀
 
 This module provides integration with the free OllamaFreeAPI service.
 Access 650+ AI models without API keys - perfect for testing and development!

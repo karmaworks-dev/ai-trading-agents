@@ -1,6 +1,6 @@
 '''
-🌙 Moon Dev's Sentiment Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Sentiment Agent
+Built with love by Karma Dev 🚀
 
 This agent monitors Twitter sentiment for our token list using twikit.
 It will analyze sentiment using HuggingFace models and track mentioned tokens.
@@ -111,7 +111,7 @@ class SentimentAgent:
         cprint("⚙️ Loading sentiment model...", "cyan")
         self.init_sentiment_model()
             
-        cprint("🌙 Moon Dev's Sentiment Agent initialized!", "green")
+        cprint("🕉️ Karma Dev's Sentiment Agent initialized!", "green")
         
     def init_sentiment_model(self):
         """Initialize the BERT model for sentiment analysis"""
@@ -281,7 +281,7 @@ class SentimentAgent:
         score_percent = (sentiment_score + 1) * 50  # Convert -1 to 1 into 0 to 100
             
         # Prepare announcement
-        message = f"Moon Dev's Sentiment Analysis: After analyzing {len(texts)} tweets, "
+        message = f"Karma Dev's Sentiment Analysis: After analyzing {len(texts)} tweets, "
         message += f"the crypto sentiment is {sentiment} "
         message += f"with a score of {score_percent:.1f} out of 100"
         
@@ -316,10 +316,10 @@ class SentimentAgent:
                 cprint("❌ No cookies.json found! Please run twitter_login.py first", "red")
                 sys.exit(1)
 
-            cprint("🌙 Moon Dev's Sentiment Agent starting up...", "cyan")
+            cprint("🕉️ Karma Dev's Sentiment Agent starting up...", "cyan")
             client = Client()
             client.load_cookies("cookies.json")
-            cprint("🚀 Moon Dev's cookies loaded successfully! Time to fly to the moon! 🌙", "green")
+            cprint("🚀 Karma Dev's cookies loaded successfully! Time to fly to the moon! 🕉️", "green")
             return client
 
         except Exception as e:
@@ -335,7 +335,7 @@ class SentimentAgent:
         collected_tweets = []
         
         try:
-            cprint(f'🕒 Time is {datetime.now()} - Moon Dev getting fresh tweets for {query}! 🌟', "cyan")
+            cprint(f'🕒 Time is {datetime.now()} - Karma Dev getting fresh tweets for {query}! 🌟', "cyan")
             
             # Random delay before request (1-3 seconds)
             time.sleep(randint(1, 3))
@@ -460,7 +460,7 @@ class SentimentAgent:
 
     async def run_async(self):
         """Async function to run sentiment analysis"""
-        cprint("📊 Moon Dev's Sentiment Analysis running...", "cyan")
+        cprint("📊 Karma Dev's Sentiment Analysis running...", "cyan")
         
         # Initialize client if not already done
         if not self.client:
@@ -486,7 +486,7 @@ class SentimentAgent:
         if all_tweets:
             self.analyze_and_announce_sentiment(all_tweets)
 
-        cprint("🌙 Moon Dev's Sentiment Analysis complete! 🚀", "green")
+        cprint("🕉️ Karma Dev's Sentiment Analysis complete! 🚀", "green")
 
     def run(self):
         """Main function to run sentiment analysis"""
@@ -495,7 +495,7 @@ class SentimentAgent:
 if __name__ == "__main__":
     try:
         agent = SentimentAgent()
-        cprint(f"\n🌙 Moon Dev's Sentiment Agent starting (checking every {CHECK_INTERVAL_MINUTES} minutes)...", "cyan")
+        cprint(f"\n🕉️ Karma Dev's Sentiment Agent starting (checking every {CHECK_INTERVAL_MINUTES} minutes)...", "cyan")
         
         while True:
             try:
@@ -510,7 +510,7 @@ if __name__ == "__main__":
                 time.sleep(60)  # Wait a minute before retrying
                 
     except KeyboardInterrupt:
-        cprint("\n👋 Moon Dev's Sentiment Agent shutting down gracefully...", "yellow")
+        cprint("\n👋 Karma Dev's Sentiment Agent shutting down gracefully...", "yellow")
     except Exception as e:
         cprint(f"\n❌ Fatal error: {str(e)}", "red")
         sys.exit(1)

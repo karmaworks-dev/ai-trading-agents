@@ -1,6 +1,6 @@
 # Compliance Agent
 
-🌙 Moon Dev's Ad Compliance Analyzer for Facebook Advertising Guidelines
+🕉️ Karma Dev's Ad Compliance Analyzer for Facebook Advertising Guidelines
 
 ## What It Does
 - Analyzes TikTok ads for Facebook advertising compliance
@@ -75,7 +75,7 @@ Each analysis includes:
     "Remove 'You must be...' language",
     "Reduce text overlay on images"
   ],
-  "moon_dev_message": "Moon Dev's magic found some issues to fix! 🌙"
+  "karma_dev_message": "Karma Dev's magic found some issues to fix! 🕉️"
 }
 ```
 
@@ -89,4 +89,4 @@ Each analysis includes:
 - Designed for search arbitrage ad campaigns
 - Works with TikTok ads being repurposed for Facebook
 - Helps avoid ad rejections and account issues
-- Part of Moon Dev's advertising automation suite
+- Part of Karma Dev's advertising automation suite

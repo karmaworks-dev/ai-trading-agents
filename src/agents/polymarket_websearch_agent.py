@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Polymarket Web Search Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Polymarket Web Search Agent
+Built with love by Karma Dev 🚀
 
 This agent combines Polymarket whale tracking with WEB SEARCH capabilities!
 It searches the web for context on each market before sending to the AI swarm.
@@ -38,7 +38,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ==============================================================================
-# CONFIGURATION - Moon Dev's Web Search Polymarket Agent
+# CONFIGURATION - Karma Dev's Web Search Polymarket Agent
 # ==============================================================================
 
 # Trade filtering (same as polymarket_agent)
@@ -46,7 +46,7 @@ MIN_TRADE_SIZE_USD = 500  # Only track trades over this amount
 IGNORE_PRICE_THRESHOLD = 0.02  # Ignore trades within X cents of resolution ($0 or $1)
 LOOKBACK_HOURS = 24  # How many hours back to fetch historical trades on startup
 
-# 🌙 Moon Dev - Market category filters (case-insensitive)
+# 🕉️ Karma Dev - Market category filters (case-insensitive)
 IGNORE_CRYPTO_KEYWORDS = [
     'bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'solana', 'sol',
     'dogecoin', 'doge', 'shiba', 'cardano', 'ada', 'ripple', 'xrp',
@@ -77,12 +77,12 @@ AI_MODEL_PROVIDER = "xai"  # Model to use if USE_SWARM_MODE = False
 AI_MODEL_NAME = "grok-2-fast-reasoning"  # Model name if not using swarm
 SEND_PRICE_INFO_TO_AI = False  # Send market price/odds to AI models
 
-# 🌙 Moon Dev - WEB SEARCH Configuration (NEW!)
+# 🕉️ Karma Dev - WEB SEARCH Configuration (NEW!)
 WEB_SEARCH_MODEL = "gpt-4o-mini-search-preview"  # OpenAI search model with built-in web search
 WEB_SEARCH_TIMEOUT = 60  # Seconds timeout for web search
 OPENAI_API_KEY = os.getenv("OPENAI_KEY")
 
-# 🌙 Moon Dev - AI Prompts
+# 🕉️ Karma Dev - AI Prompts
 MARKET_ANALYSIS_SYSTEM_PROMPT = """You are a prediction market expert analyzing Polymarket markets.
 You have been provided with RECENT NEWS AND CONTEXT for each market from web search.
 Use this context to make more informed predictions.
@@ -142,7 +142,7 @@ DATA_FOLDER = os.path.join(project_root, "src/data/polymarket_websearch")
 MARKETS_CSV = os.path.join(DATA_FOLDER, "markets.csv")
 PREDICTIONS_CSV = os.path.join(DATA_FOLDER, "predictions.csv")
 CONSENSUS_PICKS_CSV = os.path.join(DATA_FOLDER, "consensus_picks.csv")
-WEB_SEARCH_LOG_CSV = os.path.join(DATA_FOLDER, "web_search_log.csv")  # 🌙 NEW: Log web searches
+WEB_SEARCH_LOG_CSV = os.path.join(DATA_FOLDER, "web_search_log.csv")  # 🕉️ NEW: Log web searches
 
 # Polymarket API & WebSocket
 POLYMARKET_API_BASE = "https://data-api.polymarket.com"
@@ -158,7 +158,7 @@ class PolymarketWebSearchAgent:
     def __init__(self):
         """Initialize the Polymarket Web Search agent"""
         cprint("\n" + "="*80, "cyan")
-        cprint("🌙 Moon Dev's Polymarket WEB SEARCH Agent - Initializing", "cyan", attrs=['bold'])
+        cprint("🕉️ Karma Dev's Polymarket WEB SEARCH Agent - Initializing", "cyan", attrs=['bold'])
         cprint("🔍 This agent searches the web for context before AI analysis!", "yellow")
         cprint("="*80, "cyan")
 
@@ -180,7 +180,7 @@ class PolymarketWebSearchAgent:
         self.ignored_crypto_count = 0
         self.ignored_sports_count = 0
 
-        # 🌙 Moon Dev - Check OpenAI API key for web search
+        # 🕉️ Karma Dev - Check OpenAI API key for web search
         if not OPENAI_API_KEY:
             cprint("⚠️ WARNING: OPENAI_KEY not found - web search will fail!", "red", attrs=['bold'])
         else:
@@ -277,12 +277,12 @@ class PolymarketWebSearchAgent:
             cprint(f"❌ Error saving predictions CSV: {e}", "red")
 
     # ==========================================================================
-    # 🌙 Moon Dev - WEB SEARCH FUNCTIONALITY (NEW!)
+    # 🕉️ Karma Dev - WEB SEARCH FUNCTIONALITY (NEW!)
     # ==========================================================================
 
     def search_market_context(self, market_title: str) -> str:
         """
-        🌙 Moon Dev - Search the web for context about a specific Polymarket market
+        🕉️ Karma Dev - Search the web for context about a specific Polymarket market
 
         Uses OpenAI's gpt-4o-mini-search-preview which has built-in web search.
         Returns the web search results as a string.
@@ -353,7 +353,7 @@ Provide a concise summary of the most relevant and recent information."""
                 content = message.get('content', '')
 
             if content:
-                # 🌙 Moon Dev - SHOW THE WEB SEARCH RESULTS
+                # 🕉️ Karma Dev - SHOW THE WEB SEARCH RESULTS
                 cprint(f"\n{'─'*60}", "green")
                 cprint("📰 WEB SEARCH RESULTS:", "green", attrs=['bold'])
                 cprint(f"{'─'*60}", "green")
@@ -429,7 +429,7 @@ Provide a concise summary of the most relevant and recent information."""
 
             if isinstance(data, dict):
                 if data.get('type') == 'subscribed':
-                    cprint("✅ Moon Dev WebSocket subscribed to live trades!", "green")
+                    cprint("✅ Karma Dev WebSocket subscribed to live trades!", "green")
                     self.ws_connected = True
                     return
 
@@ -671,7 +671,7 @@ Provide a concise summary of the most relevant and recent information."""
         cprint("="*80 + "\n", "cyan")
 
     # ==========================================================================
-    # 🌙 Moon Dev - AI PREDICTIONS WITH WEB SEARCH (MODIFIED!)
+    # 🕉️ Karma Dev - AI PREDICTIONS WITH WEB SEARCH (MODIFIED!)
     # ==========================================================================
 
     def get_ai_predictions(self):
@@ -692,7 +692,7 @@ Provide a concise summary of the most relevant and recent information."""
         cprint("="*80, "magenta")
 
         # ==========================================================================
-        # 🌙 Moon Dev - SEARCH WEB FOR EACH MARKET BEFORE AI ANALYSIS
+        # 🕉️ Karma Dev - SEARCH WEB FOR EACH MARKET BEFORE AI ANALYSIS
         # ==========================================================================
         cprint("\n" + "="*80, "yellow")
         cprint("🔍 PHASE 1: WEB SEARCH FOR MARKET CONTEXT", "yellow", attrs=['bold'])
@@ -712,7 +712,7 @@ Provide a concise summary of the most relevant and recent information."""
                 time.sleep(2)
 
         # ==========================================================================
-        # 🌙 Moon Dev - BUILD ENRICHED PROMPT WITH WEB CONTEXT
+        # 🕉️ Karma Dev - BUILD ENRICHED PROMPT WITH WEB CONTEXT
         # ==========================================================================
         cprint("\n" + "="*80, "green")
         cprint("📝 PHASE 2: BUILDING ENRICHED PROMPT WITH WEB CONTEXT", "green", attrs=['bold'])
@@ -953,7 +953,7 @@ Provide predictions for each market in the specified format."""
                         'ollama_prediction': predictions.get('ollama', 'N/A'),
                         'consensus_prediction': consensus,
                         'num_models_responded': len(predictions),
-                        'web_search_used': 'YES',  # 🌙 Moon Dev - Mark that web search was used!
+                        'web_search_used': 'YES',  # 🕉️ Karma Dev - Mark that web search was used!
                         'market_link': market_link
                     }
                     new_records.append(record)
@@ -1262,7 +1262,7 @@ Provide predictions for each market in the specified format."""
                         fresh_eligible_count += 1
 
                 cprint(f"\n{'='*60}", "cyan")
-                cprint(f"📊 Moon Dev Web Search Agent Status @ {datetime.now().strftime('%H:%M:%S')}", "cyan", attrs=['bold'])
+                cprint(f"📊 Karma Dev Web Search Agent Status @ {datetime.now().strftime('%H:%M:%S')}", "cyan", attrs=['bold'])
                 cprint(f"{'='*60}", "cyan")
                 cprint(f"   WebSocket: {'✅ Connected' if self.ws_connected else '❌ Disconnected'}", "green" if self.ws_connected else "red")
                 cprint(f"   Total trades: {self.total_trades_received}", "white")
@@ -1377,9 +1377,9 @@ Provide predictions for each market in the specified format."""
 
 
 def main():
-    """🌙 Moon Dev Main - WebSocket + Web Search + AI Analysis"""
+    """🕉️ Karma Dev Main - WebSocket + Web Search + AI Analysis"""
     cprint("\n" + "="*80, "cyan")
-    cprint("🌙 Moon Dev's Polymarket WEB SEARCH Agent!", "cyan", attrs=['bold'])
+    cprint("🕉️ Karma Dev's Polymarket WEB SEARCH Agent!", "cyan", attrs=['bold'])
     cprint("🔍 This agent searches the web for context before AI analysis!", "yellow", attrs=['bold'])
     cprint("="*80, "cyan")
     cprint(f"💰 Tracking trades over ${MIN_TRADE_SIZE_USD}", "yellow")
@@ -1421,17 +1421,17 @@ def main():
     analysis_thread = threading.Thread(target=agent.analysis_loop, daemon=True, name="Analysis")
 
     try:
-        cprint("🚀 Moon Dev starting threads...\n", "green", attrs=['bold'])
+        cprint("🚀 Karma Dev starting threads...\n", "green", attrs=['bold'])
         status_thread.start()
         analysis_thread.start()
 
-        cprint("✨ Moon Dev Web Search Agent running! Press Ctrl+C to stop.\n", "green", attrs=['bold'])
+        cprint("✨ Karma Dev Web Search Agent running! Press Ctrl+C to stop.\n", "green", attrs=['bold'])
         while True:
             time.sleep(1)
 
     except KeyboardInterrupt:
         cprint("\n\n" + "="*80, "yellow")
-        cprint("⚠️ Moon Dev Polymarket Web Search Agent stopped by user", "yellow", attrs=['bold'])
+        cprint("⚠️ Karma Dev Polymarket Web Search Agent stopped by user", "yellow", attrs=['bold'])
         cprint("="*80 + "\n", "yellow")
         sys.exit(0)
 

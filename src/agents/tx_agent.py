@@ -1,5 +1,5 @@
 '''
-🌙 Moon Dev's Transaction Scanner - Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Transaction Scanner - Built with love by Karma Dev 🚀
 Watches for new Solana transactions and displays them with fun animations!
 '''
 
@@ -17,7 +17,7 @@ from rich.console import Console
 from rich import print as rprint
 from playsound import playsound
 
-# 🌙 Moon Dev: Calculate project root dynamically
+# 🕉️ Karma Dev: Calculate project root dynamically
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 GITHUB_DIR = PROJECT_ROOT.parent  # Parent folder containing all repos
 
@@ -55,10 +55,10 @@ TRANSACTION_EMOJIS = [
     "💸", "💰", "💎", "💵", "💶", "💷",  # Money
     "🏦", "🏧", "💱", "💲", "🤑", "💹",  # Banking & finance
     "📈", "📊", "📉", "🎯", "🎰", "🎲",  # Trading & games
-    "🌙", "⭐", "✨", "💫", "🌟", "⚡",   # Moon Dev specials
+    "🕉️", "⭐", "✨", "💫", "🌟", "⚡",   # Karma Dev specials
 ]
 
-# Sound effects paths - 🌙 Moon Dev: External repo (sibling to this repo)
+# Sound effects paths - 🕉️ Karma Dev: External repo (sibling to this repo)
 SOUND_EFFECTS = [
     str(GITHUB_DIR / "Untitled" / "sounds" / "crack1.wav"),
     str(GITHUB_DIR / "Untitled" / "sounds" / "golfhit25.MP3")
@@ -66,7 +66,7 @@ SOUND_EFFECTS = [
 
 class TxScanner:
     def __init__(self):
-        """🌙 Moon Dev's Transaction Scanner - Built with love by Moon Dev 🚀"""
+        """🕉️ Karma Dev's Transaction Scanner - Built with love by Karma Dev 🚀"""
         self.base_dir = Path(__file__).parent / "api_data"
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir = DATA_FOLDER

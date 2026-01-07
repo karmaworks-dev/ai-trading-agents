@@ -1,6 +1,6 @@
 """
-🐳 Moon Dev's Whale Watcher
-Built with love by Moon Dev 🚀
+🐳 Karma Dev's Whale Watcher
+Built with love by Karma Dev 🚀
 
 Dez the Whale Agent tracks open interest changes across different timeframes and announces market moves if she sees anomalies 
 """
@@ -24,7 +24,7 @@ import openai
 from pathlib import Path
 from src import nice_funcs as n
 from src import nice_funcs_hyperliquid as hl  # Add import for hyperliquid functions
-from src.agents.api import MoonDevAPI
+from src.agents.api import KarmaDevAPI
 from collections import deque
 from src.agents.base_agent import BaseAgent
 import traceback
@@ -115,16 +115,16 @@ class WhaleAgent(BaseAgent):
                     api_key=deepseek_key,
                     base_url=DEEPSEEK_BASE_URL
                 )
-                print("🚀 Moon Dev's Whale Agent using DeepSeek override!")
+                print("🚀 Karma Dev's Whale Agent using DeepSeek override!")
             else:
                 self.deepseek_client = None
                 print("⚠️ DEEPSEEK_KEY not found - DeepSeek model will not be available")
         else:
             self.deepseek_client = None
-            print(f"🎯 Moon Dev's Whale Agent using Claude model: {self.ai_model}!")
+            print(f"🎯 Karma Dev's Whale Agent using Claude model: {self.ai_model}!")
         
-        # Initialize Moon Dev API with correct base URL
-        self.api = MoonDevAPI(base_url="http://api.moondev.com:8000")
+        # Initialize Karma Dev API with correct base URL
+        self.api = KarmaDevAPI(base_url="http://api.moondev.com:8000")
         
         # Create data directories if they don't exist
         self.audio_dir = PROJECT_ROOT / "src" / "audio"
@@ -519,7 +519,7 @@ class WhaleAgent(BaseAgent):
                     # Get first line of analysis by splitting and taking first element
                     analysis_first_line = analysis['analysis'].split('\n')[0] if analysis['analysis'] else ""
                     message += f" | AI suggests {analysis['action']} with {analysis['confidence']}% confidence. "
-                    message += f"Analysis: {analysis_first_line} 🌙"
+                    message += f"Analysis: {analysis_first_line} 🕉️"
             
             # Return both message and whale status
             return message, is_whale
@@ -549,7 +549,7 @@ class WhaleAgent(BaseAgent):
         except Exception as e:
             print(f"❌ Error in monitoring cycle: {str(e)}")
             print(f"Stack trace: {traceback.format_exc()}")
-            print("🔧 Moon Dev suggests checking the logs and trying again!")
+            print("🔧 Karma Dev suggests checking the logs and trying again!")
             time.sleep(60)  # Sleep for 1 minute on error
             
     def _announce(self, message, is_whale=False):
@@ -593,7 +593,7 @@ class WhaleAgent(BaseAgent):
                     eth_oi = latest_data['eth_oi']
                     total_oi = latest_data['total_oi']
                     
-                    message = "🌙 Moon Dev's Whale Watcher starting fresh! I'll compare changes once I have more data. "
+                    message = "🕉️ Karma Dev's Whale Watcher starting fresh! I'll compare changes once I have more data. "
                     message += f"Current total open interest is {self._format_number_for_speech(total_oi)} with Bitcoin at "
                     message += f"{(btc_oi/total_oi)*100:.1f}% and Ethereum at {(eth_oi/total_oi)*100:.1f}% of the market."
                     self._announce(message)
@@ -666,7 +666,7 @@ if __name__ == "__main__":
     agent = WhaleAgent()
     
     # Run the agent continuously
-    print("\n🐋 Moon Dev's Whale Agent starting monitoring cycle...")
+    print("\n🐋 Karma Dev's Whale Agent starting monitoring cycle...")
     while True:
         try:
             agent.run_monitoring_cycle()
@@ -676,5 +676,5 @@ if __name__ == "__main__":
             break
         except Exception as e:
             print(f"❌ Error in main loop: {str(e)}")
-            print("🔧 Moon Dev suggests checking the logs and trying again!")
+            print("🔧 Karma Dev suggests checking the logs and trying again!")
             time.sleep(60)  # Sleep for 1 minute on error 

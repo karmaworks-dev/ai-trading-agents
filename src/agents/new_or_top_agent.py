@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's New & Top Coins Agent 🔍
+🕉️ Karma Dev's New & Top Coins Agent 🔍
 
 This agent goes through and analyzes all of the new tokens that have been listed in the coin gecko and then also analyzes the top movers of the last 24 hours on coin gecko and then makes recommendations based off that data. 
 
@@ -184,7 +184,7 @@ class NewOrTopAgent:
             self.ai_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_KEY"))
             print(f"🧠 Using Claude model: {AI_MODEL}")
             
-        print_fancy("🌙 Moon Dev's New & Top Coins Agent Initialized! 🌟", 'white', 'on_magenta', SUCCESS_EMOJIS)
+        print_fancy("🕉️ Karma Dev's New & Top Coins Agent Initialized! 🌟", 'white', 'on_magenta', SUCCESS_EMOJIS)
         
     def get_top_gainers(self) -> pd.DataFrame:
         """Get only top gainers (positive performers)"""
@@ -447,7 +447,7 @@ class NewOrTopAgent:
             
     def run_analysis(self):
         """Run complete analysis cycle"""
-        print_spinner("🚀 Initiating Moon Dev Analysis Sequence...", ROCKET_SEQUENCE, 'white', 'on_magenta')
+        print_spinner("🚀 Initiating Karma Dev Analysis Sequence...", ROCKET_SEQUENCE, 'white', 'on_magenta')
         
         # Get only top gainers and new coins
         top_gainers_df = self.get_top_gainers()
@@ -524,7 +524,7 @@ class NewOrTopAgent:
 
 def main():
     """Main function to run the agent"""
-    print_fancy("\n🌙 Moon Dev's Cosmic Token Analysis Starting! 🌟", 'white', 'on_magenta', SUCCESS_EMOJIS)
+    print_fancy("\n🕉️ Karma Dev's Cosmic Token Analysis Starting! 🌟", 'white', 'on_magenta', SUCCESS_EMOJIS)
     agent = NewOrTopAgent()
     
     try:
@@ -535,7 +535,7 @@ def main():
                 time.sleep(450)  # 450 * 8 = 3600 (1 hour)
             
     except KeyboardInterrupt:
-        print_fancy("\n👋 Agent stopped by user - Moon Dev out! 🌙", 'white', 'on_magenta')
+        print_fancy("\n👋 Agent stopped by user - Karma Dev out! 🕉️", 'white', 'on_magenta')
     except Exception as e:
         print_fancy(f"\nError: {str(e)}", 'white', 'on_red', ERROR_EMOJIS)
 

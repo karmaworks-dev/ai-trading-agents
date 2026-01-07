@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Extended Exchange Trading Functions
+🕉️ Karma Dev's Extended Exchange Trading Functions
 
 This module provides trading functions for Extended Exchange (X10).
 Compatible with the trading_agent.py exchange selector.
@@ -29,14 +29,14 @@ except ImportError:
 load_dotenv()
 
 # =============================================================================
-# 🌙 Moon Dev's Symbol Format Conversion
+# 🕉️ Karma Dev's Symbol Format Conversion
 # =============================================================================
 
 def format_symbol_for_extended(symbol: str) -> str:
     """
     Convert simple symbol format to Extended format
 
-    Moon Dev says: Keep using 'BTC', 'ETH', 'SOL' everywhere!
+    Karma Dev says: Keep using 'BTC', 'ETH', 'SOL' everywhere!
     This function automatically converts to Extended's format internally.
 
     Args:
@@ -120,7 +120,7 @@ class ExtendedExchangeAPI:
         return self._event_loop
 
     def _request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Dict:
-        """🌙 Moon Dev's REST API request handler"""
+        """🕉️ Karma Dev's REST API request handler"""
         url = f"{self.base_url}{endpoint}"
         try:
             response = self.session.request(method, url, json=data)
@@ -160,7 +160,7 @@ class ExtendedExchangeAPI:
                 'is_long': bool
             }
         """
-        # 🌙 Moon Dev: Auto-convert symbol format
+        # 🕉️ Karma Dev: Auto-convert symbol format
         symbol = format_symbol_for_extended(symbol)
 
         try:
@@ -179,14 +179,14 @@ class ExtendedExchangeAPI:
                     # Get PnL from Extended API
                     unrealized_pnl = float(getattr(pos, 'unrealised_pnl', 0) or getattr(pos, 'unrealized_pnl', 0))
 
-                    # 🌙 Moon Dev: Calculate P&L % using actual position leverage
+                    # 🕉️ Karma Dev: Calculate P&L % using actual position leverage
                     # Matches reference: actual_margin = (position_size * entry_price) / LEVERAGE
                     position_value = mypos_size * entry_px
                     position_leverage = float(getattr(pos, 'leverage', DEFAULT_LEVERAGE))
                     actual_margin = position_value / position_leverage if position_leverage > 0 else position_value
                     pnl_perc = (unrealized_pnl / actual_margin) * 100 if actual_margin > 0 else 0
 
-                    # 🌙 Moon Dev: Determine position direction from 'side' field (not size!)
+                    # 🕉️ Karma Dev: Determine position direction from 'side' field (not size!)
                     # Extended uses 'side' field: 'LONG' or 'SHORT'
                     side = str(getattr(pos, 'side', 'LONG')).upper()
                     is_long = side != 'SHORT'
@@ -414,7 +414,7 @@ class ExtendedExchangeAPI:
     def usd_to_asset_size(self, symbol: str, usd_amount: float) -> float:
         """
         Convert USD amount to asset size for trading
-        🌙 Moon Dev's asset converter for Extended Exchange
+        🕉️ Karma Dev's asset converter for Extended Exchange
         """
         try:
             loop = self._get_event_loop()
@@ -510,7 +510,7 @@ def market_buy(symbol: str, usd_amount: float, slippage=None, leverage: int = DE
         slippage: Not used by Extended (kept for compatibility)
         leverage: Leverage multiplier
     """
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -533,7 +533,7 @@ def market_sell(symbol: str, usd_amount: float, slippage=None, leverage: int = D
         slippage: Not used by Extended (kept for compatibility)
         leverage: Leverage multiplier
     """
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -571,7 +571,7 @@ def open_short(symbol: str, usd_amount: float, slippage=None, leverage: int = DE
 
 def close_position(symbol: str) -> bool:
     """Close position - trading_agent compatible"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -580,7 +580,7 @@ def close_position(symbol: str) -> bool:
 
 def chunk_kill(symbol: str, max_chunk_size: float = 999999, slippage: int = None) -> bool:
     """
-    🌙 Moon Dev's Extended Exchange Chunk Kill Function
+    🕉️ Karma Dev's Extended Exchange Chunk Kill Function
 
     Close position with maker orders - loops until FULLY closed
     Adjusts order size if partially filled
@@ -594,14 +594,14 @@ def chunk_kill(symbol: str, max_chunk_size: float = 999999, slippage: int = None
     Returns:
         True if position closed successfully
     """
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
         cprint("❌ Extended API not initialized", "red")
         return False
 
-    cprint(f"\n🔄 Moon Dev's Chunk Kill: Closing {symbol} position (MAKER orders)...", "yellow")
+    cprint(f"\n🔄 Karma Dev's Chunk Kill: Closing {symbol} position (MAKER orders)...", "yellow")
 
     last_price = None
     last_size = None
@@ -680,7 +680,7 @@ def chunk_kill(symbol: str, max_chunk_size: float = 999999, slippage: int = None
 
 def cancel_all_orders(symbol: str):
     """Cancel all orders - trading_agent compatible"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -693,7 +693,7 @@ def cancel_all_orders(symbol: str):
 
 def get_ticker(symbol: str) -> Dict:
     """Get ticker data including bid, ask, and mark price"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -716,7 +716,7 @@ def get_ticker(symbol: str) -> Dict:
 
 def get_current_price(symbol: str) -> float:
     """Get current mid price for a symbol"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -734,7 +734,7 @@ def get_current_price(symbol: str) -> float:
 
 def get_open_orders(symbol: str) -> List[Dict]:
     """Get list of open orders for a symbol"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -745,7 +745,7 @@ def get_open_orders(symbol: str) -> List[Dict]:
 
 def limit_buy(symbol: str, usd_amount: float, limit_price: float, leverage: int = DEFAULT_LEVERAGE, slippage: int = None):
     """Place a limit buy order (slippage ignored for compatibility)"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -783,7 +783,7 @@ def limit_buy(symbol: str, usd_amount: float, limit_price: float, leverage: int 
 
 def limit_sell(symbol: str, usd_amount: float, limit_price: float, leverage: int = DEFAULT_LEVERAGE, slippage: int = None):
     """Place a limit sell order (slippage ignored for compatibility)"""
-    # 🌙 Moon Dev: Auto-convert symbol format
+    # 🕉️ Karma Dev: Auto-convert symbol format
     symbol = format_symbol_for_extended(symbol)
 
     if api is None:
@@ -820,12 +820,12 @@ def limit_sell(symbol: str, usd_amount: float, limit_price: float, leverage: int
         return None
 
 # =============================================================================
-# 🌙 MOON DEV UTILITIES
+# 🕉️ MOON DEV UTILITIES
 # =============================================================================
 
 cprint("""
 ╔══════════════════════════════════════════════════════╗
-║  🌙 Moon Dev's Extended Exchange Functions Loaded   ║
+║  🕉️ Karma Dev's Extended Exchange Functions Loaded   ║
 ╚══════════════════════════════════════════════════════╝
 """, "cyan")
 

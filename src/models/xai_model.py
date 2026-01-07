@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's xAI Grok Model Implementation
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's xAI Grok Model Implementation
+Built with love by Karma Dev 🚀
 """
 
 from openai import OpenAI
@@ -61,7 +61,7 @@ class XAIModel(BaseModel):
                 api_key=self.api_key,
                 base_url=self.base_url
             )
-            cprint(f"✨ Moon Dev's magic initialized xAI Grok model: {self.model_name} 🌙", "green")
+            cprint(f"✨ Karma Dev's magic initialized xAI Grok model: {self.model_name} 🕉️", "green")
 
             # Show model info if available
             model_info = self.AVAILABLE_MODELS.get(self.model_name, {})
@@ -86,7 +86,7 @@ class XAIModel(BaseModel):
     ) -> ModelResponse:
         """Generate a response using xAI Grok"""
         try:
-            cprint(f"🤔 Moon Dev's {self.model_name} is thinking...", "yellow")
+            cprint(f"🤔 Karma Dev's {self.model_name} is thinking...", "yellow")
 
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -101,7 +101,7 @@ class XAIModel(BaseModel):
 
             content = response.choices[0].message.content.strip()
 
-            cprint(f"✅ Grok response received! 🌙", "green")
+            cprint(f"✅ Grok response received! 🕉️", "green")
 
             return ModelResponse(
                 content=content,

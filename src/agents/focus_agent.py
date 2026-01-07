@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Focus Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Focus Agent
+Built with love by Karma Dev 🚀
 
 This agent randomly monitors speech samples and provides focus assessments.
 """
@@ -116,11 +116,11 @@ AUDIO_DIR = Path("src/audio")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 # Test transcript for debugging
-TEST_TRANSCRIPT = """Hey Moon Dev here, I'm working on implementing the new trading algorithm using Python. 
+TEST_TRANSCRIPT = """Hey Karma Dev here, I'm working on implementing the new trading algorithm using Python. 
 The RSI calculations look good but I need to optimize the moving average calculations."""
 
 # Focus prompt optimized for all models
-FOCUS_PROMPT = """You are Moon Dev's Focus AI Agent. Your task is to analyze the following transcript and rate focus.
+FOCUS_PROMPT = """You are Karma Dev's Focus AI Agent. Your task is to analyze the following transcript and rate focus.
 
 IMPORTANT: DO NOT USE ANY MARKDOWN OR FORMATTING. RESPOND WITH PLAIN TEXT ONLY.
 
@@ -136,7 +136,7 @@ Consider these ratings:
 
 EXAMPLE RESPONSE:
 8/10
-Keep crushing that code, Moon Dev! Your focus is leading to amazing results.
+Keep crushing that code, Karma Dev! Your focus is leading to amazing results.
 
 TRANSCRIPT TO ANALYZE:
 {transcript}"""
@@ -167,7 +167,7 @@ class FocusAgent:
         # Print model info with pricing if available
         if MODEL_TYPE == "openai":
             model_info = self.model.AVAILABLE_MODELS.get(MODEL_NAME, {})
-            cprint(f"\n💫 Moon Dev's Focus Agent using OpenAI!", "green")
+            cprint(f"\n💫 Karma Dev's Focus Agent using OpenAI!", "green")
             cprint(f"🧠 Model: {model_info.get('description', '')}", "cyan")
             cprint(f"💰 Pricing:", "yellow")
             cprint(f"  ├─ Input: {model_info.get('input_price', '')}", "yellow")
@@ -192,7 +192,7 @@ class FocusAgent:
             raise ValueError("🚨 GOOGLE_APPLICATION_CREDENTIALS not found!")
         self.speech_client = speech.SpeechClient()
         
-        cprint("🎯 Moon Dev's Focus Agent initialized!", "green")
+        cprint("🎯 Karma Dev's Focus Agent initialized!", "green")
         
         self.is_recording = False
         self.current_transcript = []
@@ -214,7 +214,7 @@ class FocusAgent:
         """Check if current time is within scheduled hours"""
         current_time = datetime.now().time()
         if not (SCHEDULE_START <= current_time <= SCHEDULE_END):
-            cprint(f"\n🌙 Moon Dev's Focus Agent is scheduled to run between {SCHEDULE_START.strftime('%I:%M %p')} and {SCHEDULE_END.strftime('%I:%M %p')}", "yellow")
+            cprint(f"\n🕉️ Karma Dev's Focus Agent is scheduled to run between {SCHEDULE_START.strftime('%I:%M %p')} and {SCHEDULE_END.strftime('%I:%M %p')}", "yellow")
             cprint("😴 Going to sleep until next scheduled time...", "yellow")
             raise SystemExit(0)
         
@@ -332,7 +332,7 @@ class FocusAgent:
             if MODEL_TYPE == "ollama":
                 cprint("\n🧠 Using Ollama model...", "cyan")
                 response = self.model.generate_response(
-                    system_prompt="You are Moon Dev's Focus AI. You analyze focus and provide ratings. NO MARKDOWN OR FORMATTING. RESPOND WITH EXACTLY TWO LINES: A SCORE LINE (X/10) AND ONE SINGLE ENCOURAGING SENTENCE.",
+                    system_prompt="You are Karma Dev's Focus AI. You analyze focus and provide ratings. NO MARKDOWN OR FORMATTING. RESPOND WITH EXACTLY TWO LINES: A SCORE LINE (X/10) AND ONE SINGLE ENCOURAGING SENTENCE.",
                     user_content=FOCUS_PROMPT.format(transcript=transcript),
                     temperature=0.7
                 )
@@ -418,17 +418,17 @@ class FocusAgent:
                 
                 # If parsing fails, return default values
                 cprint("⚠️ Couldn't parse response, using default values", "yellow")
-                return 5, "Keep crushing it Moon Dev! Your focus is amazing!"
+                return 5, "Keep crushing it Karma Dev! Your focus is amazing!"
                 
         except Exception as e:
             cprint(f"❌ Error analyzing focus: {str(e)}", "red")
-            return 5, "Error analyzing focus, but keep going Moon Dev!"  # Always return a tuple
+            return 5, "Error analyzing focus, but keep going Karma Dev!"  # Always return a tuple
 
     def _create_focus_log(self):
         """Create empty focus history CSV"""
         df = pd.DataFrame(columns=['timestamp', 'focus_score', 'quote'])
         df.to_csv(self.focus_log_path, index=False)
-        cprint("🌟 Moon Dev's Focus History log created!", "green")
+        cprint("🌟 Karma Dev's Focus History log created!", "green")
 
     def _log_focus_data(self, score, quote):
         """Log focus data to CSV"""
@@ -492,7 +492,7 @@ class FocusAgent:
 
     def run(self):
         """Main loop for random monitoring"""
-        cprint("\n🎯 Moon Dev's Focus Agent starting with voice monitoring...", "cyan")
+        cprint("\n🎯 Karma Dev's Focus Agent starting with voice monitoring...", "cyan")
         cprint(f"⏰ Operating hours: {SCHEDULE_START.strftime('%I:%M %p')} - {SCHEDULE_END.strftime('%I:%M %p')}", "cyan")
         
         while True:

@@ -1,6 +1,6 @@
 # Path Fixes - Cross-Platform Compatibility
 
-**Built by Moon Dev** 🌙
+**Built by Karma Dev** 🕉️
 
 This document explains the path fixes implemented to make the moon-dev-ai-agents-for-trading repository work on **any system** (macOS, Linux, Windows, Docker, CI/CD).
 
@@ -82,7 +82,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 ```
 
 **Result on different systems:**
-- Moon Dev's Mac: `/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/`
+- Karma Dev's Mac: `/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/`
 - Jane's Mac: `/Users/jane/projects/moon-dev-ai-agents-for-trading/`
 - Bob's Linux: `/home/bob/moon-dev-ai-agents-for-trading/`
 - Alice's Windows: `C:\Users\Alice\moon-dev-ai-agents-for-trading\`
@@ -93,7 +93,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 ## 🚀 Usage Examples
 
-### Before (Hardcoded - Only Works for Moon Dev)
+### Before (Hardcoded - Only Works for Karma Dev)
 ```python
 # ❌ BREAKS FOR EVERYONE ELSE
 sys.path.append('/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading')
@@ -225,13 +225,13 @@ When creating new agents or scripts, use this template:
 #!/usr/bin/env python3
 """
 Your Agent Description
-Built by Moon Dev 🌙
+Built by Karma Dev 🕉️
 """
 
 from pathlib import Path
 import sys
 
-# 🌙 Moon Dev: Dynamic path calculation (works on any system!)
+# 🕉️ Karma Dev: Dynamic path calculation (works on any system!)
 PROJECT_ROOT = Path(__file__).parent.parent.parent  # Adjust based on file location
 DATA_DIR = PROJECT_ROOT / "src" / "data"
 
@@ -259,14 +259,14 @@ data_file = DATA_DIR / "rbi" / "BTC-USD-15m.csv"
 ## 🎯 Benefits
 
 ### Before Path Fixes
-- ✅ Works for Moon Dev on macOS
+- ✅ Works for Karma Dev on macOS
 - ❌ Breaks for everyone else
 - ❌ Can't run in Docker
 - ❌ Can't run in CI/CD
 - ❌ Can't collaborate
 
 ### After Path Fixes
-- ✅ Works for Moon Dev on macOS
+- ✅ Works for Karma Dev on macOS
 - ✅ Works for anyone on macOS
 - ✅ Works on Linux
 - ✅ Works on Windows
@@ -313,7 +313,7 @@ Some files require **sibling repos** to be cloned:
 
 ## 📞 Support
 
-**Built by Moon Dev** for the Data Dogs 🐕
+**Built by Karma Dev** for the Data Dogs 🐕
 
 **GitHub:** moon-dev-ai-agents-for-trading
 **Phase 1 Status:** ✅ Complete
@@ -354,6 +354,6 @@ data_file = DATA_DIR + "/rbi/BTC-USD-15m.csv"
 
 ---
 
-**Built with Moon Dev** 🌙
+**Built with Karma Dev** 🕉️
 
 *"Making code portable, one path at a time"*

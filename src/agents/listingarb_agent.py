@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Listing Arbitrage Agent 🔍
+🕉️ Karma Dev's Listing Arbitrage Agent 🔍
 
 =================================
 📚 OVERVIEW & DOCUMENTATION
@@ -97,7 +97,7 @@ Performance Notes:
 - Uses rate limiting for API calls
 - Parallel processing reduces runtime
 
-Created by Moon Dev 🌙
+Created by Karma Dev 🕉️
 For updates: https://github.com/moon-dev-ai-agents-for-trading
 """
 
@@ -184,7 +184,7 @@ Focus on:
 - Technical indicators and patterns
 - 4-hour chart analysis for the past 14 days
 
-Help Moon Dev identify tokens with strong technical setups! 🎯
+Help Karma Dev identify tokens with strong technical setups! 🎯
 """
 
 AGENT_TWO_PROMPT = """
@@ -206,7 +206,7 @@ Focus on:
 - Growth potential and risks
 - How the technical analysis aligns with fundamentals
 
-Help Moon Dev evaluate which tokens have the best fundamentals! 🚀
+Help Karma Dev evaluate which tokens have the best fundamentals! 🚀
 """
 
 class AIAgent:
@@ -391,7 +391,7 @@ class ListingArbSystem:
         self.agent_one = AIAgent("Agent One", AI_MODEL)
         self.agent_two = AIAgent("Agent Two", AI_MODEL)
         self.analysis_log = self._load_analysis_log()
-        cprint("🔍 Moon Dev's Listing Arb System Ready!", "white", "on_green", attrs=["bold"])
+        cprint("🔍 Karma Dev's Listing Arb System Ready!", "white", "on_green", attrs=["bold"])
         
     def _load_analysis_log(self) -> pd.DataFrame:
         """Load or create AI analysis log"""
@@ -732,7 +732,7 @@ class ListingArbSystem:
 
 def main():
     """Main function to run the Listing Arb system"""
-    print("\n🌙 Moon Dev's Listing Arb System Starting Up! 🚀")
+    print("\n🕉️ Karma Dev's Listing Arb System Starting Up! 🚀")
     print(f"⚙️ Configuration:")
     print(f"  • Hours between full runs: {HOURS_BETWEEN_RUNS}")
     print(f"  • Parallel processes: {PARALLEL_PROCESSES}")
@@ -754,7 +754,7 @@ def main():
             round_number += 1
             
     except KeyboardInterrupt:
-        print("\n👋 Moon Dev's Listing Arb System signing off!")
+        print("\n👋 Karma Dev's Listing Arb System signing off!")
     except Exception as e:
         print(f"\n❌ Error: {str(e)}")
         raise

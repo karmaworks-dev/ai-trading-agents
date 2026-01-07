@@ -1,4 +1,4 @@
-# 🌙 Moon Dev's RBI Execution Container System Plan
+# 🕉️ Karma Dev's RBI Execution Container System Plan
 
 ## Overview
 This plan outlines the implementation of an automated execution system for the RBI (Research-Backtest-Implement) agent, enabling it to run backtests, capture results/errors, and create a continuous improvement loop.
@@ -261,4 +261,4 @@ OPTIMIZATION_ALGORITHMS = ["grid_search", "random_search", "bayesian"]
 
 *"To the moon with automated strategy optimization!" 🚀*
 
-*Built with love by Moon Dev* 🌙
+*Built with love by Karma Dev* 🕉️

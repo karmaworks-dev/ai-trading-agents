@@ -1,4 +1,4 @@
-# 🌙 Moon Dev's Model Factory
+# 🕉️ Karma Dev's Model Factory
 
 A unified interface for managing multiple AI model providers. This module handles initialization, API key management, and provides a consistent interface for generating responses across different AI models.
 
@@ -186,17 +186,17 @@ print(response.content)
   - Error recovery and retries
 
 ## 🔄 Model Updates
-New models are regularly added to the factory. Check the Moon Dev Discord or GitHub for announcements about new models and features.
+New models are regularly added to the factory. Check the Karma Dev Discord or GitHub for announcements about new models and features.
 
 ## 🐛 Troubleshooting
 - If a model fails to initialize, check your API key in the `.env` file
 - Some models (O1, DeepSeek R1) show their thinking process - this is normal
 - For rate limit errors, try using a different model or wait a few minutes
-- Watch Moon Dev's streams for live debugging and updates: [@moondevonyt](https://www.youtube.com/@moondevonyt)
+- Watch Karma Dev's streams for live debugging and updates: [@moondevonyt](https://www.youtube.com/@moondevonyt)
 
 ## 🤝 Contributing
-Feel free to contribute new models or improvements! Join the Moon Dev community:
+Feel free to contribute new models or improvements! Join the Karma Dev community:
 - YouTube: [@moondevonyt](https://www.youtube.com/@moondevonyt)
 - GitHub: [moon-dev-ai-agents-for-trading](https://github.com/moon-dev-ai-agents-for-trading)
 
-Built with 💖 by Moon Dev 🌙
+Built with 💖 by Karma Dev 🕉️

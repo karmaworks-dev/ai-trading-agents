@@ -18,7 +18,7 @@ def process_folder_to_txt():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = os.path.join(OUTPUT_FOLDER, f"{folder_name}_code_dump_{timestamp}.txt")
     
-    print(f"🌙 Moon Dev's Code Collector starting up! 🌙")
+    print(f"🕉️ Karma Dev's Code Collector starting up! 🕉️")
     print(f"📂 Scanning folder: {INPUT_FOLDER}")
     
     # Initialize counter for stats
@@ -26,8 +26,8 @@ def process_folder_to_txt():
     total_lines = 0
     
     with open(output_file, 'w', encoding='utf-8') as outfile:
-        outfile.write(f"// Moon Dev's Code Collection - Generated on {datetime.now()}\n")
-        outfile.write(f"// May the code be with you! 🌙\n\n")
+        outfile.write(f"// Karma Dev's Code Collection - Generated on {datetime.now()}\n")
+        outfile.write(f"// May the code be with you! 🕉️\n\n")
         
         # Walk through all directories
         for root, dirs, files in os.walk(INPUT_FOLDER):
@@ -54,12 +54,12 @@ def process_folder_to_txt():
                     except Exception as e:
                         print(f"❌ Error processing {relative_path}: {str(e)}")
 
-    print(f"\n🎉 Moon Dev's Code Collection Complete! 🎉")
+    print(f"\n🎉 Karma Dev's Code Collection Complete! 🎉")
     print(f"📊 Stats:")
     print(f"   - Total files processed: {total_files}")
     print(f"   - Total lines of code: {total_lines}")
     print(f"📝 Output saved to: {output_file}")
-    print(f"\n💫 Thanks for using Moon Dev's Code Collector! Keep coding! 💫")
+    print(f"\n💫 Thanks for using Karma Dev's Code Collector! Keep coding! 💫")
 
 if __name__ == "__main__":
     process_folder_to_txt()

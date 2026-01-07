@@ -1,7 +1,7 @@
 """
-Moon Dev's Price Data Streaming
+Karma Dev's Price Data Streaming
 Real-time price updates from Hyperliquid WebSocket
-Built with love by Moon Dev
+Built with love by Karma Dev
 
 Features:
 - Real-time price updates for monitored tokens

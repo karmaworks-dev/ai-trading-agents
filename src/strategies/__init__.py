@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's Strategies Package
+🕉️ Karma Dev's Strategies Package
 """
 
 from .base_strategy import BaseStrategy

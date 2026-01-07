@@ -1,5 +1,5 @@
 '''
-🌙 Moon Dev's Solana Analysis Agent - Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Solana Analysis Agent - Built with love by Karma Dev 🚀
 Analyzes token launches and transactions to find the best opportunities!
 '''
 
@@ -66,7 +66,7 @@ BACKGROUND_COLORS = [
 
 ANALYSIS_EMOJIS = [
     "🔍", "📊", "📈", "🎯", "💎",  # Analysis & targets
-    "🚀", "⭐", "🌟", "✨", "💫",  # Moon Dev specials
+    "🚀", "⭐", "🌟", "✨", "💫",  # Karma Dev specials
     "🎨", "🎭", "🎪", "🎢", "🎡",  # Fun stuff
 ]
 
@@ -78,7 +78,7 @@ TOP_PICKS_FILE = DATA_FOLDER / "solana_agent" / "top_picks.csv"
 
 class SolanaAnalyzer:
     def __init__(self):
-        """🌙 Moon Dev's Solana Analyzer - Built with love by Moon Dev 🚀"""
+        """🕉️ Karma Dev's Solana Analyzer - Built with love by Karma Dev 🚀"""
         self.api_key = os.getenv('MOONDEV_API_KEY')
         self.headers = {'X-API-Key': self.api_key} if self.api_key else {}
         self.session = requests.Session()
@@ -87,7 +87,7 @@ class SolanaAnalyzer:
         (DATA_FOLDER / "solana_agent").mkdir(parents=True, exist_ok=True)
         
     def analyze_token(self, token_address):
-        """Analyze a single token using Moon Dev's criteria"""
+        """Analyze a single token using Karma Dev's criteria"""
         try:
             # Initialize variables
             top_holders_pct = 100  # Default to 100% if we can't get the data
@@ -272,7 +272,7 @@ class SolanaAnalyzer:
             print(f"⚠️ Error saving analysis: {str(e)}")
             
     def display_top_pick(self, token_data):
-        """Display a top pick with Moon Dev style 🌙"""
+        """Display a top pick with Karma Dev style 🕉️"""
         random_emoji = random.choice(ANALYSIS_EMOJIS)
         random_bg = random.choice(BACKGROUND_COLORS)
         
@@ -337,7 +337,7 @@ class SolanaAnalyzer:
         
     def run_analysis(self):
         """Main analysis loop"""
-        print("\n🔍 Starting Moon Dev's AI Analysis Agent...")
+        print("\n🔍 Starting Karma Dev's AI Analysis Agent...")
         
         while True:
             try:
@@ -358,7 +358,7 @@ class SolanaAnalyzer:
             except Exception as e:
                 print(f"⚠️ Error in analysis loop: {str(e)}")
                 
-            print(f"\n😴 Moon Dev's AI Agent sleeping for {CHECK_INTERVAL/60:.1f} minutes...")
+            print(f"\n😴 Karma Dev's AI Agent sleeping for {CHECK_INTERVAL/60:.1f} minutes...")
             time.sleep(CHECK_INTERVAL)
 
 def main():

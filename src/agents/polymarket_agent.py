@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Polymarket Prediction Market Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Polymarket Prediction Market Agent
+Built with love by Karma Dev 🚀
 
 This agent scans Polymarket trades, saves markets to CSV, and uses AI to make predictions.
 NO ACTUAL TRADING - just predictions and analysis for now.
@@ -34,7 +34,7 @@ MIN_TRADE_SIZE_USD = 500  # Only track trades over this amount
 IGNORE_PRICE_THRESHOLD = 0.02  # Ignore trades within X cents of resolution ($0 or $1)
 LOOKBACK_HOURS = 24  # How many hours back to fetch historical trades on startup
 
-# 🌙 Moon Dev - Market category filters (case-insensitive)
+# 🕉️ Karma Dev - Market category filters (case-insensitive)
 IGNORE_CRYPTO_KEYWORDS = [
     'bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'solana', 'sol',
     'dogecoin', 'doge', 'shiba', 'cardano', 'ada', 'ripple', 'xrp',
@@ -66,7 +66,7 @@ AI_MODEL_PROVIDER = "xai"  # Model to use if USE_SWARM_MODE = False
 AI_MODEL_NAME = "grok-2-fast-reasoning"  # Model name if not using swarm
 SEND_PRICE_INFO_TO_AI = False  # Send market price/odds to AI models (True = include price, False = no price)
 
-# 🌙 Moon Dev - AI Prompts (customize these for your own edge!)
+# 🕉️ Karma Dev - AI Prompts (customize these for your own edge!)
 # ==============================================================================
 
 # System prompt for individual AI market analysis
@@ -125,7 +125,7 @@ TOP {top_count} CONSENSUS PICKS:
 DATA_FOLDER = os.path.join(project_root, "src/data/polymarket")
 MARKETS_CSV = os.path.join(DATA_FOLDER, "markets.csv")
 PREDICTIONS_CSV = os.path.join(DATA_FOLDER, "predictions.csv")
-CONSENSUS_PICKS_CSV = os.path.join(DATA_FOLDER, "consensus_picks.csv")  # 🌙 Moon Dev - Top consensus picks only
+CONSENSUS_PICKS_CSV = os.path.join(DATA_FOLDER, "consensus_picks.csv")  # 🕉️ Karma Dev - Top consensus picks only
 
 # Polymarket API & WebSocket
 POLYMARKET_API_BASE = "https://data-api.polymarket.com"
@@ -141,7 +141,7 @@ class PolymarketAgent:
     def __init__(self):
         """Initialize the Polymarket agent"""
         cprint("\n" + "="*80, "cyan")
-        cprint("🌙 Polymarket Prediction Market Agent - Initializing", "cyan", attrs=['bold'])
+        cprint("🕉️ Polymarket Prediction Market Agent - Initializing", "cyan", attrs=['bold'])
         cprint("="*80, "cyan")
 
         # Create data folder if it doesn't exist
@@ -224,13 +224,13 @@ class PolymarketAgent:
                 cprint("Creating new predictions DataFrame", "yellow")
 
         # Create new DataFrame with required columns
-        # 🌙 Moon Dev - Link column at END for clickable CSVs in Excel/Numbers
+        # 🕉️ Karma Dev - Link column at END for clickable CSVs in Excel/Numbers
         return pd.DataFrame(columns=[
             'analysis_timestamp', 'analysis_run_id', 'market_title', 'market_slug',
             'claude_prediction', 'opus_prediction', 'openai_prediction', 'groq_prediction',
             'gemini_prediction', 'deepseek_prediction', 'xai_prediction',
             'ollama_prediction', 'consensus_prediction', 'num_models_responded',
-            'market_link'  # 🌙 Link at end for clickable CSVs
+            'market_link'  # 🕉️ Link at end for clickable CSVs
         ])
 
     def _save_markets(self):
@@ -256,7 +256,7 @@ class PolymarketAgent:
         return price_float <= IGNORE_PRICE_THRESHOLD or price_float >= (1.0 - IGNORE_PRICE_THRESHOLD)
 
     def should_ignore_market(self, title):
-        """🌙 Moon Dev - Check if market should be ignored based on category keywords
+        """🕉️ Karma Dev - Check if market should be ignored based on category keywords
 
         Returns:
             tuple: (should_ignore: bool, reason: str or None)
@@ -276,7 +276,7 @@ class PolymarketAgent:
         return (False, None)
 
     def on_ws_message(self, ws, message):
-        """🌙 Moon Dev - Handle incoming WebSocket messages"""
+        """🕉️ Karma Dev - Handle incoming WebSocket messages"""
         try:
             data = json.loads(message)
 
@@ -284,7 +284,7 @@ class PolymarketAgent:
             if isinstance(data, dict):
                 # Handle subscription confirmation
                 if data.get('type') == 'subscribed':
-                    cprint("✅ Moon Dev WebSocket subscribed successfully to live trades!", "green")
+                    cprint("✅ Karma Dev WebSocket subscribed successfully to live trades!", "green")
                     self.ws_connected = True
                     return
 
@@ -310,7 +310,7 @@ class PolymarketAgent:
                     usd_amount = price * size
                     title = payload.get('title', 'Unknown')
 
-                    # 🌙 Moon Dev - Check if we should ignore this market category
+                    # 🕉️ Karma Dev - Check if we should ignore this market category
                     should_ignore, ignore_reason = self.should_ignore_market(title)
                     if should_ignore:
                         # Track what we're ignoring
@@ -325,7 +325,7 @@ class PolymarketAgent:
                     if usd_amount >= MIN_TRADE_SIZE_USD and not self.is_near_resolution(price):
                         self.filtered_trades_count += 1
 
-                        # 🌙 MOON DEV - Process this trade immediately
+                        # 🕉️ MOON DEV - Process this trade immediately
                         trade_data = {
                             'timestamp': payload.get('timestamp', time.time()),
                             'conditionId': payload.get('conditionId', payload.get('id', f"ws_{time.time()}")),
@@ -344,23 +344,23 @@ class PolymarketAgent:
         except json.JSONDecodeError:
             pass  # Ignore malformed messages
         except Exception as e:
-            cprint(f"⚠️ Moon Dev - Error processing WebSocket message: {e}", "yellow")
+            cprint(f"⚠️ Karma Dev - Error processing WebSocket message: {e}", "yellow")
 
     def on_ws_error(self, ws, error):
-        """🌙 Moon Dev - Handle WebSocket errors"""
-        cprint(f"❌ Moon Dev WebSocket Error: {error}", "red")
+        """🕉️ Karma Dev - Handle WebSocket errors"""
+        cprint(f"❌ Karma Dev WebSocket Error: {error}", "red")
 
     def on_ws_close(self, ws, close_status_code, close_msg):
-        """🌙 Moon Dev - Handle WebSocket close"""
+        """🕉️ Karma Dev - Handle WebSocket close"""
         self.ws_connected = False
-        cprint(f"\n🔌 Moon Dev WebSocket connection closed: {close_status_code} - {close_msg}", "yellow")
+        cprint(f"\n🔌 Karma Dev WebSocket connection closed: {close_status_code} - {close_msg}", "yellow")
         cprint("Reconnecting in 5 seconds...", "cyan")
         time.sleep(5)
         self.connect_websocket()
 
     def on_ws_open(self, ws):
-        """🌙 Moon Dev - Handle WebSocket open - send subscription"""
-        cprint("🔌 Moon Dev WebSocket connected!", "green")
+        """🕉️ Karma Dev - Handle WebSocket open - send subscription"""
+        cprint("🔌 Karma Dev WebSocket connected!", "green")
 
         # Subscribe to all trades on the activity topic
         subscription_msg = {
@@ -373,12 +373,12 @@ class PolymarketAgent:
             ]
         }
 
-        cprint(f"📡 Moon Dev sending subscription for live trades...", "cyan")
+        cprint(f"📡 Karma Dev sending subscription for live trades...", "cyan")
         ws.send(json.dumps(subscription_msg))
 
         # Set connected flag immediately after sending subscription
         self.ws_connected = True
-        cprint("✅ Moon Dev subscription sent! Waiting for trades...", "green")
+        cprint("✅ Karma Dev subscription sent! Waiting for trades...", "green")
 
         # Start ping thread to keep connection alive
         def send_ping():
@@ -393,8 +393,8 @@ class PolymarketAgent:
         ping_thread.start()
 
     def connect_websocket(self):
-        """🌙 Moon Dev - Connect to Polymarket WebSocket"""
-        cprint(f"🚀 Moon Dev connecting to {WEBSOCKET_URL}...", "cyan")
+        """🕉️ Karma Dev - Connect to Polymarket WebSocket"""
+        cprint(f"🚀 Karma Dev connecting to {WEBSOCKET_URL}...", "cyan")
 
         self.ws = websocket.WebSocketApp(
             WEBSOCKET_URL,
@@ -408,10 +408,10 @@ class PolymarketAgent:
         ws_thread = threading.Thread(target=self.ws.run_forever, daemon=True)
         ws_thread.start()
 
-        cprint("✅ Moon Dev WebSocket thread started!", "green")
+        cprint("✅ Karma Dev WebSocket thread started!", "green")
 
     def fetch_historical_trades(self, hours_back=None):
-        """🌙 Moon Dev - Fetch historical trades from Polymarket API on startup
+        """🕉️ Karma Dev - Fetch historical trades from Polymarket API on startup
 
         Args:
             hours_back: How many hours back to fetch (defaults to LOOKBACK_HOURS)
@@ -423,7 +423,7 @@ class PolymarketAgent:
             hours_back = LOOKBACK_HOURS
 
         try:
-            cprint(f"\n📡 Moon Dev fetching historical trades (last {hours_back}h)...", "yellow")
+            cprint(f"\n📡 Karma Dev fetching historical trades (last {hours_back}h)...", "yellow")
 
             # Calculate timestamp for X hours ago
             cutoff_time = datetime.now() - timedelta(hours=hours_back)
@@ -502,7 +502,7 @@ class PolymarketAgent:
 
                 # Check if market already exists
                 if market_id in self.markets_df['market_id'].values:
-                    # 🌙 Moon Dev - UPDATE existing market with new trade data (fresh odds!)
+                    # 🕉️ Karma Dev - UPDATE existing market with new trade data (fresh odds!)
                     mask = self.markets_df['market_id'] == market_id
                     self.markets_df.loc[mask, 'timestamp'] = timestamp
                     self.markets_df.loc[mask, 'outcome'] = outcome
@@ -592,7 +592,7 @@ class PolymarketAgent:
         cprint("="*80, "magenta")
 
         # Build prompt with market information
-        # 🌙 Moon Dev - Conditionally include price info based on config
+        # 🕉️ Karma Dev - Conditionally include price info based on config
         if SEND_PRICE_INFO_TO_AI:
             markets_text = "\n\n".join([
                 f"Market {i+1}:\n"
@@ -624,7 +624,7 @@ Provide predictions for each market in the specified format."""
             cprint("\n🌊 Getting predictions from AI swarm (120s timeout per model)...\n", "cyan")
 
             # Query the swarm (swarm handles timeouts gracefully and returns partial results)
-            cprint("📡 Moon Dev sending prompts to swarm...", "cyan")
+            cprint("📡 Karma Dev sending prompts to swarm...", "cyan")
             swarm_result = self.swarm.query(
                 prompt=user_prompt,
                 system_prompt=system_prompt
@@ -673,7 +673,7 @@ Provide predictions for each market in the specified format."""
             cprint(consensus_text, "white")
             cprint("="*80 + "\n", "green")
 
-            # 🌙 Moon Dev - Run final consensus AI to pick top 3 markets
+            # 🕉️ Karma Dev - Run final consensus AI to pick top 3 markets
             self._get_top_consensus_picks(swarm_result, markets_to_analyze)
 
             # Save predictions to database
@@ -690,7 +690,7 @@ Provide predictions for each market in the specified format."""
                 import traceback
                 traceback.print_exc()
 
-            # 🌙 Moon Dev - Mark analyzed markets with timestamp
+            # 🕉️ Karma Dev - Mark analyzed markets with timestamp
             self._mark_markets_analyzed(markets_to_analyze, analysis_timestamp)
         else:
             # Use single model
@@ -734,14 +734,14 @@ Provide predictions for each market in the specified format."""
                 self._save_predictions()
                 cprint(f"✅ Saved analysis run {analysis_run_id} to predictions database", "green")
 
-                # 🌙 Moon Dev - Mark analyzed markets with timestamp
+                # 🕉️ Karma Dev - Mark analyzed markets with timestamp
                 self._mark_markets_analyzed(markets_to_analyze, analysis_timestamp)
 
             except Exception as e:
                 cprint(f"❌ Error getting prediction: {e}", "red")
 
     def _mark_markets_analyzed(self, markets, analysis_timestamp):
-        """🌙 Moon Dev - Mark markets as analyzed with timestamp
+        """🕉️ Karma Dev - Mark markets as analyzed with timestamp
 
         Args:
             markets: DataFrame of markets that were just analyzed
@@ -770,7 +770,7 @@ Provide predictions for each market in the specified format."""
             traceback.print_exc()
 
     def _save_swarm_predictions(self, analysis_run_id, analysis_timestamp, markets, swarm_result):
-        """🌙 Moon Dev - Save swarm predictions to CSV database (one row per market)
+        """🕉️ Karma Dev - Save swarm predictions to CSV database (one row per market)
 
         Args:
             analysis_run_id: Unique ID for this analysis run
@@ -801,7 +801,7 @@ Provide predictions for each market in the specified format."""
                             market_part = line_upper.split('MARKET')[1].split(':')[0].strip()
                             market_num = int(''.join(filter(str.isdigit, market_part)))
 
-                            # 🌙 Moon Dev - Validate market number is within range
+                            # 🕉️ Karma Dev - Validate market number is within range
                             if market_num < 1 or market_num > len(markets):
                                 continue  # Skip invalid market numbers (AI hallucination)
 
@@ -849,7 +849,7 @@ Provide predictions for each market in the specified format."""
                         'market_title': market_title,
                         'market_slug': market_slug,
                         'claude_prediction': predictions.get('claude', 'N/A'),
-                        'opus_prediction': predictions.get('opus', 'N/A'),  # 🌙 Moon Dev - Opus 4.5 predictions
+                        'opus_prediction': predictions.get('opus', 'N/A'),  # 🕉️ Karma Dev - Opus 4.5 predictions
                         'openai_prediction': predictions.get('openai', 'N/A'),
                         'groq_prediction': predictions.get('groq', 'N/A'),
                         'gemini_prediction': predictions.get('gemini', 'N/A'),
@@ -858,7 +858,7 @@ Provide predictions for each market in the specified format."""
                         'ollama_prediction': predictions.get('ollama', 'N/A'),
                         'consensus_prediction': consensus,
                         'num_models_responded': len(predictions),
-                        'market_link': market_link  # 🌙 Moon Dev - Link at end for clickable CSVs
+                        'market_link': market_link  # 🕉️ Karma Dev - Link at end for clickable CSVs
                     }
                     new_records.append(record)
 
@@ -883,7 +883,7 @@ Provide predictions for each market in the specified format."""
 
     def _calculate_polymarket_consensus(self, swarm_result, markets_df):
         """
-        🌙 Moon Dev - Calculate consensus from individual swarm responses for Polymarket predictions
+        🕉️ Karma Dev - Calculate consensus from individual swarm responses for Polymarket predictions
 
         Args:
             swarm_result: Result dict from swarm.query() containing individual responses
@@ -918,7 +918,7 @@ Provide predictions for each market in the specified format."""
                             market_part = line_upper.split('MARKET')[1].split(':')[0].strip()
                             market_num = int(''.join(filter(str.isdigit, market_part)))
 
-                            # 🌙 Moon Dev - Validate market number is within range
+                            # 🕉️ Karma Dev - Validate market number is within range
                             if market_num < 1 or market_num > len(markets_df):
                                 continue  # Skip invalid market numbers (AI hallucination)
 
@@ -1013,7 +1013,7 @@ Provide predictions for each market in the specified format."""
 
     def _get_top_consensus_picks(self, swarm_result, markets_df):
         """
-        🌙 Moon Dev - Use consensus AI to identify top 3 markets with strongest agreement
+        🕉️ Karma Dev - Use consensus AI to identify top 3 markets with strongest agreement
 
         Args:
             swarm_result: Result dict from swarm.query() containing all AI responses
@@ -1070,7 +1070,7 @@ Provide predictions for each market in the specified format."""
             cprint("\n" + "="*80, "white", "on_blue", attrs=['bold'])
             cprint("="*80 + "\n", "white", "on_blue", attrs=['bold'])
 
-            # 🌙 Moon Dev - Save consensus picks to dedicated CSV
+            # 🕉️ Karma Dev - Save consensus picks to dedicated CSV
             self._save_consensus_picks_to_csv(response.content, markets_df)
 
         except Exception as e:
@@ -1080,7 +1080,7 @@ Provide predictions for each market in the specified format."""
 
     def _save_consensus_picks_to_csv(self, consensus_response, markets_df):
         """
-        🌙 Moon Dev - Save top consensus picks to dedicated CSV (append-only)
+        🕉️ Karma Dev - Save top consensus picks to dedicated CSV (append-only)
 
         This CSV only contains the TOP consensus picks from each analysis run.
         Perfect for reviewing what the AI swarm agreed on throughout the day!
@@ -1154,7 +1154,7 @@ Provide predictions for each market in the specified format."""
             timestamp = datetime.now().isoformat()
             run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-            # Convert to records for CSV (🌙 Moon Dev - link at END for clickable CSVs)
+            # Convert to records for CSV (🕉️ Karma Dev - link at END for clickable CSVs)
             records = []
             for pick in picks:
                 record = {
@@ -1168,18 +1168,18 @@ Provide predictions for each market in the specified format."""
                     'consensus_count': pick.get('consensus_count', ''),
                     'total_models': pick.get('total_models', ''),
                     'reasoning': pick.get('reasoning', ''),
-                    'link': pick.get('link', '')  # 🌙 Link at end for clickable CSVs
+                    'link': pick.get('link', '')  # 🕉️ Link at end for clickable CSVs
                 }
                 records.append(record)
 
-            # Load or create consensus picks CSV (🌙 Moon Dev - link at END for clickable CSVs)
+            # Load or create consensus picks CSV (🕉️ Karma Dev - link at END for clickable CSVs)
             if os.path.exists(CONSENSUS_PICKS_CSV):
                 consensus_df = pd.read_csv(CONSENSUS_PICKS_CSV)
             else:
                 consensus_df = pd.DataFrame(columns=[
                     'timestamp', 'run_id', 'rank', 'market_number', 'market_title',
                     'side', 'consensus', 'consensus_count', 'total_models', 'reasoning',
-                    'link'  # 🌙 Link at end for clickable CSVs
+                    'link'  # 🕉️ Link at end for clickable CSVs
                 ])
 
             # Append new records
@@ -1202,7 +1202,7 @@ Provide predictions for each market in the specified format."""
             traceback.print_exc()
 
     def status_display_loop(self):
-        """🌙 Moon Dev - Display status updates every 30 seconds"""
+        """🕉️ Karma Dev - Display status updates every 30 seconds"""
         cprint("\n📊 STATUS DISPLAY THREAD STARTED", "cyan", attrs=['bold'])
         cprint(f"📡 Showing stats every 30 seconds\n", "cyan")
 
@@ -1212,7 +1212,7 @@ Provide predictions for each market in the specified format."""
 
                 total_markets = len(self.markets_df)
 
-                # 🌙 Moon Dev - Count markets with FRESH TRADES that are also ELIGIBLE
+                # 🕉️ Karma Dev - Count markets with FRESH TRADES that are also ELIGIBLE
                 now = datetime.now()
                 cutoff_time = now - timedelta(hours=REANALYSIS_HOURS)
                 fresh_eligible_count = 0
@@ -1251,7 +1251,7 @@ Provide predictions for each market in the specified format."""
                         fresh_eligible_count += 1
 
                 cprint(f"\n{'='*60}", "cyan")
-                cprint(f"📊 Moon Dev Status @ {datetime.now().strftime('%H:%M:%S')}", "cyan", attrs=['bold'])
+                cprint(f"📊 Karma Dev Status @ {datetime.now().strftime('%H:%M:%S')}", "cyan", attrs=['bold'])
                 cprint(f"{'='*60}", "cyan")
                 cprint(f"   WebSocket Connected: {'✅ YES' if self.ws_connected else '❌ NO'}", "green" if self.ws_connected else "red")
                 cprint(f"   Total trades received: {self.total_trades_received}", "white")
@@ -1287,13 +1287,13 @@ Provide predictions for each market in the specified format."""
 
         total_markets = len(self.markets_df)
 
-        # 🌙 Moon Dev - Skip if no markets exist yet
+        # 🕉️ Karma Dev - Skip if no markets exist yet
         if total_markets == 0:
             cprint(f"\n⏳ No markets in database yet! WebSocket is collecting...", "yellow", attrs=['bold'])
             cprint(f"   First analysis will run when markets are collected\n", "yellow")
             return
 
-        # 🌙 Moon Dev - Count markets with FRESH TRADES that are also ELIGIBLE for re-analysis
+        # 🕉️ Karma Dev - Count markets with FRESH TRADES that are also ELIGIBLE for re-analysis
         now = datetime.now()
         cutoff_time = now - timedelta(hours=REANALYSIS_HOURS)
 
@@ -1372,7 +1372,7 @@ Provide predictions for each market in the specified format."""
             # Run AI predictions
             self.get_ai_predictions()
 
-            # 🌙 Moon Dev - Update analysis run timestamp
+            # 🕉️ Karma Dev - Update analysis run timestamp
             self.last_analysis_run_timestamp = datetime.now().isoformat()
             self.last_analyzed_count = total_markets
             cprint(f"\n💾 Updated analysis tracker: {self.last_analyzed_count} markets in database", "green")
@@ -1388,12 +1388,12 @@ Provide predictions for each market in the specified format."""
 
 
     def analysis_loop(self):
-        """🌙 Moon Dev - Continuously check for new markets to analyze (runs immediately!)"""
+        """🕉️ Karma Dev - Continuously check for new markets to analyze (runs immediately!)"""
         cprint("\n✅ ANALYSIS THREAD STARTED", "magenta", attrs=['bold'])
         cprint(f"🧠 Running first analysis NOW, then checking every {ANALYSIS_CHECK_INTERVAL_SECONDS} seconds\n", "magenta")
 
-        # 🌙 Moon Dev - Run first analysis IMMEDIATELY (no waiting!)
-        cprint("🚀 Moon Dev running first analysis immediately...\n", "yellow", attrs=['bold'])
+        # 🕉️ Karma Dev - Run first analysis IMMEDIATELY (no waiting!)
+        cprint("🚀 Karma Dev running first analysis immediately...\n", "yellow", attrs=['bold'])
 
         while True:
             try:
@@ -1414,9 +1414,9 @@ Provide predictions for each market in the specified format."""
 
 
 def main():
-    """🌙 Moon Dev Main - WebSocket real-time data + AI analysis threads"""
+    """🕉️ Karma Dev Main - WebSocket real-time data + AI analysis threads"""
     cprint("\n" + "="*80, "cyan")
-    cprint("🌙 Moon Dev's Polymarket Agent - WebSocket Edition!", "cyan", attrs=['bold'])
+    cprint("🕉️ Karma Dev's Polymarket Agent - WebSocket Edition!", "cyan", attrs=['bold'])
     cprint("="*80, "cyan")
     cprint(f"💰 Tracking trades over ${MIN_TRADE_SIZE_USD}", "yellow")
     cprint(f"🚫 Ignoring prices within {IGNORE_PRICE_THRESHOLD:.2f} of $0 or $1", "yellow")
@@ -1441,9 +1441,9 @@ def main():
     # Initialize agent
     agent = PolymarketAgent()
 
-    # 🌙 Moon Dev - Fetch historical trades on startup to populate database
+    # 🕉️ Karma Dev - Fetch historical trades on startup to populate database
     cprint("\n" + "="*80, "yellow")
-    cprint(f"📜 Moon Dev fetching historical data from last {LOOKBACK_HOURS} hours...", "yellow", attrs=['bold'])
+    cprint(f"📜 Karma Dev fetching historical data from last {LOOKBACK_HOURS} hours...", "yellow", attrs=['bold'])
     cprint("="*80, "yellow")
 
     historical_trades = agent.fetch_historical_trades()
@@ -1465,18 +1465,18 @@ def main():
 
     # Start threads
     try:
-        cprint("🚀 Moon Dev starting threads...\n", "green", attrs=['bold'])
+        cprint("🚀 Karma Dev starting threads...\n", "green", attrs=['bold'])
         status_thread.start()
         analysis_thread.start()
 
         # Keep main thread alive
-        cprint("✨ Moon Dev WebSocket + AI running! Press Ctrl+C to stop.\n", "green", attrs=['bold'])
+        cprint("✨ Karma Dev WebSocket + AI running! Press Ctrl+C to stop.\n", "green", attrs=['bold'])
         while True:
             time.sleep(1)
 
     except KeyboardInterrupt:
         cprint("\n\n" + "="*80, "yellow")
-        cprint("⚠️ Moon Dev Polymarket Agent stopped by user", "yellow", attrs=['bold'])
+        cprint("⚠️ Karma Dev Polymarket Agent stopped by user", "yellow", attrs=['bold'])
         cprint("="*80 + "\n", "yellow")
         sys.exit(0)
 

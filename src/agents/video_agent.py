@@ -1,10 +1,10 @@
 """
-🌙 Moon Dev's Sora 2 Video Generation Agent
+🕉️ Karma Dev's Sora 2 Video Generation Agent
 
 Parallel video generation using OpenAI's Sora 2 API.
 Creates multiple videos simultaneously with background processing.
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os
@@ -29,7 +29,7 @@ load_dotenv()
 # =============================================================================
 
 OUTPUT_DIR = "src/data/video_agent/"
-OPENAI_API_KEY = os.getenv("OPENAI_KEY")  # Moon Dev's repo uses OPENAI_KEY
+OPENAI_API_KEY = os.getenv("OPENAI_KEY")  # Karma Dev's repo uses OPENAI_KEY
 
 # Sora 2 Configuration
 MODEL = "sora-2"  # Options: "sora-2", "sora-2-pro"
@@ -359,7 +359,7 @@ def main():
     """Main interactive loop for video generation"""
     cprint("""
 ╔══════════════════════════════════════════════════════════╗
-║  🌙 Moon Dev's Sora 2 Video Generation Agent           ║
+║  🕉️ Karma Dev's Sora 2 Video Generation Agent           ║
 ║  Parallel video generation with OpenAI Sora 2          ║
 ╚══════════════════════════════════════════════════════════╝
 """, "cyan", attrs=['bold'])
@@ -478,7 +478,7 @@ def main():
         display_status()
 
         cprint("\n✅ Video Agent shutdown complete", "green")
-        cprint("🌙 Moon Dev says: Check your videos in src/data/video_agent/", "cyan")
+        cprint("🕉️ Karma Dev says: Check your videos in src/data/video_agent/", "cyan")
 
 if __name__ == "__main__":
     main()

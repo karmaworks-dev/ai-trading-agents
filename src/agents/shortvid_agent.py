@@ -1,6 +1,6 @@
 """
-🎬 Moon Dev's Video Agent
-Built with love by Moon Dev 🚀
+🎬 Karma Dev's Video Agent
+Built with love by Karma Dev 🚀
 
 This agent converts text to speech and combines it with background videos.
 
@@ -41,7 +41,7 @@ SUPPORTED_VIDEO_FORMATS = ['.mp4', '.mov', '.avi', '.mkv']
 AUDIO_DIR = Path("/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/videos/audio")
 
 class VideoAgent:
-    """Moon Dev's Video Agent 🎬"""
+    """Karma Dev's Video Agent 🎬"""
     
     def __init__(self):
         """Initialize the Video Agent"""
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     agent = VideoAgent()
     
     # Example usage with direct text
-    test_text = "Moon Dev's AI agents are revolutionizing trading with deep seek integration."
+    test_text = "Karma Dev's AI agents are revolutionizing trading with deep seek integration."
     
     # If USE_TEXT_FILE is True, it will use the file instead of test_text
     agent.generate_audio(test_text)

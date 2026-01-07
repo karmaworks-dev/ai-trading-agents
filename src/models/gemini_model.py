@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Gemini Model Implementation
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Gemini Model Implementation
+Built with love by Karma Dev 🚀
 """
 
 import google.generativeai as genai

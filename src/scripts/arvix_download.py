@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-🌙 Moon Dev's arXiv Paper Downloader 🚀
+🕉️ Karma Dev's arXiv Paper Downloader 🚀
 A tool to search and download papers from arXiv.org
 """
 
@@ -57,25 +57,25 @@ class Colors:
     BOLD = '\033[1m'
 
 # Easter eggs and fun messages
-MOON_DEV_QUOTES = [
-    "🌙 Moon Dev says: To the moon with knowledge! 🚀",
-    "🌙 Thanks for using Moon Dev's arXiv downloader! 💫",
-    "🌙 Moon Dev approves this download! 👍",
-    "🌙 Moon Dev reminds you: Knowledge is power! 📚",
-    "🌙 Moon Dev says: Learning never stops! 🧠",
-    "🌙 Moon Dev's secret to success: Read more papers! 📝",
-    "🌙 Moon Dev is proud of you for doing research! 🔍",
+KARMA_DEV_QUOTES = [
+    "🕉️ Karma Dev says: To the moon with knowledge! 🚀",
+    "🕉️ Thanks for using Karma Dev's arXiv downloader! 💫",
+    "🕉️ Karma Dev approves this download! 👍",
+    "🕉️ Karma Dev reminds you: Knowledge is power! 📚",
+    "🕉️ Karma Dev says: Learning never stops! 🧠",
+    "🕉️ Karma Dev's secret to success: Read more papers! 📝",
+    "🕉️ Karma Dev is proud of you for doing research! 🔍",
 ]
 
 def print_banner():
     """Print a fancy banner for the tool"""
     banner = f"""
     {Colors.CYAN}╔═══════════════════════════════════════════════════════════╗
-    ║ {Colors.YELLOW}🌙  MOON DEV's arXiv PAPER DOWNLOADER  🌙{Colors.CYAN}                ║
+    ║ {Colors.YELLOW}🕉️  MOON DEV's arXiv PAPER DOWNLOADER  🕉️{Colors.CYAN}                ║
     ╚═══════════════════════════════════════════════════════════╝{Colors.ENDC}
     """
     print(banner)
-    print(f"{Colors.GREEN}{random.choice(MOON_DEV_QUOTES)}{Colors.ENDC}\n")
+    print(f"{Colors.GREEN}{random.choice(KARMA_DEV_QUOTES)}{Colors.ENDC}\n")
     print(f"{Colors.BOLD}Current search topic:{Colors.ENDC} {Colors.YELLOW}{SEARCH_TOPIC}{Colors.ENDC}")
     print(f"{Colors.BOLD}Category:{Colors.ENDC} {Colors.YELLOW}{SEARCH_CATEGORY}{Colors.ENDC}")
     print(f"{Colors.BOLD}Max papers:{Colors.ENDC} {Colors.YELLOW}{MAX_PAPERS_TO_DOWNLOAD}{Colors.ENDC}")
@@ -302,7 +302,7 @@ def download_paper(paper, download_dir, show_progress=True):
             
             # Create a progress bar
             progress_bar = tqdm(total=file_size, unit='B', unit_scale=True, 
-                               desc=f"🌙 Moon Dev's Download", ncols=100)
+                               desc=f"🕉️ Karma Dev's Download", ncols=100)
             
             # Download with progress
             with open(filepath, 'wb') as f:
@@ -319,7 +319,7 @@ def download_paper(paper, download_dir, show_progress=True):
             urllib.request.urlretrieve(paper['pdf_url'], filepath)
         
         print(f"{Colors.GREEN}✅ Successfully downloaded paper to {filepath}{Colors.ENDC}")
-        print(f"{Colors.CYAN}{random.choice(MOON_DEV_QUOTES)}{Colors.ENDC}")
+        print(f"{Colors.CYAN}{random.choice(KARMA_DEV_QUOTES)}{Colors.ENDC}")
         
         # Record the downloaded paper
         paper['filepath'] = filepath
@@ -437,7 +437,7 @@ def display_downloaded_papers():
 
 def main():
     """Main function to handle command line arguments"""
-    parser = argparse.ArgumentParser(description="🌙 Moon Dev's arXiv Paper Downloader")
+    parser = argparse.ArgumentParser(description="🕉️ Karma Dev's arXiv Paper Downloader")
     
     # Add arguments
     parser.add_argument('-t', '--topic', type=str, default=SEARCH_TOPIC,
@@ -491,6 +491,6 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print(f"\n\n{Colors.YELLOW}🛑 Operation cancelled by user{Colors.ENDC}")
-        print(f"{Colors.CYAN}👋 Thanks for using Moon Dev's arXiv Downloader! Goodbye!{Colors.ENDC}")
+        print(f"{Colors.CYAN}👋 Thanks for using Karma Dev's arXiv Downloader! Goodbye!{Colors.ENDC}")
     except Exception as e:
         print(f"\n{Colors.RED}❌ An error occurred: {str(e)}{Colors.ENDC}")

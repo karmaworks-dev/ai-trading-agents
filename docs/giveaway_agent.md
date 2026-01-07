@@ -1,6 +1,6 @@
 # Giveaway Agent
 
-**Built by Moon Dev** 🌙
+**Built by Karma Dev** 🕉️
 
 ## What It Does
 
@@ -215,4 +215,4 @@ Or open in Excel/Google Sheets!
 
 ---
 
-**Moon Dev's Giveaway Agent** - Track participation, reward engagement 🚀🌙
+**Karma Dev's Giveaway Agent** - Track participation, reward engagement 🚀🕉️

@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's DeepSeek Model Implementation
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's DeepSeek Model Implementation
+Built with love by Karma Dev 🚀
 """
 
 from openai import OpenAI

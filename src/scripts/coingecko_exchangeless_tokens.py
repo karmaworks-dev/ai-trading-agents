@@ -1,5 +1,5 @@
 """
-🌙 Moon Dev's CoinGecko Token Finder 🔍
+🕉️ Karma Dev's CoinGecko Token Finder 🔍
 Finds Solana tokens that aren't listed on major exchanges like Binance and Coinbase.
 Runs every 24 hours to maintain an updated list.
 """
@@ -50,7 +50,7 @@ class CoinGeckoTokenFinder:
             "Content-Type": "application/json"
         }
         self.api_calls = 0
-        print("🦎 Moon Dev's CoinGecko Token Finder initialized!")
+        print("🦎 Karma Dev's CoinGecko Token Finder initialized!")
         
     def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
         """Make API request with rate limiting and error handling"""
@@ -217,7 +217,7 @@ class CoinGeckoTokenFinder:
 
 def main():
     """Main function to run token discovery"""
-    print("\n🌙 Moon Dev's Token Finder Starting Up! 🚀")
+    print("\n🕉️ Karma Dev's Token Finder Starting Up! 🚀")
     print(f"📝 Results will be saved to: {DISCOVERED_TOKENS_FILE.absolute()}")
     
     finder = CoinGeckoTokenFinder()
@@ -245,7 +245,7 @@ def main():
             time.sleep(HOURS_BETWEEN_RUNS * 3600)
             
     except KeyboardInterrupt:
-        print("\n👋 Moon Dev's Token Finder signing off!")
+        print("\n👋 Karma Dev's Token Finder signing off!")
     except Exception as e:
         print(f"\n❌ Error: {str(e)}")
         raise

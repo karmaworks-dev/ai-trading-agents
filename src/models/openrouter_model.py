@@ -1,6 +1,6 @@
 """
 OpenRouter Model Implementation
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 
 OpenRouter provides unified access to all major AI models through a single API.
 """

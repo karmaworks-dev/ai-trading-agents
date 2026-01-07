@@ -19,7 +19,7 @@ class BookAgent:
     
     def __init__(self):
         """Initialize the book agent with Gemini 2.0 Flash model"""
-        cprint("🌙 Moon Dev's Book Agent Initializing...", "cyan")
+        cprint("🕉️ Karma Dev's Book Agent Initializing...", "cyan")
         self.model = model_factory.get_model("gemini", "gemini-2.0-flash")
         cprint(f"📚 Loading knowledge base from: {KNOWLEDGE_BASE_FOLDER}", "cyan")
         self.knowledge_base = self._load_knowledge_base()
@@ -67,7 +67,7 @@ class BookAgent:
         
         try:
             response = self.model.generate_response(
-                system_prompt="You are Moon Dev's Knowledge Base AI 🌙. Answer questions based on the provided content only.",
+                system_prompt="You are Karma Dev's Knowledge Base AI 🕉️. Answer questions based on the provided content only.",
                 user_content=prompt,
                 temperature=0.7
             )
@@ -83,7 +83,7 @@ def main():
     """CLI interface for the Book Agent"""
     agent = BookAgent()
     
-    cprint("\n🌙 Moon Dev's Knowledge Base Assistant", "cyan")
+    cprint("\n🕉️ Karma Dev's Knowledge Base Assistant", "cyan")
     cprint("Type 'exit' to quit", "yellow")
     
     while True:
@@ -101,7 +101,7 @@ def main():
         except Exception as e:
             cprint(f"❌ Error: {str(e)}", "red")
     
-    cprint("\n👋 Thanks for using Moon Dev's Knowledge Base Assistant! 🌙", "cyan")
+    cprint("\n👋 Thanks for using Karma Dev's Knowledge Base Assistant! 🕉️", "cyan")
 
 if __name__ == "__main__":
     main() 

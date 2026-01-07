@@ -237,4 +237,4 @@ TOKEN_EXCHANGE_MAP = {
 ✅ **Backward compatible** with existing Solana code
 ✅ **Future proof** for adding more exchanges
 
-🌙 Moon Dev's Exchange Manager - Trade Anywhere! 🚀
+🕉️ Karma Dev's Exchange Manager - Trade Anywhere! 🚀

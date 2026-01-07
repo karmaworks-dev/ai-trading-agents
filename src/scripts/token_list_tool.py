@@ -22,11 +22,11 @@ class TokenAccountTracker:
         self.rpc_endpoint = os.getenv("RPC_ENDPOINT")
         if not self.rpc_endpoint:
             raise ValueError("⚠️ Please set RPC_ENDPOINT environment variable!")
-        print(f"🌐 Connected to Helius RPC endpoint... Moon Dev is ready! 🚀")
+        print(f"🌐 Connected to Helius RPC endpoint... Karma Dev is ready! 🚀")
 
     def get_token_accounts(self, wallet_address: str) -> Dict:
         """Get all token accounts for a specific wallet address"""
-        print(f"🔍 Moon Dev is fetching token accounts for {wallet_address}...")
+        print(f"🔍 Karma Dev is fetching token accounts for {wallet_address}...")
         
         payload = {
             "jsonrpc": "2.0",
@@ -53,7 +53,7 @@ class TokenAccountTracker:
 
     def track_all_wallets(self):
         """Track token accounts for all wallets in the WALLETS_TO_TRACK list"""
-        print(f"🚀 Moon Dev's Token Tracker starting up...")
+        print(f"🚀 Karma Dev's Token Tracker starting up...")
         print(f"📋 Tracking {len(WALLETS_TO_TRACK)} wallets...")
         
         results = {}
@@ -79,7 +79,7 @@ def main():
     results = tracker.track_all_wallets()
     
     # Pretty print the results
-    print("\n🎉 Moon Dev's Final Report:")
+    print("\n🎉 Karma Dev's Final Report:")
     print(json.dumps(results, indent=2))
 
 if __name__ == "__main__":

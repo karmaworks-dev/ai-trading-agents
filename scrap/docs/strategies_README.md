@@ -1,7 +1,7 @@
-# 🌙 Moon Dev's Trading Strategies
+# 🕉️ Karma Dev's Trading Strategies
 
 ## Overview
-This directory contains the base strategy class and custom trading strategies for Moon Dev's AI Trading System.
+This directory contains the base strategy class and custom trading strategies for Karma Dev's AI Trading System.
 
 ## Structure
 ```

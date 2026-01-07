@@ -1,6 +1,6 @@
 # RBI Agent (Research-Based Inference)
 
-**Created by Moon Dev**
+**Created by Karma Dev**
 
 The RBI Agent is an AI-powered system that converts strategy ideas from any source (text, videos, PDFs, or files) into backtested trading strategies using DeepSeek-R1 reasoning AI.
 
@@ -129,7 +129,7 @@ This strategy uses RSI oversold conditions..." > /path/to/strategies/strategy1.m
 
 ```python
 # ============================================
-# 📁 STRATEGY SOURCE CONFIGURATION - Moon Dev
+# 📁 STRATEGY SOURCE CONFIGURATION - Karma Dev
 # ============================================
 # Option 1 (Default): STRATEGIES_FROM_FILES = False
 #   - Reads from ideas.txt (one strategy per line)
@@ -179,7 +179,7 @@ When you run the agent, clear messages show which configuration is active:
 
 ```
 ============================================================
-🌟 Moon Dev's RBI AI v3.0 PARALLEL PROCESSOR + MULTI-DATA 🚀
+🌟 Karma Dev's RBI AI v3.0 PARALLEL PROCESSOR + MULTI-DATA 🚀
 ============================================================
 
 📅 Date: 2025-10-28
@@ -201,7 +201,7 @@ When you run the agent, clear messages show which configuration is active:
 
 ```
 ============================================================
-🌟 Moon Dev's RBI AI v3.0 PARALLEL PROCESSOR + MULTI-DATA 🚀
+🌟 Karma Dev's RBI AI v3.0 PARALLEL PROCESSOR + MULTI-DATA 🚀
 ============================================================
 
 📅 Date: 2025-10-28
@@ -686,8 +686,8 @@ All operations are thread-safe:
 
 ---
 
-**Made with ❤️ by Moon Dev**
+**Made with ❤️ by Karma Dev**
 
-*Part of the Moon Dev AI Agents for Trading project*
+*Part of the Karma Dev AI Agents for Trading project*
 
 **GitHub**: https://github.com/moon-dev-ai-agents-for-trading

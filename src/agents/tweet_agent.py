@@ -1,6 +1,6 @@
 """
-🐦 Moon Dev's Tweet Generator
-Built with love by Moon Dev 🚀
+🐦 Karma Dev's Tweet Generator
+Built with love by Karma Dev 🚀
 
 This agent takes text input and generates tweets based on the content.
 """
@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-# 🌙 Moon Dev: Calculate project root dynamically (MUST be before OG_TWEET_FILE)
+# 🕉️ Karma Dev: Calculate project root dynamically (MUST be before OG_TWEET_FILE)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "src" / "data"
 
@@ -29,7 +29,7 @@ MAX_CHUNK_SIZE = 10000  # Maximum characters per chunk
 TWEETS_PER_CHUNK = 3   # Number of tweets to generate per chunk
 USE_TEXT_FILE = True   # Whether to use og_tweet_text.txt by default
 # if the above is true, then the below is the file to use
-OG_TWEET_FILE = DATA_DIR / "tweets" / "og_tweet_text.txt"  # 🌙 Moon Dev: Dynamic path!
+OG_TWEET_FILE = DATA_DIR / "tweets" / "og_tweet_text.txt"  # 🕉️ Karma Dev: Dynamic path!
 from dotenv import load_dotenv
 import openai
 import anthropic
@@ -77,7 +77,7 @@ TWEET_COLORS = [
 ]
 
 class TweetAgent:
-    """Moon Dev's Tweet Generator 🐦"""
+    """Karma Dev's Tweet Generator 🐦"""
     
     def __init__(self):
         """Initialize the Tweet Agent"""
@@ -124,7 +124,7 @@ class TweetAgent:
         else:
             self.deepseek_client = None
         
-        # Create tweets directory if it doesn't exist - 🌙 Moon Dev: Dynamic path!
+        # Create tweets directory if it doesn't exist - 🕉️ Karma Dev: Dynamic path!
         self.tweets_dir = DATA_DIR / "tweets"
         self.tweets_dir.mkdir(parents=True, exist_ok=True)
         

@@ -1,6 +1,6 @@
-# 🌙 Moon Dev's Extended Exchange Integration
+# 🕉️ Karma Dev's Extended Exchange Integration
 
-Complete guide to using Extended Exchange (X10) with Moon Dev's trading system.
+Complete guide to using Extended Exchange (X10) with Karma Dev's trading system.
 
 ---
 
@@ -20,7 +20,7 @@ Complete guide to using Extended Exchange (X10) with Moon Dev's trading system.
 
 ## Overview
 
-Extended Exchange (X10) is a decentralized perpetual futures exchange built on StarkNet. This integration allows you to trade crypto perpetual futures with up to 20x leverage directly from the Moon Dev trading system.
+Extended Exchange (X10) is a decentralized perpetual futures exchange built on StarkNet. This integration allows you to trade crypto perpetual futures with up to 20x leverage directly from the Karma Dev trading system.
 
 **Files:**
 - **`src/nice_funcs_extended.py`** - Extended Exchange trading functions (850+ lines)
@@ -192,7 +192,7 @@ print(f"Current BTC price: ${price:,.2f}")
 
 ### Symbol Format
 
-🌙 **Moon Dev Note**: Extended Exchange uses `BTC-USD` format internally, but all functions auto-convert!
+🕉️ **Karma Dev Note**: Extended Exchange uses `BTC-USD` format internally, but all functions auto-convert!
 
 ```python
 # All of these work the same:
@@ -276,7 +276,7 @@ The test script performs an 8-step verification:
 
 **Expected Output:**
 ```
-🌙 Moon Dev's Extended Exchange Test Starting! 🚀
+🕉️ Karma Dev's Extended Exchange Test Starting! 🚀
 
 ================================================================
   📊 STEP 1: Check Initial Position & Balance
@@ -290,7 +290,7 @@ The test script performs an 8-step verification:
 
 [... continues through all 8 steps ...]
 
-✨ Moon Dev's Extended Exchange Test Complete! ✨
+✨ Karma Dev's Extended Exchange Test Complete! ✨
 
 All functionality tested:
   ✅ Get position
@@ -302,7 +302,7 @@ All functionality tested:
   ✅ Market buy
   ✅ Close position
 
-🌙 Extended Exchange is fully functional! 🚀
+🕉️ Extended Exchange is fully functional! 🚀
 ```
 
 ### Debug Position Issues
@@ -409,7 +409,7 @@ If you encounter issues:
 2. **Use debug script**: `python src/scripts/debug_extended_position.py`
 3. **Check the logs**: Look for colored terminal output
 4. **Verify credentials**: Ensure all 4 Extended env vars are set
-5. **Join Discord**: Get help from the Moon Dev community
+5. **Join Discord**: Get help from the Karma Dev community
 
 ---
 
@@ -447,7 +447,7 @@ Here's a complete example of using Extended Exchange:
 
 ```python
 """
-🌙 Moon Dev's Extended Trading Example
+🕉️ Karma Dev's Extended Trading Example
 """
 from src import nice_funcs_extended as extended
 from termcolor import cprint
@@ -496,7 +496,7 @@ if position:
 # extended.chunk_kill("BTC")  # Close with maker orders
 # extended.close_position("BTC")  # Close with market order
 
-cprint(f"\n🌙 Moon Dev's trading flow complete!", "green")
+cprint(f"\n🕉️ Karma Dev's trading flow complete!", "green")
 ```
 
 ---
@@ -506,7 +506,7 @@ cprint(f"\n🌙 Moon Dev's trading flow complete!", "green")
 - **Extended Exchange Docs**: https://docs.extended.exchange
 - **Python SDK**: https://github.com/x10xchange/python_sdk
 - **StarkNet Docs**: https://docs.starknet.io
-- **Moon Dev YouTube**: Weekly trading system updates
+- **Karma Dev YouTube**: Weekly trading system updates
 - **Discord**: Join for community support
 
 ---
@@ -531,6 +531,6 @@ Extended Exchange integration provides:
 
 ---
 
-**Built with 🌙 by Moon Dev**
+**Built with 🕉️ by Karma Dev**
 
 *"Never over-engineer, always ship real trading systems."*

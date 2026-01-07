@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Chat Agent
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Chat Agent
+Built with love by Karma Dev 🚀
 
 This agent monitors YouTube stream chat and answers questions using a knowledge base.
 """
@@ -83,7 +83,7 @@ RESTREAM_EVENT_SOURCES = {
 }
 
 # Chat prompts
-CHAT_PROMPT = """You are Moon Dev's Live Stream Chat AI Agent. Keep all responses short.
+CHAT_PROMPT = """You are Karma Dev's Live Stream Chat AI Agent. Keep all responses short.
 Keep responses concise, friendly, and include emojis.
 
 YOU ARE THE CHAT MODERATOR OF A LIVE STREAM ABOUT CODING.
@@ -101,8 +101,8 @@ Just respond with a friendly message including emojis.
 
 IMPORTANT: 
 - All responses must be very short and concise (under 50 tokens)
-- Use knowledge base to answer questions about Moon Dev accurately
-- If unsure about something, say "I'll let Moon Dev answer that! 🌙"
+- Use knowledge base to answer questions about Karma Dev accurately
+- If unsure about something, say "I'll let Karma Dev answer that! 🕉️"
 - Never share API keys or sensitive information
 - Keep the good vibes going with emojis! 😊
 """
@@ -148,7 +148,7 @@ WARNING_EMOJIS = ["⚠️", "🚫", "❌", "⛔️", "🔴", "💀", "☠️", "
 
 # Update config defaults
 DEFAULT_CONFIG = {
-    "response_prefix": "Moon Dev AI: ",
+    "response_prefix": "Karma Dev AI: ",
     "ignored_users": ["Nightbot", "StreamElements"],
     "command_prefix": "!",
     "initial_chats": DEFAULT_INITIAL_CHATS,
@@ -637,19 +637,19 @@ class RestreamChatHandler:
             # If it's a 777 response, display with cyan background
             if text.strip() == "777":
                 print(f"🧠 ", end="")
-                cprint("Moon Dev AI", "white", "on_green", end="")
+                cprint("Karma Dev AI", "white", "on_green", end="")
                 print(": ", end="")
                 cprint(ai_response, "white", "on_cyan")
             else:
                 print(f"🧠 ", end="")
-                cprint("Moon Dev AI", "white", "on_green", end="")
+                cprint("Karma Dev AI", "white", "on_green", end="")
                 print(f": {ai_response}")
             print()  # Add spacing
 
 class ChatAgent:
     def __init__(self):
         """Initialize the Chat Agent"""
-        cprint("\n⚙️ Initializing Moon Dev's Chat Agent...", "cyan")
+        cprint("\n⚙️ Initializing Karma Dev's Chat Agent...", "cyan")
         
         # Create data directories
         self.data_dir = Path(project_root) / "src" / "data" / "chat_agent"
@@ -710,13 +710,13 @@ class ChatAgent:
             self.youtube_monitor = YouTubeChatMonitor(youtube_api_key)
             self.restream_handler = None
         
-        cprint("🎯 Moon Dev's Chat Agent initialized!", "green")
+        cprint("🎯 Karma Dev's Chat Agent initialized!", "green")
         
     def _create_knowledge_base(self):
         """Create initial knowledge base file"""
-        initial_knowledge = """# 🌙 Moon Dev's Knowledge Base
+        initial_knowledge = """# 🕉️ Karma Dev's Knowledge Base
 
-## About Moon Dev
+## About Karma Dev
 - Passionate about AI, trading, and coding
 - Loves adding emojis to everything
 - Streams coding sessions on YouTube
@@ -822,12 +822,12 @@ class ChatAgent:
             # If it's a 777 response, display with cyan background
             if text.strip() == "777":
                 print(f"🧠 ", end="")
-                cprint("Moon Dev AI", "white", "on_green", end="")
+                cprint("Karma Dev AI", "white", "on_green", end="")
                 print(": ", end="")
                 cprint(ai_response, "white", "on_cyan")
             else:
                 print(f"🧠 ", end="")
-                cprint("Moon Dev AI", "white", "on_green", end="")
+                cprint("Karma Dev AI", "white", "on_green", end="")
                 print(f": {ai_response}")
             print()  # Add spacing
 
@@ -874,7 +874,7 @@ class ChatAgent:
             
             # For simple questions, use a minimal prompt
             if len(question.split()) < 5:
-                formatted_prompt = """You are Moon Dev's Live Stream Chat AI Agent. Keep responses short and friendly with emojis."""
+                formatted_prompt = """You are Karma Dev's Live Stream Chat AI Agent. Keep responses short and friendly with emojis."""
             
             # Get response from model
             response = self.model.generate_response(
@@ -892,7 +892,7 @@ class ChatAgent:
 
     def _get_leaderboard(self):
         """
-        🌙 MOON DEV SAYS: Let's see who's leading the chat! 🏆
+        🕉️ MOON DEV SAYS: Let's see who's leading the chat! 🏆
         """
         try:
             # Read chat history
@@ -909,7 +909,7 @@ class ChatAgent:
             
     def _format_leaderboard_message(self, scores):
         """
-        🌙 MOON DEV SAYS: Format that leaderboard with style! 🎨
+        🕉️ MOON DEV SAYS: Format that leaderboard with style! 🎨
         """
         if len(scores) == 0:
             return None
@@ -937,7 +937,7 @@ class ChatAgent:
         
     def _show_leaderboard(self):
         """
-        🌙 MOON DEV SAYS: Time to show off those chat skills! 🚀
+        🕉️ MOON DEV SAYS: Time to show off those chat skills! 🚀
         """
         scores = self._get_leaderboard()
         if len(scores) == 0:
@@ -949,7 +949,7 @@ class ChatAgent:
         
     def run(self):
         """Main loop for monitoring chat"""
-        cprint("\n🎯 Moon Dev's Chat Agent starting...", "cyan", attrs=['bold'])
+        cprint("\n🎯 Karma Dev's Chat Agent starting...", "cyan", attrs=['bold'])
         print()
         
         cprint(f"📝 Will process last {DEFAULT_INITIAL_CHATS} messages on startup", "cyan")
@@ -1023,7 +1023,7 @@ class ChatAgent:
 
     def _get_user_chat_history(self, username):
         """
-        🌙 MOON DEV SAYS: Let's get that chat history! 📚
+        🕉️ MOON DEV SAYS: Let's get that chat history! 📚
         """
         try:
             df = pd.read_csv(self.chat_log_path)
@@ -1036,7 +1036,7 @@ class ChatAgent:
 
     def save_chat_history(self, username, message, score):
         """
-        🌙 MOON DEV SAYS: Saving chat history with scores! 📊
+        🕉️ MOON DEV SAYS: Saving chat history with scores! 📊
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -1052,7 +1052,7 @@ class ChatAgent:
 
 def is_meaningful_chat(new_message, chat_history, threshold=0.3):
     """
-    🌙 MOON DEV SAYS: Let's keep chats meaningful and fun!
+    🕉️ MOON DEV SAYS: Let's keep chats meaningful and fun!
     Determines if a chat is meaningful based on similarity to previous chats
     """
     if len(new_message.split()) < 3:  # Very short messages
@@ -1072,7 +1072,7 @@ def is_meaningful_chat(new_message, chat_history, threshold=0.3):
 
 def evaluate_chat_sentiment(message):
     """
-    🌙 MOON DEV SAYS: Let's keep the vibes positive! 🌈
+    🕉️ MOON DEV SAYS: Let's keep the vibes positive! 🌈
     Simple sentiment evaluation (can be replaced with more complex AI)
     """
     positive_words = ['great', 'awesome', 'love', 'thanks', 'helpful']
@@ -1083,16 +1083,16 @@ def evaluate_chat_sentiment(message):
     negative_score = sum(word in message_lower for word in negative_words)
     
     if positive_score > negative_score:
-        #print("🌙 MOON DEV: Positive vibes detected! ")
+        #print("🕉️ MOON DEV: Positive vibes detected! ")
         return 1
     elif negative_score > positive_score:
-        print("🌙 ayo fam lets keep it positive, spam the 777s to increase the vibes in here")
+        print("🕉️ ayo fam lets keep it positive, spam the 777s to increase the vibes in here")
         return -1
     return 0
 
 def update_chat_score(username, message, chat_history):
     """
-    🌙 MOON DEV SAYS: Let's track those chat points! 
+    🕉️ MOON DEV SAYS: Let's track those chat points! 
     """
     if not is_meaningful_chat(message, chat_history):
         return 0

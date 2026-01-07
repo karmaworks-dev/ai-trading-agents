@@ -1,5 +1,5 @@
 '''
-🌙 Moon Dev Trading Bot Control Panel 
+🕉️ Karma Dev Trading Bot Control Panel 
 Controls different trading actions that our AI agents can execute:
 
 0 - close a position (in chunks)
@@ -24,7 +24,7 @@ import schedule
 
 ###### ASKING USER WHAT THEY WANNA DO - WILL REMOVE USER SOON AND REPLACE WITH BOT ######
 action = 0
-print('🌙 Moon Dev says: slow down, dont trade by hand... take it easy! 🚀')
+print('🕉️ Karma Dev says: slow down, dont trade by hand... take it easy! 🚀')
 action = input('0 to close, 1 to buy, 2 stop loss, 3 breakout, 5 market maker  |||| 6 funding buy, 7 liquidation amount:')
 print('you entered:', action)
 action = int(action)

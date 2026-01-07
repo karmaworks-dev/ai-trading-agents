@@ -19,7 +19,7 @@
 **Structure**:
 ```
 ┌─────────────────────────────────────────────┐
-│ 🌀 Logo   Models  Chat  Rankings  Docs [☀️/🌙] │
+│ 🌀 Logo   Models  Chat  Rankings  Docs [☀️/🕉️] │
 └─────────────────────────────────────────────┘
 ```
 

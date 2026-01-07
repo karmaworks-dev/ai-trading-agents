@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Claude Model Implementation
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Claude Model Implementation
+Built with love by Karma Dev 🚀
 """
 
 from termcolor import cprint
@@ -10,7 +10,7 @@ class ClaudeModel(BaseModel):
     """Implementation for Anthropic's Claude models"""
     
     AVAILABLE_MODELS = {
-        # Claude 4 Series (New Generation) - 🌙 Moon Dev's Latest Models!
+        # Claude 4 Series (New Generation) - 🕉️ Karma Dev's Latest Models!
         # API names include date suffixes for version control
         "claude-opus-4-5-20251101": "Claude Opus 4.5 - Most powerful model with superior reasoning and creativity (200K context)",
         "claude-sonnet-4-5-20250929": "Claude Sonnet 4.5 - Best balance of speed and intelligence (200K context) ⚡ Recommended",

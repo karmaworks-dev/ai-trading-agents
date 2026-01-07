@@ -1,6 +1,6 @@
 """
-🌙 Moon Dev's Model Factory
-Built with love by Moon Dev 🚀
+🕉️ Karma Dev's Model Factory
+Built with love by Karma Dev 🚀
 
 This module manages all available AI models and provides a unified interface.
 """
@@ -270,7 +270,7 @@ class ModelFactory:
             "gemini": "GEMINI_KEY",  # Re-enabled with Gemini 2.5 models
             "deepseek": "DEEPSEEK_KEY",
             "xai": "XAI_KEY",  # xAI uses XAI_KEY (aligned with secrets_manager.py)
-            "openrouter": "OPENROUTER_API_KEY",  # 🌙 Moon Dev: OpenRouter - 200+ models!
+            "openrouter": "OPENROUTER_API_KEY",  # 🕉️ Karma Dev: OpenRouter - 200+ models!
             # Ollama doesn't need an API key as it runs locally
         }
     

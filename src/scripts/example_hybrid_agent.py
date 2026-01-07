@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-🌙 Moon Dev's Hybrid Trading Example
+🕉️ Karma Dev's Hybrid Trading Example
 Shows how to use both Solana and HyperLiquid in one agent
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 """
 
 import os
@@ -127,7 +127,7 @@ This leverages:
 def main():
     """Run examples"""
     cprint("\n" + "="*60, "cyan")
-    cprint("🌙 MOON DEV'S HYBRID TRADING EXAMPLE", "cyan", attrs=['bold'])
+    cprint("🕉️ MOON DEV'S HYBRID TRADING EXAMPLE", "cyan", attrs=['bold'])
     cprint("="*60, "cyan")
 
     # Check environment
@@ -178,7 +178,7 @@ Choose based on your needs:
 - HyperLiquid: BTC/ETH/SOL perps with leverage
     """, "white")
 
-    cprint("\n🌕 Thanks for using Moon Dev Trading Bots! 🤖", "magenta")
+    cprint("\n🌕 Thanks for using Karma Dev Trading Bots!", "magenta")
 
 if __name__ == "__main__":
     main()

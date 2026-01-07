@@ -17,7 +17,7 @@ DATA_DIR = PROJECT_ROOT / "src" / "data" / "hyperliquid_data"
 
 # Create data directory if it doesn't exist
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-print(f"📁 Moon Dev's data directory: {DATA_DIR}")
+print(f"📁 Karma Dev's data directory: {DATA_DIR}")
 
 
 # Constants
@@ -128,7 +128,7 @@ def process_data_to_df(snapshot_data):
 
 def fetch_historical_data(symbol, timeframe):
     """Fetch 5000 rows of historical data."""
-    print("\n🌙 MoonDev's Historical Data Fetcher")
+    print("\n🕉️ KarmaDev's Historical Data Fetcher")
     print(f"🎯 Symbol: {symbol}")
     print(f"⏰ Timeframe: {timeframe}")
 
@@ -162,7 +162,7 @@ def fetch_historical_data(symbol, timeframe):
         print("\n📊 Final data summary:")
         print(f"📈 Total candles: {len(df)}")
         print(f"📅 Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
-        print("✨ Thanks for using MoonDev's Data Fetcher! ✨")
+        print("✨ Thanks for using KarmaDev's Data Fetcher! ✨")
 
 
     return df
@@ -177,11 +177,11 @@ if not all_data.empty:
     timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
     file_path = DATA_DIR / f'{symbol}_{timeframe}_{timestamp}_historical.csv'
     all_data.to_csv(file_path, index=False)
-    print(f'\n💾 Moon Dev saved data to: {file_path}')
+    print(f'\n💾 Karma Dev saved data to: {file_path}')
 
     # Print the DataFrame
     print("\n" + "="*80)
-    print("🌙 MOON DEV'S DATA PREVIEW 🌙")
+    print("🕉️ MOON DEV'S DATA PREVIEW 🕉️")
     print("="*80)
     print(f"\n📊 First 10 rows:")
     print(all_data.head(10).to_string(index=False))

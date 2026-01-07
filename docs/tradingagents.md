@@ -1,8 +1,8 @@
-# 🌙 Moon Dev's Trading Agents Guide
+# 🕉️ Karma Dev's Trading Agents Guide
 
-**Complete Onboarding to Moon Dev's AI Trading Agent Ecosystem**
+**Complete Onboarding to Karma Dev's AI Trading Agent Ecosystem**
 
-Built with love by Moon Dev 🚀
+Built with love by Karma Dev 🚀
 
 ---
 
@@ -31,7 +31,7 @@ Built with love by Moon Dev 🚀
 
 ## Overview
 
-Moon Dev's trading system uses a **multi-agent architecture** where specialized AI agents work independently or together to analyze markets, generate signals, manage risk, and execute trades.
+Karma Dev's trading system uses a **multi-agent architecture** where specialized AI agents work independently or together to analyze markets, generate signals, manage risk, and execute trades.
 
 ### 🎯 Agent Categories
 
@@ -740,7 +740,7 @@ These agents find new trading opportunities.
 
 #### How It Works:
 ```python
-# 1. Continuously poll Moon Dev API for new tokens
+# 1. Continuously poll Karma Dev API for new tokens
 while True:
     new_tokens = api.get_recent_tokens()
 
@@ -797,7 +797,7 @@ python src/agents/sniper_agent.py
 **The Solana Token Analyzer 🔍**
 
 #### What It Does:
-- Analyzes recent token launches using Moon Dev's criteria
+- Analyzes recent token launches using Karma Dev's criteria
 - Filters tokens by market cap, liquidity, volume, holder distribution
 - Scores tokens and saves "top picks"
 - More sophisticated than sniper agent
@@ -969,7 +969,7 @@ market_signals = {
 
 def main_loop():
     while True:
-        print("\n🌙 Moon Dev Trading System - Starting Cycle")
+        print("\n🕉️ Karma Dev Trading System - Starting Cycle")
 
         # 1. RISK CHECK (ALWAYS FIRST!)
         risk_status = risk_agent.check_risk_limits()
@@ -1314,13 +1314,13 @@ for t in threads:
 
 ## Support
 
-Questions? Issues? Join the Moon Dev community:
+Questions? Issues? Join the Karma Dev community:
 - YouTube: [@moondevonyt](https://www.youtube.com/@moondevonyt)
 - Bootcamp: [algotradecamp.com](https://algotradecamp.com)
 - Discord: [Join here](https://algotradecamp.com)
 
 ---
 
-**Built with love by Moon Dev 🌙**
+**Built with love by Karma Dev 🕉️**
 
 *Remember: Trading involves risk. Always test strategies thoroughly before deploying with real capital. These agents are educational tools - use at your own risk!*

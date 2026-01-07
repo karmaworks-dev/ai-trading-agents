@@ -26,7 +26,7 @@ This document summarizes the cleanup performed on the ai-trading-agents codebase
 - `rbi_agent.py`
 
 ### Documentation Files
-- `moon_dev_trading_agents_README.md`
+- `karma_dev_trading_agents_README.md`
 - `rbi_claude_commands_coordination_README.md`
 - `rbi_claude_commands_memory_README.md`
 - `rbi_memory_agents_README.md`

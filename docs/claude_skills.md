@@ -234,6 +234,6 @@ See FORMATTING_RULES.md for complete style guide.
 
 ---
 
-**Built by Moon Dev 🌙**
+**Built by Karma Dev 🕉️**
 
 *Skills enable Claude to master specialized tasks across all surfaces.*
