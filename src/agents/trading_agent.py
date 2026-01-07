@@ -1836,33 +1836,36 @@ Return ONLY valid JSON with the following structure:
                 except Exception:
                     continue
 
-            # ================================================================
-            # STEP 2: Collect AI Signals
-            # ================================================================
-            signals = []
-            for _, row in self.recommendations_df.iterrows():
-                token = row["token"]
-                if token not in self.symbols:
-                    continue
+        # ================================================================
+        # STEP 2: Collect AI Signals
+        # ================================================================
+        signals = []
+        for _, row in self.recommendations_df.iterrows():
+            token = row["token"]
+            if token not in self.symbols:
+                continue
 
-                # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
-                if row["action"] not in ["BUY", "SELL"]:
-                    continue
+            # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
+            # Fix case sensitivity issue - ensure action is uppercase
+            action_upper = row["action"].upper()
+            if action_upper not in ["BUY", "SELL"]:
+                continue
 
-                # Skip SELL signals in LONG_ONLY mode (can't open shorts)
-                if LONG_ONLY and row["action"] == "SELL" and token not in open_positions:
-                    continue
+            # Skip SELL signals in LONG_ONLY mode (can't open shorts)
+            if LONG_ONLY and action_upper == "SELL" and token not in open_positions:
+                continue
 
-                signals.append({
-                    "symbol": token,
-                    "action": row["action"],
-                    "confidence": int(row["confidence"]),
-                })
+            # Use the uppercase version for consistency
+            signals.append({
+                "symbol": token,
+                "action": action_upper,
+                "confidence": int(row["confidence"]),
+            })
 
-            if not signals:
-                cprint("📊 No actionable signals. Skipping allocation.", "yellow")
-                add_console_log("No actionable signals for allocation", "info")
-                return []
+        if not signals:
+            cprint("📊 No actionable signals. Skipping allocation.", "yellow")
+            add_console_log("No actionable signals for allocation", "info")
+            return []
 
             # ================================================================
             # STEP 3: Get Account Balance and Calculate Total Equity
@@ -2914,3 +2917,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
