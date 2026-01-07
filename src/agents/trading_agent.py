@@ -1992,320 +1992,224 @@ Return ONLY valid JSON with the following structure:
 
 
 
-    def allocate_portfolio(self):
-        """
-        AI-DRIVEN SMART PORTFOLIO ALLOCATION WITH RISK MANAGEMENT
+def allocate_portfolio(self):
+    """
+    Deterministic, verbose, allocation-safe portfolio allocator.
+    No silent failures. Every rejection is logged.
+    """
+    try:
+        cprint("\n" + "=" * 70, "cyan")
+        cprint("🧠 AI SMART PORTFOLIO ALLOCATION", "white", "on_blue", attrs=["bold"])
+        cprint("=" * 70, "cyan")
 
-        Uses AI to analyze:
-        1. Current open positions with P&L
-        2. AI trading signals with confidence levels
-        3. Available balance and risk parameters
-        4. Enhanced risk management with smart leverage and TP/SL
-
-        The AI decides optimal allocation including:
-        - Which positions to close/reduce (reallocate capital)
-        - Which positions to open/increase
-        - Allocation amounts based on confidence
-        - Smart leverage based on confidence, volatility, and drawdown
-        - Dynamic TP/SL based on confidence levels
-
-        Returns:
-            list: List of action dictionaries from AI, or empty list if no actions
-        """
-        try:
-            cprint("\n" + "=" * 60, "cyan")
-            cprint("🧠 AI-DRIVEN SMART ALLOCATION", "white", "on_blue", attrs=["bold"])
-            cprint("=" * 60, "cyan")
-
-            # ================================================================
-            # STEP 1: Collect Current Portfolio State
-            # ================================================================
-            open_positions = {}
-            total_position_value = 0
-
-            for sym in self.symbols:
-                try:
-                    if EXCHANGE == "HYPERLIQUID":
-                        pos_data = n.get_position(sym, self.account)
-                    else:
-                        pos_data = n.get_position(sym)
-
-                    _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
-
-                    if im_in_pos and pos_size != 0:
-                        notional = abs(float(pos_size) * float(entry_px))
-                        margin = notional / LEVERAGE
-                        open_positions[sym] = {
-                            "direction": "LONG" if is_long else "SHORT",
-                            "size": abs(float(pos_size)),
-                            "entry_price": float(entry_px),
-                            "notional_usd": round(notional, 2),
-                            "margin_usd": round(margin, 2),
-                            "pnl_percent": round(float(pnl_pct), 2),
-                        }
-                        total_position_value += margin
-                except Exception:
-                    continue
-
-            # DEBUG: show live open positions and incoming signals
+        # ==========================================================
+        # STEP 1 — COLLECT OPEN POSITIONS
+        # ==========================================================
+        open_positions = {}
+        for sym in self.symbols:
             try:
-                cprint(f"DEBUG open_positions: {open_positions}", "red")
-                cprint(f"DEBUG incoming signals: {signals}", "red")
+                pos_data = n.get_position(sym, self.account) if EXCHANGE != "HYPERLIQUID" \
+                    else n.get_position(sym, self.account)
+
+                _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
+                if im_in_pos and pos_size != 0:
+                    notional = abs(float(pos_size) * float(entry_px))
+                    margin = notional / LEVERAGE
+                    open_positions[sym] = {
+                        "direction": "LONG" if is_long else "SHORT",
+                        "margin_usd": round(margin, 2),
+                        "pnl_percent": round(float(pnl_pct), 2),
+                    }
             except Exception:
-                pass
+                continue
 
-            # ================================================================
-            # STEP 2: Collect AI Signals
-            # ================================================================
-            signals = []
-            removed_actions = []  # Track removed actions for logging
-            for _, row in self.recommendations_df.iterrows():
-                token = row["token"]
-                if token not in self.symbols:
-                    removed_actions.append(f"{token} -> Skipped (not in configured symbols)")
-                    continue
+        cprint(f"📊 Open positions: {open_positions}", "cyan")
 
-                # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
-                # Fix case sensitivity issue - ensure action is uppercase
-                action_upper = row["action"].upper()
-                if action_upper not in ["BUY", "SELL"]:
-                    removed_actions.append(f"{token} -> {action_upper} (skipped: not actionable)")
-                    continue
+        # ==========================================================
+        # STEP 2 — FILTER STRATEGY SIGNALS (LOUD)
+        # ==========================================================
+        signals = []
+        removed = []
 
-                # Skip SELL signals in LONG_ONLY mode (can't open shorts)
-                if LONG_ONLY and action_upper == "SELL" and token not in open_positions:
-                    removed_actions.append(f"{token} -> SELL (skipped: LONG_ONLY mode)")
-                    continue
+        for _, row in self.recommendations_df.iterrows():
+            token = row["token"]
+            action = str(row["action"]).upper()
 
-                # Use the uppercase version for consistency
-                signals.append({
-                    "symbol": token,
-                    "action": action_upper,
-                    "confidence": int(row["confidence"]),
-                })
+            if token not in self.symbols:
+                removed.append(f"{token}: not in symbols")
+                continue
 
-            # Log removed actions
-            if removed_actions:
-                cprint(f"\n📋 Removed {len(removed_actions)} actions:", "yellow")
-                for action in removed_actions:
-                    cprint(f"   - {action}", "white")
-                add_console_log(f"Removed {len(removed_actions)} actions", "warning")
+            if action not in ["BUY", "SELL"]:
+                removed.append(f"{token}: action {action} not actionable")
+                continue
 
-            if not signals:
-                cprint("📊 No actionable signals. Skipping allocation.", "yellow")
-                add_console_log("No actionable signals for allocation", "info")
-                return []
+            if LONG_ONLY and action == "SELL" and token not in open_positions:
+                removed.append(f"{token}: SELL blocked by LONG_ONLY")
+                continue
 
-            # ================================================================
-            # STEP 3: Get Account Balance and Calculate Total Equity
-            # ================================================================
-            account_balance = get_account_balance(self.account)
-            
-            # CRITICAL FIX: Use total equity instead of free balance for allocation
-            # For HyperLiquid, we need to pass the account address, not the account object
-            if EXCHANGE == "HYPERLIQUID":
-                total_equity = n.get_account_value(self.account.address if hasattr(self.account, 'address') else self.account)
-            else:
-                total_equity = get_account_balance(self.account)  # Fallback to balance for other exchanges
-            available_balance = account_balance  # Free USDC for immediate use
+            signals.append({
+                "symbol": token,
+                "action": action,
+                "confidence": int(row["confidence"]),
+            })
 
-            # Allow allocation even when available balance is $0 but total equity > 0
-            # The AI can recommend closing positions to free up capital
-            if total_equity <= 0:
-                cprint("❌ Total equity is zero. Cannot allocate.", "red")
-                return []
+        if removed:
+            cprint(f"\n❌ Removed {len(removed)} signals:", "yellow")
+            for r in removed:
+                cprint(f"   - {r}", "white")
+            add_console_log(f"Removed {len(removed)} strategy signals", "warning")
 
-            # Calculate total position value for portfolio state
-            total_position_value = sum(pos["margin_usd"] for pos in open_positions.values())
-            min_order_notional = 12.0  # HyperLiquid minimum
-
-            cprint(f"💰 Account Balance (USDC): ${account_balance:.2f}", "cyan")
-            cprint(f"💎 Total Equity (Balance + Positions): ${total_equity:.2f}", "cyan")
-            cprint(f"📊 Positions Value: ${total_position_value:.2f}", "cyan")
-            cprint(f"💵 Available Balance: ${available_balance:.2f}", "green")
-
-            # ================================================================
-            # STEP 4: Build Portfolio State Summary for AI
-            # ================================================================
-            if open_positions:
-                portfolio_lines = ["OPEN POSITIONS:"]
-                for sym, pos in open_positions.items():
-                    pnl_emoji = "🟢" if pos["pnl_percent"] >= 0 else "🔴"
-                    portfolio_lines.append(
-                        f"  - {sym}: {pos['direction']} | ${pos['notional_usd']:.2f} notional | "
-                        f"PnL: {pnl_emoji} {pos['pnl_percent']:+.2f}%"
-                    )
-                portfolio_lines.append(f"\nTotal Position Value: ${total_position_value:.2f} margin")
-            else:
-                portfolio_lines = ["OPEN POSITIONS: None"]
-
-            portfolio_state = "\n".join(portfolio_lines)
-
-            # Build signals summary with enhanced risk management context
-            signal_lines = []
-            for sig in signals:
-                emoji = "📈" if sig["action"] == "BUY" else "📉" if sig["action"] == "SELL" else "⏸️"
-                in_position = "✓ IN POSITION" if sig["symbol"] in open_positions else ""
-                
-                # Add risk management context if risk manager is available
-                risk_context = ""
-                if RISK_MANAGER_AVAILABLE and self.risk_manager:
-                    try:
-                        # Get risk analysis for this signal
-                        risk_profile = self.risk_manager.calculate_position_risk(
-                            symbol=sig["symbol"],
-                            action=sig["action"],
-                            confidence=sig["confidence"] / 10.0,  # Convert to 0-1
-                            entry_price=100.0,  # Placeholder - would need actual price
-                            account_balance=total_equity
-                        )
-                        
-                        leverage = risk_profile["leverage"]
-                        tp_pct = risk_profile["tp_pct"]
-                        sl_pct = risk_profile["sl_pct"]
-                        risk_context = f" | Leverage: {leverage}x | TP: {tp_pct:.1f}% | SL: {sl_pct:.1f}%"
-                    except Exception as e:
-                        risk_context = " | Risk analysis pending"
-                
-                signal_lines.append(
-                    f"  - {sig['symbol']}: {emoji} {sig['action']} ({sig['confidence']}% confidence) {in_position}{risk_context}"
-                )
-            signals_text = "\n".join(signal_lines)
-
-            cprint(f"\n📊 Portfolio State:", "cyan")
-            cprint(portfolio_state, "white")
-            cprint(f"\n📈 AI Signals:", "cyan")
-            cprint(signals_text, "white")
-            cprint(f"\n⏱️  Cycle Time: {SLEEP_BETWEEN_RUNS_MINUTES} min (minimum hold time)", "yellow")
-
-            # ================================================================
-            # STEP 5: Ask AI for Allocation Plan
-            # ================================================================
-            cprint("\n🧠 Consulting AI for optimal allocation...", "magenta", attrs=["bold"])
-            add_console_log("Agent is analyzing allocation...", "info")
-
-            prompt = SMART_ALLOCATION_PROMPT.format(
-                portfolio_state=portfolio_state,
-                signals=signals_text,
-                available_balance=total_equity,  # CRITICAL: Use total equity instead of available balance
-                leverage=LEVERAGE,
-                max_position_pct=MAX_POSITION_PERCENTAGE,
-                cash_buffer_pct=CASH_PERCENTAGE,
-                min_order=min_order_notional,
-                cycle_minutes=SLEEP_BETWEEN_RUNS_MINUTES
-            )
-
-            ai_response = self.chat_with_ai(
-                "You are a portfolio allocation expert. Return ONLY valid JSON.",
-                prompt
-            )
-
-            if not ai_response:
-                cprint("❌ No response from AI. Using fallback allocation.", "red")
-                return self._fallback_equal_allocation(signals, total_equity, open_positions)
-
-            # ================================================================
-            # STEP 6: Parse AI Response
-            # ================================================================
-            try:
-                # Extract JSON from response
-                allocation_plan = extract_json_from_text(ai_response)
-
-                if not allocation_plan or "actions" not in allocation_plan:
-                    cprint("⚠️ AI response missing 'actions'. Using fallback.", "yellow")
-                    return self._fallback_equal_allocation(signals, total_equity, open_positions)
-
-                actions = allocation_plan["actions"]
-
-                # CRITICAL: Validate that actions is a list and not empty
-                if not isinstance(actions, list) or len(actions) == 0:
-                    cprint("⚠️ AI returned empty or invalid actions list. Using fallback.", "yellow")
-                    return self._fallback_equal_allocation(signals, total_equity, open_positions)
-
-                # Validate and filter actions
-                valid_actions = []
-                for action in actions:
-                    if not isinstance(action, dict):
-                        continue
-                    if "symbol" not in action or "action" not in action:
-                        continue
-                    if action["symbol"] not in self.symbols:
-                        continue
-
-                    # Skip HOLD actions - nothing to execute
-                    if action["action"] == "HOLD":
-                        cprint(f"   ⏸️ {action['symbol']}: HOLD - {action.get('reason', 'No change needed')}", "cyan")
-                        continue
-
-                    # ENHANCEMENT: Add risk management validation
-                    if RISK_MANAGER_AVAILABLE and self.risk_manager:
-                        try:
-                            # Correct confidence scaling: convert from 1-100 to 0-1
-                            confidence_raw = action.get("confidence", 50)
-                            confidence_scaled = confidence_raw / 100.0  # Convert to 0-1 range
-                            
-                            # Validate action against risk constraints
-                            validation = self.risk_manager.validate_trade_decision(
-                                symbol=action["symbol"],
-                                action=action["action"],
-                                confidence=confidence_scaled,  # Use properly scaled confidence
-                                entry_price=100.0,  # Placeholder
-                                account_balance=total_equity
-                            )
-                            
-                            if not validation["valid"]:
-                                cprint(f"   ⚠️ {action['symbol']}: Risk validation failed - {validation['action']}", "yellow")
-                                continue
-                        except Exception as e:
-                            cprint(f"   ⚠️ Risk validation error for {action['symbol']}: {e}", "yellow")
-
-                    valid_actions.append(action)
-
-                # ================================================================
-                # STEP 7: Display AI Allocation Plan
-                # ================================================================
-                cprint("\n" + "=" * 60, "green")
-                cprint("🎯 AI ALLOCATION PLAN:", "white", "on_green", attrs=["bold"])
-                cprint("=" * 60, "green")
-
-                for action in valid_actions:
-                    action_type = action["action"]
-                    symbol = action["symbol"]
-                    reason = action.get("reason", "")
-
-                    if action_type == "OPEN_LONG":
-                        margin = action.get("margin_usd", 0)
-                        cprint(f"   📈 {symbol}: OPEN LONG ${margin:.2f} margin - {reason}", "green")
-                    elif action_type == "OPEN_SHORT":
-                        margin = action.get("margin_usd", 0)
-                        cprint(f"   📉 {symbol}: OPEN SHORT ${margin:.2f} margin - {reason}", "red")
-                    elif action_type == "INCREASE":
-                        margin = action.get("margin_usd", 0)
-                        cprint(f"   ➕ {symbol}: INCREASE by ${margin:.2f} margin - {reason}", "cyan")
-                    elif action_type == "REDUCE":
-                        reduce_amt = action.get("reduce_by_usd", 0)
-                        cprint(f"   ➖ {symbol}: REDUCE by ${reduce_amt:.2f} notional - {reason}", "yellow")
-                    elif action_type == "CLOSE":
-                        cprint(f"   ❌ {symbol}: CLOSE position - {reason}", "red")
-
-                if allocation_plan.get("reasoning"):
-                    cprint(f"\n   💡 Strategy: {allocation_plan['reasoning']}", "magenta")
-
-                cprint("=" * 60 + "\n", "green")
-                add_console_log(f"Planned {len(valid_actions)} actions", "info")
-
-                return valid_actions
-
-            except Exception as e:
-                cprint(f"⚠️ Error parsing AI response: {e}", "yellow")
-                cprint(f"   Response: {ai_response[:200]}...", "white")
-                return self._fallback_equal_allocation(signals, total_equity, open_positions)
-
-        except Exception as e:
-            cprint(f"❌ Error in portfolio allocation: {str(e)}", "red")
-            import traceback
-            traceback.print_exc()
+        if not signals:
+            add_console_log("No actionable signals after filtering", "info")
+            cprint("📭 No signals left to allocate.", "yellow")
             return []
+
+        # ==========================================================
+        # STEP 3 — ACCOUNT EQUITY
+        # ==========================================================
+        account_balance = get_account_balance(self.account)
+        total_equity = (
+            n.get_account_value(self.account.address)
+            if EXCHANGE == "HYPERLIQUID"
+            else account_balance
+        )
+
+        if total_equity <= 0:
+            cprint("❌ Total equity is zero", "red")
+            add_console_log("Allocation aborted: zero equity", "error")
+            return []
+
+        cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
+        cprint(f"💎 Total equity: ${total_equity:.2f}", "cyan")
+
+        # ==========================================================
+        # STEP 4 — BUILD AI PROMPT
+        # ==========================================================
+        prompt = SMART_ALLOCATION_PROMPT.format(
+            portfolio_state=open_positions,
+            signals=signals,
+            available_balance=total_equity,
+            leverage=LEVERAGE,
+            max_position_pct=MAX_POSITION_PERCENTAGE,
+            cash_buffer_pct=CASH_PERCENTAGE,
+            min_order=12.0,
+            cycle_minutes=SLEEP_BETWEEN_RUNS_MINUTES,
+        )
+
+        cprint("\n🤖 Requesting AI allocation...", "magenta")
+        add_console_log("Requesting AI allocation", "info")
+
+        ai_response = self.chat_with_ai(
+            "You are a portfolio allocator. Return ONLY valid JSON.",
+            prompt
+        )
+
+        if not ai_response:
+            add_console_log("AI returned no response, using fallback", "warning")
+            return self._fallback_equal_allocation(signals, total_equity, open_positions)
+
+        # ==========================================================
+        # STEP 5 — PARSE AI RESPONSE
+        # ==========================================================
+        try:
+            allocation = extract_json_from_text(ai_response)
+            actions = allocation.get("actions", [])
+        except Exception as e:
+            add_console_log(f"AI JSON parse failed: {e}", "error")
+            return self._fallback_equal_allocation(signals, total_equity, open_positions)
+
+        if not actions:
+            add_console_log("AI returned zero actions", "warning")
+            return self._fallback_equal_allocation(signals, total_equity, open_positions)
+
+        # ==========================================================
+        # STEP 6 — VALIDATE ACTIONS (NO SILENCE)
+        # ==========================================================
+        valid_actions = []
+        rejected = {}
+
+        def reject(reason):
+            rejected[reason] = rejected.get(reason, 0) + 1
+
+        for a in actions:
+            if not isinstance(a, dict):
+                reject("not a dict")
+                continue
+
+            sym = a.get("symbol")
+            act = a.get("action")
+
+            if sym not in self.symbols:
+                reject(f"{sym}: invalid symbol")
+                continue
+
+            if act not in ["OPEN_LONG", "OPEN_SHORT", "INCREASE", "REDUCE", "CLOSE"]:
+                reject(f"{sym}: invalid action {act}")
+                continue
+
+            # Size validation
+            if act in ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]:
+                if a.get("margin_usd", 0) <= 0:
+                    reject(f"{sym}: margin_usd <= 0")
+                    continue
+
+            if act == "REDUCE":
+                if a.get("reduce_by_usd", 0) <= 0:
+                    reject(f"{sym}: reduce_by_usd <= 0")
+                    continue
+
+            # Risk validation
+            if RISK_MANAGER_AVAILABLE and self.risk_manager:
+                try:
+                    conf = a.get("confidence", 50) / 100.0
+                    verdict = self.risk_manager.validate_trade_decision(
+                        symbol=sym,
+                        action=act,
+                        confidence=conf,
+                        entry_price=100.0,
+                        account_balance=total_equity,
+                    )
+                    if not verdict["valid"]:
+                        reject(f"{sym}: risk rejected")
+                        continue
+                except Exception as e:
+                    reject(f"{sym}: risk error {e}")
+                    continue
+
+            valid_actions.append(a)
+
+        # ==========================================================
+        # STEP 7 — LOG REJECTIONS
+        # ==========================================================
+        if rejected:
+            cprint("\n❌ Rejected actions:", "red")
+            for r, c in rejected.items():
+                cprint(f"   {r}: {c}", "white")
+            add_console_log(f"Rejected actions: {dict(rejected)}", "warning")
+
+        if not valid_actions:
+            add_console_log("All AI actions rejected — fallback triggered", "error")
+            return self._fallback_equal_allocation(signals, total_equity, open_positions)
+
+        # ==========================================================
+        # STEP 8 — FINAL PLAN
+        # ==========================================================
+        cprint("\n" + "=" * 70, "green")
+        cprint("🎯 FINAL ALLOCATION PLAN", "white", "on_green", attrs=["bold"])
+        cprint("=" * 70, "green")
+
+        for a in valid_actions:
+            cprint(f"   {a}", "white")
+
+        add_console_log(f"Final allocation: {len(valid_actions)} actions", "success")
+        return valid_actions
+
+    except Exception as e:
+        add_console_log(f"allocate_portfolio crashed: {e}", "error")
+        import traceback
+        traceback.print_exc()
+        return []
+
 
     def _fallback_equal_allocation(self, signals, available_balance, open_positions):
         """
