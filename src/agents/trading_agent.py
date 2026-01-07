@@ -405,6 +405,22 @@ RESPOND WITH ONLY: ACTION | CONFIDENCE%"""
 
 SMART_ALLOCATION_PROMPT = """You are an expert portfolio allocation AI for cryptocurrency trading.
 
+# CRITICAL REQUIREMENTS
+1. Return ONLY a valid JSON object with this EXACT structure:
+{{
+  "actions": [ // List of actions (required)
+    {{"symbol": "...", "action": "OPEN_LONG"/"OPEN_SHORT"/"REDUCE"/"CLOSE", "margin_usd"/"reduce_by_usd": number, "reason": "..."}}
+  ],
+  "cash_buffer_usd": ...,
+  "reasoning": "..."
+}}
+
+# FORMAT RULES
+- No markdown or explanation outside the JSON
+- All number values must be in USD
+- Action must be one of: OPEN_LONG, OPEN_SHORT, REDUCE, CLOSE
+- Cash buffer must be at least {cash_buffer_pct}% of total equity
+
 CURRENT PORTFOLIO STATE:
 {portfolio_state}
 
@@ -437,19 +453,6 @@ ALLOCATION RULES:
 7. BUY signals = LONG positions, SELL signals = SHORT positions (if not LONG_ONLY)
 8. Consider the {cycle_minutes}-minute minimum hold time when sizing positions
 
-RESPOND WITH ONLY A VALID JSON OBJECT in this exact format:
-{{
-    "actions": [
-        {{"symbol": "BTC", "action": "OPEN_LONG", "margin_usd": 50.00, "reason": "High confidence BUY signal"}},
-        {{"symbol": "ETH", "action": "CLOSE", "reason": "SELL signal contradicts LONG position"}},
-        {{"symbol": "SOL", "action": "REDUCE", "reduce_by_usd": 100.00, "reason": "Reallocating to higher conviction trade"}},
-        {{"symbol": "LTC", "action": "HOLD", "reason": "Position aligned with signal, PnL positive"}},
-        {{"symbol": "AAVE", "action": "OPEN_SHORT", "margin_usd": 25.00, "reason": "SELL signal, opening short"}}
-    ],
-    "cash_buffer_usd": 50.00,
-    "reasoning": "Brief explanation of overall allocation strategy"
-}}
-
 ACTION TYPES:
 - OPEN_LONG: Open new long position (requires margin_usd)
 - OPEN_SHORT: Open new short position (requires margin_usd)
@@ -457,6 +460,12 @@ ACTION TYPES:
 - REDUCE: Reduce existing position (requires reduce_by_usd in notional)
 - CLOSE: Close position entirely
 - HOLD: Keep position as-is
+
+ABSOLUTE REQUIREMENTS:
+- Always return valid JSON
+- Never return empty actions array
+- Always use USD values
+- Allocate based on confidence levels
 
 CRITICAL: Return ONLY the JSON object, no markdown, no explanation outside the JSON."""
 
@@ -1944,6 +1953,11 @@ Return ONLY valid JSON with the following structure:
                     return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
                 actions = allocation_plan["actions"]
+
+                # CRITICAL: Validate that actions is a list and not empty
+                if not isinstance(actions, list) or len(actions) == 0:
+                    cprint("⚠️ AI returned empty or invalid actions list. Using fallback.", "yellow")
+                    return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
                 # Validate and filter actions
                 valid_actions = []
