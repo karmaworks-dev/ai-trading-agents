@@ -107,6 +107,14 @@ try:
 except ImportError:
     AI_GATEWAY_AVAILABLE = False
 
+# Import risk management system
+try:
+    from src.risk.risk_manager import RiskManager
+    from src.risk.pnl_calculator import Position
+    RISK_MANAGER_AVAILABLE = True
+except ImportError:
+    RISK_MANAGER_AVAILABLE = False
+
 # Import intelligence integrator for strategy and volume signals
 try:
     from src.utils.intelligence_integrator import (
@@ -726,6 +734,14 @@ class TradingAgent:
                 sys.exit(1)
 
             cprint(f"✅ Using model: {self.model.model_name}", "green")
+
+        # Initialize risk management system
+        if RISK_MANAGER_AVAILABLE:
+            self.risk_manager = RiskManager(max_leverage=self.leverage)
+            cprint("🛡️ Risk Management System initialized", "cyan")
+        else:
+            self.risk_manager = None
+            cprint("⚠️ Risk Management System not available", "yellow")
 
         self.recommendations_df = pd.DataFrame(
             columns=["token", "action", "confidence", "reasoning"]
@@ -1968,17 +1984,20 @@ Return ONLY valid JSON with the following structure:
 
     def allocate_portfolio(self):
         """
-        AI-Driven Smart Portfolio Allocation
+        AI-DRIVEN SMART PORTFOLIO ALLOCATION WITH RISK MANAGEMENT
 
         Uses AI to analyze:
         1. Current open positions with P&L
         2. AI trading signals with confidence levels
         3. Available balance and risk parameters
+        4. Enhanced risk management with smart leverage and TP/SL
 
         The AI decides optimal allocation including:
         - Which positions to close/reduce (reallocate capital)
         - Which positions to open/increase
         - Allocation amounts based on confidence
+        - Smart leverage based on confidence, volatility, and drawdown
+        - Dynamic TP/SL based on confidence levels
 
         Returns:
             list: List of action dictionaries from AI, or empty list if no actions
@@ -2094,13 +2113,34 @@ Return ONLY valid JSON with the following structure:
 
             portfolio_state = "\n".join(portfolio_lines)
 
-            # Build signals summary
+            # Build signals summary with enhanced risk management context
             signal_lines = []
             for sig in signals:
                 emoji = "📈" if sig["action"] == "BUY" else "📉" if sig["action"] == "SELL" else "⏸️"
                 in_position = "✓ IN POSITION" if sig["symbol"] in open_positions else ""
+                
+                # Add risk management context if risk manager is available
+                risk_context = ""
+                if RISK_MANAGER_AVAILABLE and self.risk_manager:
+                    try:
+                        # Get risk analysis for this signal
+                        risk_profile = self.risk_manager.calculate_position_risk(
+                            symbol=sig["symbol"],
+                            action=sig["action"],
+                            confidence=sig["confidence"] / 10.0,  # Convert to 0-1
+                            entry_price=100.0,  # Placeholder - would need actual price
+                            account_balance=total_equity
+                        )
+                        
+                        leverage = risk_profile["leverage"]
+                        tp_pct = risk_profile["tp_pct"]
+                        sl_pct = risk_profile["sl_pct"]
+                        risk_context = f" | Leverage: {leverage}x | TP: {tp_pct:.1f}% | SL: {sl_pct:.1f}%"
+                    except Exception as e:
+                        risk_context = " | Risk analysis pending"
+                
                 signal_lines.append(
-                    f"  - {sig['symbol']}: {emoji} {sig['action']} ({sig['confidence']}% confidence) {in_position}"
+                    f"  - {sig['symbol']}: {emoji} {sig['action']} ({sig['confidence']}% confidence) {in_position}{risk_context}"
                 )
             signals_text = "\n".join(signal_lines)
 
@@ -2168,6 +2208,24 @@ Return ONLY valid JSON with the following structure:
                     if action["action"] == "HOLD":
                         cprint(f"   ⏸️ {action['symbol']}: HOLD - {action.get('reason', 'No change needed')}", "cyan")
                         continue
+
+                    # ENHANCEMENT: Add risk management validation
+                    if RISK_MANAGER_AVAILABLE and self.risk_manager:
+                        try:
+                            # Validate action against risk constraints
+                            validation = self.risk_manager.validate_trade_decision(
+                                symbol=action["symbol"],
+                                action=action["action"],
+                                confidence=action.get("confidence", 50) / 10.0,  # Convert to 0-1
+                                entry_price=100.0,  # Placeholder
+                                account_balance=total_equity
+                            )
+                            
+                            if not validation["valid"]:
+                                cprint(f"   ⚠️ {action['symbol']}: Risk validation failed - {validation['action']}", "yellow")
+                                continue
+                        except Exception as e:
+                            cprint(f"   ⚠️ Risk validation error for {action['symbol']}: {e}", "yellow")
 
                     valid_actions.append(action)
 
