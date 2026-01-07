@@ -1849,9 +1849,9 @@ Return ONLY valid JSON with the following structure:
                 cprint("❌ Account balance is zero. Cannot allocate.", "red")
                 return []
 
-            # CRITICAL FIX: Calculate total equity including existing positions
-            total_equity = account_balance + total_position_value
-            available_balance = account_balance - total_position_value
+            # CRITICAL FIX: Use total equity instead of free balance for allocation
+            total_equity = get_account_value(self.account)
+            available_balance = account_balance  # Free USDC for immediate use
             min_order_notional = 12.0  # HyperLiquid minimum
 
             cprint(f"💰 Account Balance (USDC): ${account_balance:.2f}", "cyan")
@@ -2186,7 +2186,7 @@ Return ONLY valid JSON with the following structure:
                         # CRITICAL FIX: Handle position conflicts more efficiently
                         if im_in_pos and not is_long:
                             # Opposite position exists - allocate in opposite direction instead of closing first
-                            cprint(f"   🔄 Opposite position detected - allocating in opposite direction", "cyan")
+                            cprint(f"   🔄 Opposite position detected - using position reversal", "cyan")
                             
                             # For HyperLiquid, we can directly open opposite position which will net against existing
                             if EXCHANGE == "HYPERLIQUID":
