@@ -1836,45 +1836,42 @@ Return ONLY valid JSON with the following structure:
                 except Exception:
                     continue
 
-        # ================================================================
-        # STEP 2: Collect AI Signals
-        # ================================================================
-        signals = []
-        for _, row in self.recommendations_df.iterrows():
-            token = row["token"]
-            if token not in self.symbols:
-                continue
+            # ================================================================
+            # STEP 2: Collect AI Signals
+            # ================================================================
+            signals = []
+            for _, row in self.recommendations_df.iterrows():
+                token = row["token"]
+                if token not in self.symbols:
+                    continue
 
-            # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
-            # Fix case sensitivity issue - ensure action is uppercase
-            action_upper = row["action"].upper()
-            if action_upper not in ["BUY", "SELL"]:
-                continue
+                # CRITICAL: Only include actionable BUY/SELL signals (skip NOTHING)
+                # Fix case sensitivity issue - ensure action is uppercase
+                action_upper = row["action"].upper()
+                if action_upper not in ["BUY", "SELL"]:
+                    continue
 
-            # Skip SELL signals in LONG_ONLY mode (can't open shorts)
-            if LONG_ONLY and action_upper == "SELL" and token not in open_positions:
-                continue
+                # Skip SELL signals in LONG_ONLY mode (can't open shorts)
+                if LONG_ONLY and action_upper == "SELL" and token not in open_positions:
+                    continue
 
-            # Use the uppercase version for consistency
-            signals.append({
-                "symbol": token,
-                "action": action_upper,
-                "confidence": int(row["confidence"]),
-            })
+                # Use the uppercase version for consistency
+                signals.append({
+                    "symbol": token,
+                    "action": action_upper,
+                    "confidence": int(row["confidence"]),
+                })
 
-        if not signals:
-            cprint("📊 No actionable signals. Skipping allocation.", "yellow")
-            add_console_log("No actionable signals for allocation", "info")
-            return []
+            if not signals:
+                cprint("📊 No actionable signals. Skipping allocation.", "yellow")
+                add_console_log("No actionable signals for allocation", "info")
+                return []
 
             # ================================================================
             # STEP 3: Get Account Balance and Calculate Total Equity
             # ================================================================
             account_balance = get_account_balance(self.account)
-            if account_balance <= 0:
-                cprint("❌ Account balance is zero. Cannot allocate.", "red")
-                return []
-
+            
             # CRITICAL FIX: Use total equity instead of free balance for allocation
             # For HyperLiquid, we need to pass the account address, not the account object
             if EXCHANGE == "HYPERLIQUID":
@@ -1882,6 +1879,12 @@ Return ONLY valid JSON with the following structure:
             else:
                 total_equity = get_account_balance(self.account)  # Fallback to balance for other exchanges
             available_balance = account_balance  # Free USDC for immediate use
+
+            # Allow allocation even when available balance is $0 but total equity > 0
+            # The AI can recommend closing positions to free up capital
+            if total_equity <= 0:
+                cprint("❌ Total equity is zero. Cannot allocate.", "red")
+                return []
 
             # Calculate total position value for portfolio state
             total_position_value = sum(pos["margin_usd"] for pos in open_positions.values())
