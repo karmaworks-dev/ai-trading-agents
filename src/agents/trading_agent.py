@@ -1942,13 +1942,17 @@ Return ONLY valid JSON with the following structure:
                     f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
                 )
 
+                # BUGFIX: Use proper market data formatting (was just stringifying, causing AI to return low confidence)
+                # Format market data the same way swarm mode does for consistency
+                base_market_data = self._format_market_data_for_swarm(token, market_data)
+
                 response = self.chat_with_ai(
                     TRADING_PROMPT.format(
                         strategy_context=strategy_context_text,
                         position_context=position_context,
                         performance_context=performance_context,
                     ),
-                    f"Market Data to Analyze:\n{market_data}",
+                    f"{position_context}\n\n{base_market_data}",  # Use formatted data instead of raw stringification
                 )
 
                 if not response:
@@ -1982,6 +1986,7 @@ Return ONLY valid JSON with the following structure:
 
                 # Apply confidence threshold for single model
                 if action in ["BUY", "SELL"] and confidence < self.min_single_confidence:
+                    original_action = action  # BUGFIX: Store original before overwriting
                     cprint(
                         f"⚠️ LOW CONFIDENCE: {confidence}% < {self.min_single_confidence}% threshold",
                         "yellow",
@@ -1989,9 +1994,9 @@ Return ONLY valid JSON with the following structure:
                     )
                     cprint(f"   → Downgrading {action} to NOTHING", "yellow")
                     add_console_log(f"{token} -> NOTHING | {confidence}% (low confidence)", "warning")
-                    
+
                     action = "NOTHING"
-                    reasoning = f"Original: {action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
+                    reasoning = f"Original: {original_action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
 
                 self.recommendations_df = pd.concat(
                     [
@@ -2053,8 +2058,8 @@ Return ONLY valid JSON with the following structure:
             open_positions = {}
             for sym in self.symbols:
                 try:
-                    pos_data = n.get_position(sym, self.account) if EXCHANGE != "HYPERLIQUID" \
-                        else n.get_position(sym, self.account)
+                    # BUGFIX: Removed redundant conditional (both branches were identical)
+                    pos_data = n.get_position(sym, self.account)
 
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     if im_in_pos and pos_size != 0:
@@ -2339,6 +2344,9 @@ Return ONLY valid JSON with the following structure:
         new_signals = []
         now_ts = time.time()
 
+        # BUGFIX: Define minimum order notional (HyperLiquid minimum is $12 USD)
+        min_order_notional = 12.0
+
         for sig in actionable_signals:
             sym = sig["symbol"]
 
@@ -2377,8 +2385,9 @@ Return ONLY valid JSON with the following structure:
             return []
 
         # Calculate margin per position
-        usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)  # CRITICAL: Use total_equity
-        cash_buffer = total_equity * (CASH_PERCENTAGE / 100)  # CRITICAL: Use total_equity
+        # BUGFIX: Use available_balance parameter instead of undefined total_equity variable
+        usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)  # Use available_balance parameter
+        cash_buffer = available_balance * (CASH_PERCENTAGE / 100)  # Use available_balance parameter
 
         # Prevent division by zero
         if len(new_signals) == 0:
@@ -2922,7 +2931,9 @@ Return ONLY valid JSON with the following structure:
                                 remove_position(token)
 
                             cprint("✅ Position closed successfully!", "white", "on_green")
-                            add_console_log(f"✅ Closed {token} {position_dir} | Reason: {decision['reasoning']}", "success")
+                            # BUGFIX: Construct reason from signal contradiction context instead of undefined 'decision' variable
+                            reason = f"Signal ({action}) contradicts position ({position_dir})"
+                            add_console_log(f"✅ Closed {token} {position_dir} | Reason: {reason}", "success")
                             closed_count += 1
                         else:
                             cprint("⚠️ Position close may have failed - will retry next cycle", "yellow")
@@ -3285,14 +3296,15 @@ Return ONLY valid JSON with the following structure:
                     add_console_log("ℹ️ Stop signal received - skipping execution", "warning")
                     return
 
-                # Phase 3: Execute the AI allocation plan
-                if allocation_actions and isinstance(allocation_actions, list) and len(allocation_actions) > 0:
-                    cprint(f"\n📌 PHASE 3: Execute {len(allocation_actions)} Actions", "green", attrs=["bold"])
-                    self.execute_allocations(allocation_actions)
+                # BUGFIX: Removed redundant Phase 3 execution (lines 3255-3263 in original)
+                # Allocation actions are already executed in the rebalance/open phase above
+                # Executing them again would duplicate trades (open same position twice, etc.)
+                # Summary message about completion
+                if allocation_actions:
                     cprint(f"\n✅ {mode_name} mode execution complete!", "green", attrs=["bold"])
                     add_console_log(f"✅ {mode_name} execution complete", "success")
                 else:
-                    cprint("\nℹ️ No allocation actions to execute.", "yellow")
+                    cprint("\nℹ️ No allocation actions generated this cycle.", "yellow")
                     add_console_log("ℹ️ No allocation actions generated", "info")
 
             except Exception as exec_err:
