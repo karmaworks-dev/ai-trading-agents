@@ -1993,12 +1993,7 @@ Return ONLY valid JSON with the following structure:
 
             for sym in self.symbols:
                 try:
-                    pos_data = (
-                        n.get_position(sym, self.account)
-                        if EXCHANGE != "HYPERLIQUID"
-                        else n.get_position(sym, self.account)
-                    )
-
+                    pos_data = n.get_position(sym, self.account)
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
 
                     if im_in_pos and pos_size != 0:
@@ -2055,7 +2050,7 @@ Return ONLY valid JSON with the following structure:
                 return []
 
             # ==========================================================
-            # STEP 3 — ACCOUNT BALANCE & TOTAL EQUITY (MUST BE EARLY)
+            # STEP 3 — ACCOUNT BALANCE & TOTAL EQUITY
             # ==========================================================
             account_balance = get_account_balance(self.account)
 
@@ -2128,12 +2123,15 @@ Return ONLY valid JSON with the following structure:
 
             for a in actions:
                 if not isinstance(a, dict):
-                    reject("invalid format (not a dict)")
+                    reject("invalid format (not dict)")
                     continue
 
                 sym = a.get("symbol")
                 act = a.get("action")
 
+                if act == "HOLD":
+                    reject(f"{sym}: HOLD (no execution)")
+                    continue
 
                 if act not in ["OPEN_LONG", "OPEN_SHORT", "INCREASE", "REDUCE", "CLOSE"]:
                     reject(f"{sym}: invalid action {act}")
@@ -2149,36 +2147,7 @@ Return ONLY valid JSON with the following structure:
                         reject(f"{sym}: reduce_by_usd <= 0")
                         continue
 
-                if act not in ["OPEN_LONG", "OPEN_SHORT", "CLOSE", "HOLD"]:
-                    reject(f"{sym}: invalid action {act}")
-                    continue
-
-                # Allocation phase:
-                # Risk manager is intentionally NOT applied here.
-                # Risk validation must occur during execute_allocations(),
-                # where prices, leverage and margin are real.
-
                 valid_actions.append(a)
-
-               
-                #if RISK_MANAGER_AVAILABLE and self.risk_manager:
-                #    try:
-                #        confidence = a.get("confidence", 50) / 100.0
-                #        verdict = self.risk_manager.validate_trade_decision(
-                #            symbol=sym,
-                #            action=act,
-                #            confidence=confidence,
-                #            entry_price=100.0,
-                #            account_balance=total_equity,
-                #        )
-                #        if not verdict.get("valid", False):
-                #            reject(f"{sym}: rejected by risk manager")
-                #            continue
-                #    except Exception as e:
-                #        reject(f"{sym}: risk validation error ({e})")
-                #        continue
-
-                #valid_actions.append(a)
 
             # ==========================================================
             # STEP 7 — LOG REJECTIONS
@@ -2218,92 +2187,72 @@ Return ONLY valid JSON with the following structure:
     def _fallback_equal_allocation(self, signals, available_balance, open_positions):
         """
         Fallback to equal distribution when AI allocation fails.
-        Returns list of action dicts in the same format as AI.
         """
         cprint("\n📊 Using fallback equal distribution...", "yellow")
 
-        actionable_signals = [s for s in signals if s["action"] in ["BUY", "SELL"]]
-        if not actionable_signals:
+        actionable = [s for s in signals if s["action"] in ["BUY", "SELL"]]
+        if not actionable:
             return []
 
-        # Filter out signals where we already have aligned position
-        # Use grace period and min-margin logic to handle ghost positions
         new_signals = []
         now_ts = time.time()
+        min_order_notional = 12.0
 
-        for sig in actionable_signals:
+        for sig in actionable:
             sym = sig["symbol"]
 
-            # If exchange reports a position, inspect it
             if sym in open_positions:
                 pos = open_positions[sym]
 
-                # 1) If position margin is tiny (below minimum order notional), treat as flat
                 if pos.get("margin_usd", 0) < min_order_notional:
-                    # treat as no position — allow re-entry
                     pass
-
-                # 2) If we closed this symbol recently in this cycle, allow re-entry (grace window)
-                elif sym in self.recently_closed:
+                elif sym in getattr(self, "recently_closed", {}):
                     closed_ts = self.recently_closed.get(sym, 0)
                     if (now_ts - closed_ts) < getattr(self, "REENTRY_GRACE_PERIOD", 15):
-                        # still within grace window -> treat as flat
                         pass
                     else:
-                        # outside grace window: enforce alignment protection
                         if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
                            (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
-                            # Already aligned with existing live position — skip
                             continue
                 else:
-                    # No recent close and margin is meaningful: enforce alignment protection
                     if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
                        (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
                         continue
 
-            # If we reach here, signal is allowed
             new_signals.append(sig)
 
         if not new_signals:
-            cprint("   No new positions to open after filtering.", "cyan")
+            cprint("   No new positions after filtering.", "cyan")
             return []
 
-        # Calculate margin per position
-        usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)  # CRITICAL: Use total_equity
-        cash_buffer = total_equity * (CASH_PERCENTAGE / 100)  # CRITICAL: Use total_equity
+        usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)
+        cash_buffer = available_balance * (CASH_PERCENTAGE / 100)
 
-        # Prevent division by zero
-        if len(new_signals) == 0:
-            cprint("   No signals after filtering.", "cyan")
+        margin_pool = usable_margin - cash_buffer
+        if margin_pool <= 0:
+            cprint("   Insufficient margin after cash buffer.", "yellow")
             return []
 
-        margin_per_position = (usable_margin - cash_buffer) / len(new_signals)
-        min_margin = 12 / LEVERAGE
+        margin_per_position = margin_pool / len(new_signals)
+        min_margin = 12.0 / LEVERAGE
 
         if margin_per_position < min_margin:
-            # Take only highest confidence signals
             new_signals.sort(key=lambda x: x["confidence"], reverse=True)
-            max_positions = int((usable_margin - cash_buffer) / min_margin)
+            max_positions = int(margin_pool / min_margin)
             new_signals = new_signals[:max(1, max_positions)]
-
-            # Prevent division by zero after filtering
-            if len(new_signals) == 0:
-                cprint("   Insufficient margin for any positions.", "yellow")
-                return []
-
-            margin_per_position = (usable_margin - cash_buffer) / len(new_signals)
+            margin_per_position = margin_pool / len(new_signals)
 
         actions = []
         for sig in new_signals:
-            action_type = "OPEN_LONG" if sig["action"] == "BUY" else "OPEN_SHORT"
             actions.append({
                 "symbol": sig["symbol"],
-                "action": action_type,
+                "action": "OPEN_LONG" if sig["action"] == "BUY" else "OPEN_SHORT",
                 "margin_usd": round(margin_per_position, 2),
-                "reason": f"Fallback: {sig['action']} signal ({sig['confidence']}% confidence)"
+                "reason": f"Fallback: {sig['action']} ({sig['confidence']}%)"
             })
 
         return actions
+
 
     def execute_allocations(self, actions_list):
         """
