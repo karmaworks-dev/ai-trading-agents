@@ -133,6 +133,22 @@ except ImportError:
 # Load Environment Variables
 load_dotenv()
 
+# Import WebSocket infrastructure
+try:
+    from src.websocket import (
+        start_websocket_feeds,
+        stop_websocket_feeds,
+        is_websocket_enabled,
+        get_data_manager
+    )
+    WEBSOCKET_AVAILABLE = True
+except ImportError:
+    WEBSOCKET_AVAILABLE = False
+    def start_websocket_feeds(*args, **kwargs): pass
+    def stop_websocket_feeds(*args, **kwargs): pass
+    def is_websocket_enabled(): return False
+    def get_data_manager(): return None
+
 # ============================================================================
 # 🔧 OPTIONAL: COLOR PRINT & PANDAS SHIM (Keep your existing helpers)
 # ============================================================================
@@ -708,6 +724,29 @@ class TradingAgent:
             except Exception as e:
                 cprint(f"❌ Error loading key: {e}", "red")
                 sys.exit(1)
+
+        # 🚀 WebSocket Startup (for real-time data - ONCE per agent instance)
+        if WEBSOCKET_AVAILABLE and EXCHANGE == 'HYPERLIQUID':
+            try:
+                cprint("\n🔌 Starting WebSocket feeds...", "cyan")
+                start_websocket_feeds()
+
+                if is_websocket_enabled():
+                    cprint("🟢 WebSocket feeds started successfully", "green")
+
+                    # Subscribe to user state for real-time account updates
+                    if hasattr(self, 'address') and self.address:
+                        try:
+                            dm = get_data_manager()
+                            if dm:
+                                dm.subscribe_user_state(self.address)
+                                cprint(f"📍 Subscribed to user state: {self.address[:6]}...{self.address[-4:]}", "green")
+                        except Exception as e:
+                            cprint(f"⚠️  User state subscription failed: {e}", "yellow")
+                else:
+                    cprint("🟡 WebSocket feeds not enabled — using REST fallback", "yellow")
+            except Exception as e:
+                cprint(f"⚠️  WebSocket initialization failed: {e}", "red")
 
         # Check if using swarm mode or single model
         if self.use_swarm_mode:
@@ -3328,6 +3367,12 @@ def main():
         except KeyboardInterrupt:
             cprint("\n👋 AI Agent shutting down gracefully...", "white", "on_blue")
             add_console_log("👋 Agent shutting down gracefully...", "info")
+            if WEBSOCKET_AVAILABLE:
+                try:
+                    stop_websocket_feeds()
+                    cprint("🔌 WebSocket feeds stopped", "cyan")
+                except Exception as e:
+                    cprint(f"⚠️  Error stopping WebSocket feeds: {e}", "yellow")
             break
         except Exception as e:
             cprint(f"\n❌ Error in main loop: {e}", "white", "on_red")

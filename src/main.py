@@ -23,6 +23,22 @@ from src.agents.strategy_agent import StrategyAgent
 from src.agents.copybot_agent import CopyBotAgent
 from src.agents.sentiment_agent import SentimentAgent
 
+# Import WebSocket infrastructure
+try:
+    from src.websocket import (
+        start_websocket_feeds,
+        stop_websocket_feeds,
+        is_websocket_enabled,
+        get_data_manager
+    )
+    WEBSOCKET_AVAILABLE = True
+except ImportError:
+    WEBSOCKET_AVAILABLE = False
+    def start_websocket_feeds(*args, **kwargs): pass
+    def stop_websocket_feeds(*args, **kwargs): pass
+    def is_websocket_enabled(): return False
+    def get_data_manager(): return None
+
 # Load environment variables
 load_dotenv()
 
@@ -41,6 +57,37 @@ ACTIVE_AGENTS = {
 def run_agents():
     """Run all active agents in sequence"""
     try:
+        # 🚀 WebSocket Startup (ONCE, early in the execution flow)
+        if WEBSOCKET_AVAILABLE and EXCHANGE == 'hyperliquid':
+            try:
+                cprint("\n🔌 Starting WebSocket feeds...", "cyan")
+                start_websocket_feeds()
+
+                if is_websocket_enabled():
+                    cprint("🟢 WebSocket feeds started successfully", "green")
+
+                    # Subscribe to user state for real-time account updates
+                    try:
+                        from eth_account import Account as EthAccount
+                        private_key = os.getenv('HYPER_LIQUID_ETH_PRIVATE_KEY')
+                        if private_key:
+                            clean_key = private_key.strip().replace('"', '').replace("'", "")
+                            account = EthAccount.from_key(clean_key)
+                            account_address = account.address
+
+                            dm = get_data_manager()
+                            if dm:
+                                dm.subscribe_user_state(account_address)
+                                cprint(f"📍 Subscribed to user state: {account_address[:6]}...{account_address[-4:]}", "green")
+                        else:
+                            cprint("⚠️  HYPER_LIQUID_ETH_PRIVATE_KEY not found in .env", "yellow")
+                    except Exception as e:
+                        cprint(f"⚠️  User state subscription failed: {e}", "yellow")
+                else:
+                    cprint("🟡 WebSocket feeds not enabled — using REST fallback", "yellow")
+            except Exception as e:
+                cprint(f"⚠️  WebSocket initialization failed: {e}", "red")
+
         # Initialize active agents
         trading_agent = TradingAgent() if ACTIVE_AGENTS['trading'] else None
         risk_agent = RiskAgent() if ACTIVE_AGENTS['risk'] else None
@@ -92,8 +139,19 @@ def run_agents():
 
     except KeyboardInterrupt:
         cprint("\n👋 Gracefully shutting down...", "yellow")
+        if WEBSOCKET_AVAILABLE:
+            try:
+                stop_websocket_feeds()
+                cprint("🔌 WebSocket feeds stopped", "cyan")
+            except Exception as e:
+                cprint(f"⚠️  Error stopping WebSocket feeds: {e}", "yellow")
     except Exception as e:
         cprint(f"\n❌ Fatal error in main loop: {str(e)}", "red")
+        if WEBSOCKET_AVAILABLE:
+            try:
+                stop_websocket_feeds()
+            except Exception as cleanup_err:
+                cprint(f"⚠️  Error stopping WebSocket feeds: {cleanup_err}", "yellow")
         raise
 
 if __name__ == "__main__":
