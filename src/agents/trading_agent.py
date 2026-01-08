@@ -218,6 +218,12 @@ DEFAULT_SWARM_MODE = False  # True = Swarm Mode (all Models), False = Single Mod
 # Recommended: 55-65% (requires clear majority, not just a tie)
 MIN_SWARM_CONFIDENCE = 65  # 55% = requires at least slight majority (e.g., 3/5 models agree)
 
+# 📈 SINGLE MODEL CONFIDENCE SETTINGS
+# Minimum confidence threshold for single model to execute a trade
+# If confidence is below this threshold, default to NOTHING
+# Recommended: 60-80% (requires strong conviction)
+MIN_SINGLE_CONFIDENCE = 70  # 70% = requires strong conviction
+
 # 📈 TRADING MODE SETTINGS
 LONG_ONLY = False 
 
@@ -434,62 +440,78 @@ RESPONSE FORMAT EXAMPLES:
 
 RESPOND WITH ONLY: ACTION | CONFIDENCE%"""
 
-SMART_ALLOCATION_PROMPT = """You are an expert portfolio allocation AI for cryptocurrency trading.
-
-CURRENT PORTFOLIO STATE:
-{portfolio_state}
-
-AI TRADING SIGNALS:
-{signals}
-
-ACCOUNT INFO:
-- Available Balance: ${available_balance:.2f}
-- Leverage: {leverage}x
-- Max Position %: {max_position_pct}%
-- Cash Buffer: {cash_buffer_pct}%
-- Minimum Order: ${min_order:.2f} notional
-- Trading Cycle: Every {cycle_minutes} minutes (MINIMUM HOLD TIME)
+SMART_ALLOCATION_PROMPT = """
+You are an expert crypto portfolio allocation AI.
 
 YOUR TASK:
-Analyze the current positions and AI signals to create an OPTIMAL allocation plan.
+Return a FINAL, EXECUTABLE allocation plan based on the signals and portfolio state.
 
-⚠️ CRITICAL: Positions will be held for AT LEAST {cycle_minutes} minutes until the next cycle.
-- Factor this hold time into your risk assessment
-- Higher leverage + longer hold = more exposure to volatility
-- Be more conservative if cycle time is long relative to expected move
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESPONSE FORMAT (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Return ONLY valid JSON in this EXACT structure:
 
-ALLOCATION RULES:
-1. Higher confidence signals deserve larger allocations
-2. Consider reallocating from underperforming positions (negative PnL) to stronger opportunities
-3. Keep at least {cash_buffer_pct}% as cash buffer
-4. Each position's margin should not exceed {max_position_pct}% of total equity
-5. Account for existing positions - don't over-allocate to positions already at target size
-6. Factor in position PnL when deciding to hold, reduce, or close
-7. BUY signals = LONG positions, SELL signals = SHORT positions (if not LONG_ONLY)
-8. Consider the {cycle_minutes}-minute minimum hold time when sizing positions
+{
+  "actions": [
+    {
+      "symbol": "HYPE",
+      "action": "OPEN_LONG | OPEN_SHORT | REDUCE | CLOSE | INCREASE",
+      "margin_usd": 123.45,
+      "confidence": 65,
+      "reason": "Short explanation"
+    }
+  ],
+  "cash_buffer_usd": 100.0,
+  "reasoning": "Overall allocation logic summary"
+}
 
-RESPOND WITH ONLY A VALID JSON OBJECT in this exact format:
-{{
-    "actions": [
-        {{"symbol": "BTC", "action": "OPEN_LONG", "margin_usd": 50.00, "reason": "High confidence BUY signal"}},
-        {{"symbol": "ETH", "action": "CLOSE", "reason": "SELL signal contradicts LONG position"}},
-        {{"symbol": "SOL", "action": "REDUCE", "reduce_by_usd": 100.00, "reason": "Reallocating to higher conviction trade"}},
-        {{"symbol": "LTC", "action": "HOLD", "reason": "Position aligned with signal, PnL positive"}},
-        {{"symbol": "AAVE", "action": "OPEN_SHORT", "margin_usd": 25.00, "reason": "SELL signal, opening short"}}
-    ],
-    "cash_buffer_usd": 50.00,
-    "reasoning": "Brief explanation of overall allocation strategy"
-}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STRICT RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- ALWAYS return at least ONE action
+- NEVER return HOLD
+- BUY signal → OPEN_LONG
+- SELL signal → OPEN_SHORT (LONG_ONLY = False)
+- All values must be in USD
+- margin_usd must be >= minimum order
+- confidence must be 1–100
+- Do NOT include markdown
+- Do NOT include explanations outside JSON
 
-ACTION TYPES:
-- OPEN_LONG: Open new long position (requires margin_usd)
-- OPEN_SHORT: Open new short position (requires margin_usd)
-- INCREASE: Add to existing position (requires margin_usd)
-- REDUCE: Reduce existing position (requires reduce_by_usd in notional)
-- CLOSE: Close position entirely
-- HOLD: Keep position as-is
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PORTFOLIO STATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{portfolio_state}
 
-CRITICAL: Return ONLY the JSON object, no markdown, no explanation outside the JSON."""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AI TRADING SIGNALS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{signals}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACCOUNT CONSTRAINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Total Equity: ${available_balance:.2f}
+- Leverage: {leverage}x
+- Max Position %: {max_position_pct}%
+- Required Cash Buffer: {cash_buffer_pct}%
+- Minimum Order Size: ${min_order:.2f}
+- Minimum Hold Time: {cycle_minutes} minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALLOCATION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Higher confidence → larger allocation
+2. Do not exceed max position %
+3. Respect cash buffer
+4. Prefer opening new positions over many small trades
+5. If no good trade exists, CLOSE weakest position instead
+6. Return ONLY executable actions
+
+REMEMBER:
+This JSON will be executed directly by a trading engine.
+"""
+
 
 POSITION_ANALYSIS_PROMPT = """
 You are an expert crypto trading analyst. Your task is to analyze the user's open positions based on the provided position summaries and current market data.
@@ -1990,16 +2012,15 @@ Return ONLY valid JSON with the following structure:
             # STEP 1 — COLLECT OPEN POSITIONS
             # ==========================================================
             open_positions = {}
-
             for sym in self.symbols:
                 try:
-                    pos_data = n.get_position(sym, self.account)
-                    _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
+                    pos_data = n.get_position(sym, self.account) if EXCHANGE != "HYPERLIQUID" \
+                        else n.get_position(sym, self.account)
 
+                    _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     if im_in_pos and pos_size != 0:
                         notional = abs(float(pos_size) * float(entry_px))
                         margin = notional / LEVERAGE
-
                         open_positions[sym] = {
                             "direction": "LONG" if is_long else "SHORT",
                             "margin_usd": round(margin, 2),
@@ -2021,7 +2042,7 @@ Return ONLY valid JSON with the following structure:
                 action = str(row["action"]).upper()
 
                 if token not in self.symbols:
-                    removed.append(f"{token}: not in configured symbols")
+                    removed.append(f"{token}: not in symbols")
                     continue
 
                 if action not in ["BUY", "SELL"]:
@@ -2039,31 +2060,29 @@ Return ONLY valid JSON with the following structure:
                 })
 
             if removed:
-                cprint(f"\n❌ Removed {len(removed)} strategy signals:", "yellow")
+                cprint(f"\n❌ Removed {len(removed)} signals:", "yellow")
                 for r in removed:
                     cprint(f"   - {r}", "white")
                 add_console_log(f"Removed {len(removed)} strategy signals", "warning")
 
             if not signals:
-                cprint("📭 No actionable signals after filtering.", "yellow")
                 add_console_log("No actionable signals after filtering", "info")
+                cprint("📭 No signals left to allocate.", "yellow")
                 return []
 
             # ==========================================================
-            # STEP 3 — ACCOUNT BALANCE & TOTAL EQUITY
+            # STEP 3 — ACCOUNT EQUITY
             # ==========================================================
             account_balance = get_account_balance(self.account)
-
-            if EXCHANGE == "HYPERLIQUID":
-                total_equity = n.get_account_value(
-                    self.account.address if hasattr(self.account, "address") else self.account
-                )
-            else:
-                total_equity = account_balance
+            total_equity = (
+                n.get_account_value(self.account.address)
+                if EXCHANGE == "HYPERLIQUID"
+                else account_balance
+            )
 
             if total_equity <= 0:
-                cprint("❌ Total equity is zero. Allocation aborted.", "red")
-                add_console_log("Allocation aborted: total equity is zero", "error")
+                cprint("❌ Total equity is zero", "red")
+                add_console_log("Allocation aborted: zero equity", "error")
                 return []
 
             cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
@@ -2092,8 +2111,7 @@ Return ONLY valid JSON with the following structure:
             )
 
             if not ai_response:
-                cprint("⚠️ AI returned no response. Using fallback.", "yellow")
-                add_console_log("AI returned no response — fallback allocation", "warning")
+                add_console_log("AI returned no response, using fallback", "warning")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             # ==========================================================
@@ -2103,13 +2121,11 @@ Return ONLY valid JSON with the following structure:
                 allocation = extract_json_from_text(ai_response)
                 actions = allocation.get("actions", [])
             except Exception as e:
-                cprint(f"⚠️ AI JSON parsing failed: {e}", "yellow")
-                add_console_log(f"AI JSON parsing failed: {e}", "error")
+                add_console_log(f"AI JSON parse failed: {e}", "error")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             if not actions:
-                cprint("⚠️ AI returned zero actions. Using fallback.", "yellow")
-                add_console_log("AI returned zero actions — fallback allocation", "warning")
+                add_console_log("AI returned zero actions", "warning")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             # ==========================================================
@@ -2123,20 +2139,21 @@ Return ONLY valid JSON with the following structure:
 
             for a in actions:
                 if not isinstance(a, dict):
-                    reject("invalid format (not dict)")
+                    reject("not a dict")
                     continue
 
                 sym = a.get("symbol")
                 act = a.get("action")
 
-                if act == "HOLD":
-                    reject(f"{sym}: HOLD (no execution)")
+                if sym not in self.symbols:
+                    reject(f"{sym}: invalid symbol")
                     continue
 
                 if act not in ["OPEN_LONG", "OPEN_SHORT", "INCREASE", "REDUCE", "CLOSE"]:
                     reject(f"{sym}: invalid action {act}")
                     continue
 
+                # Size validation
                 if act in ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]:
                     if a.get("margin_usd", 0) <= 0:
                         reject(f"{sym}: margin_usd <= 0")
@@ -2147,6 +2164,24 @@ Return ONLY valid JSON with the following structure:
                         reject(f"{sym}: reduce_by_usd <= 0")
                         continue
 
+                # Risk validation
+                if RISK_MANAGER_AVAILABLE and self.risk_manager:
+                    try:
+                        conf = a.get("confidence", 50) / 100.0
+                        verdict = self.risk_manager.validate_trade_decision(
+                            symbol=sym,
+                            action=act,
+                            confidence=conf,
+                            entry_price=100.0,
+                            account_balance=total_equity,
+                        )
+                        if not verdict["valid"]:
+                            reject(f"{sym}: risk rejected")
+                            continue
+                    except Exception as e:
+                        reject(f"{sym}: risk error {e}")
+                        continue
+
                 valid_actions.append(a)
 
             # ==========================================================
@@ -2154,17 +2189,16 @@ Return ONLY valid JSON with the following structure:
             # ==========================================================
             if rejected:
                 cprint("\n❌ Rejected actions:", "red")
-                for reason, count in rejected.items():
-                    cprint(f"   {reason}: {count}", "white")
+                for r, c in rejected.items():
+                    cprint(f"   {r}: {c}", "white")
                 add_console_log(f"Rejected actions: {dict(rejected)}", "warning")
 
             if not valid_actions:
-                cprint("⚠️ All AI actions rejected. Using fallback.", "yellow")
-                add_console_log("All AI actions rejected — fallback allocation", "error")
+                add_console_log("All AI actions rejected — fallback triggered", "error")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             # ==========================================================
-            # STEP 8 — FINAL ALLOCATION PLAN
+            # STEP 8 — FINAL PLAN
             # ==========================================================
             cprint("\n" + "=" * 70, "green")
             cprint("🎯 FINAL ALLOCATION PLAN", "white", "on_green", attrs=["bold"])
@@ -2173,86 +2207,172 @@ Return ONLY valid JSON with the following structure:
             for a in valid_actions:
                 cprint(f"   {a}", "white")
 
-            add_console_log(f"Final allocation prepared: {len(valid_actions)} actions", "success")
+            add_console_log(f"Final allocation: {len(valid_actions)} actions", "success")
             return valid_actions
 
         except Exception as e:
-            cprint(f"❌ allocate_portfolio crashed: {e}", "red")
             add_console_log(f"allocate_portfolio crashed: {e}", "error")
             import traceback
             traceback.print_exc()
             return []
 
 
+    def plan_rebalance_actions(self, open_positions, target_allocations, total_equity):
+        """
+        Generate CLOSE / REDUCE actions to free margin so OPENs can succeed.
+
+        - open_positions: dict from fetch_all_open_positions/allocate_portfolio (symbol -> margin_usd, direction)
+        - target_allocations: list of actions returned by allocate_portfolio()
+        - total_equity: USD equity value (same as used by allocator)
+
+        Returns: list of actions (CLOSE/REDUCE) formatted for execute_allocations()
+        """
+        actions = []
+        # Build a map: symbol -> target_margin (for OPEN/INCREASE actions)
+        target_map = {}
+        for a in target_allocations:
+            if not isinstance(a, dict):
+                continue
+            sym = a.get("symbol")
+            if not sym:
+                continue
+            if a.get("action") in ("OPEN_LONG", "OPEN_SHORT", "INCREASE"):
+                target_map[sym] = float(a.get("margin_usd", 0))
+
+        MIN_NOTIONAL = 12.0
+        TOLERANCE = 1.05  # 5% tolerance before reducing
+
+        for sym, pos in open_positions.items():
+            current_margin = float(pos.get("margin_usd", 0))
+            target_margin = float(target_map.get(sym, 0))
+
+            # If not in target_map -> close entire position
+            if sym not in target_map:
+                # Only plan a CLOSE if there is a meaningful margin to free
+                if current_margin >= MIN_NOTIONAL / self.leverage:
+                    actions.append({
+                        "symbol": sym,
+                        "action": "CLOSE",
+                        "reason": "Rebalance: not in target allocations"
+                    })
+                continue
+
+            # If current margin significantly exceeds target -> reduce
+            if current_margin > (target_margin * TOLERANCE):
+                reduce_by = round(current_margin - target_margin, 2)
+                # Only plan a REDUCE if reduction is meaningful
+                min_reduce_margin = MIN_NOTIONAL / self.leverage
+                if reduce_by >= min_reduce_margin:
+                    actions.append({
+                        "symbol": sym,
+                        "action": "REDUCE",
+                        "reduce_by_usd": reduce_by,
+                        "reason": f"Rebalance: reduce from {current_margin} to {target_margin}"
+                    })
+                else:
+                    # If target is zero but current small margin >= min notional, prefer CLOSE
+                    if target_margin == 0 and current_margin >= min_reduce_margin:
+                        actions.append({
+                            "symbol": sym,
+                            "action": "CLOSE",
+                            "reason": "Rebalance: close small position to free margin"
+                        })
+
+        # Close actions first, then reduces
+        actions_sorted = sorted(actions, key=lambda x: 0 if x["action"] == "CLOSE" else 1)
+        if actions_sorted:
+            add_console_log(f"Planned {len(actions_sorted)} rebalance actions", "info")
+        return actions_sorted
+
     def _fallback_equal_allocation(self, signals, available_balance, open_positions):
         """
         Fallback to equal distribution when AI allocation fails.
+        Returns list of action dicts in the same format as AI.
         """
         cprint("\n📊 Using fallback equal distribution...", "yellow")
 
-        actionable = [s for s in signals if s["action"] in ["BUY", "SELL"]]
-        if not actionable:
+        actionable_signals = [s for s in signals if s["action"] in ["BUY", "SELL"]]
+        if not actionable_signals:
             return []
 
+        # Filter out signals where we already have aligned position
+        # Use grace period and min-margin logic to handle ghost positions
         new_signals = []
         now_ts = time.time()
-        min_order_notional = 12.0
 
-        for sig in actionable:
+        for sig in actionable_signals:
             sym = sig["symbol"]
 
+            # If exchange reports a position, inspect it
             if sym in open_positions:
                 pos = open_positions[sym]
 
+                # 1) If position margin is tiny (below minimum order notional), treat as flat
                 if pos.get("margin_usd", 0) < min_order_notional:
+                    # treat as no position — allow re-entry
                     pass
-                elif sym in getattr(self, "recently_closed", {}):
+
+                # 2) If we closed this symbol recently in this cycle, allow re-entry (grace window)
+                elif sym in self.recently_closed:
                     closed_ts = self.recently_closed.get(sym, 0)
                     if (now_ts - closed_ts) < getattr(self, "REENTRY_GRACE_PERIOD", 15):
+                        # still within grace window -> treat as flat
                         pass
                     else:
+                        # outside grace window: enforce alignment protection
                         if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
                            (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
+                            # Already aligned with existing live position — skip
                             continue
                 else:
+                    # No recent close and margin is meaningful: enforce alignment protection
                     if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
                        (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
                         continue
 
+            # If we reach here, signal is allowed
             new_signals.append(sig)
 
         if not new_signals:
-            cprint("   No new positions after filtering.", "cyan")
+            cprint("   No new positions to open after filtering.", "cyan")
             return []
 
-        usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)
-        cash_buffer = available_balance * (CASH_PERCENTAGE / 100)
+        # Calculate margin per position
+        usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)  # CRITICAL: Use total_equity
+        cash_buffer = total_equity * (CASH_PERCENTAGE / 100)  # CRITICAL: Use total_equity
 
-        margin_pool = usable_margin - cash_buffer
-        if margin_pool <= 0:
-            cprint("   Insufficient margin after cash buffer.", "yellow")
+        # Prevent division by zero
+        if len(new_signals) == 0:
+            cprint("   No signals after filtering.", "cyan")
             return []
 
-        margin_per_position = margin_pool / len(new_signals)
-        min_margin = 12.0 / LEVERAGE
+        margin_per_position = (usable_margin - cash_buffer) / len(new_signals)
+        min_margin = 12 / LEVERAGE
 
         if margin_per_position < min_margin:
+            # Take only highest confidence signals
             new_signals.sort(key=lambda x: x["confidence"], reverse=True)
-            max_positions = int(margin_pool / min_margin)
+            max_positions = int((usable_margin - cash_buffer) / min_margin)
             new_signals = new_signals[:max(1, max_positions)]
-            margin_per_position = margin_pool / len(new_signals)
+
+            # Prevent division by zero after filtering
+            if len(new_signals) == 0:
+                cprint("   Insufficient margin for any positions.", "yellow")
+                return []
+
+            margin_per_position = (usable_margin - cash_buffer) / len(new_signals)
 
         actions = []
         for sig in new_signals:
+            action_type = "OPEN_LONG" if sig["action"] == "BUY" else "OPEN_SHORT"
             actions.append({
                 "symbol": sig["symbol"],
-                "action": "OPEN_LONG" if sig["action"] == "BUY" else "OPEN_SHORT",
+                "action": action_type,
                 "margin_usd": round(margin_per_position, 2),
-                "reason": f"Fallback: {sig['action']} ({sig['confidence']}%)"
+                "reason": f"Fallback: {sig['action']} signal ({sig['confidence']}% confidence)"
             })
 
         return actions
-
 
     def execute_allocations(self, actions_list):
         """
@@ -2314,6 +2434,47 @@ Return ONLY valid JSON with the following structure:
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     current_notional = abs(float(pos_size) * float(entry_px)) if im_in_pos else 0
                     current_dir = "LONG" if is_long else "SHORT"
+
+                    # -----------------------
+                    # LIVE EXECUTION GUARDS
+                    # -----------------------
+                    # Compute live balances / available free USDC
+                    try:
+                        if EXCHANGE == "HYPERLIQUID":
+                            live_total_equity = n.get_account_value(
+                                self.account.address if hasattr(self.account, "address") else self.account
+                            )
+                            live_available_balance = get_account_balance(self.account)
+                        else:
+                            live_total_equity = get_account_balance(self.account)
+                            live_available_balance = live_total_equity
+                    except Exception:
+                        # fallback
+                        live_available_balance = get_account_balance(self.account)
+                        live_total_equity = live_available_balance
+
+                    # For OPEN / INCREASE actions enforce min notional and cash buffer
+                    if action_type in ("OPEN_LONG", "OPEN_SHORT", "INCREASE"):
+                        margin_usd = action.get("margin_usd", 0)
+                        if margin_usd <= 0:
+                            cprint(f"   ⚠️ Skipping {symbol}: invalid margin_usd", "yellow")
+                            add_console_log(f"Skipped {symbol}: invalid margin_usd", "warning")
+                            continue
+
+                        # notional after leverage
+                        notional = margin_usd * LEVERAGE
+                        min_notional = 12.0
+                        if notional < min_notional:
+                            cprint(f"   ⚠️ Skipping {symbol}: notional ${notional:.2f} < min ${min_notional:.2f}", "yellow")
+                            add_console_log(f"Skipped {symbol}: notional below exchange minimum ({notional:.2f} < {min_notional})", "warning")
+                            continue
+
+                        # Ensure cash buffer is preserved after placing this margin
+                        required_buffer = live_total_equity * (CASH_PERCENTAGE / 100.0)
+                        if (live_available_balance - margin_usd) < required_buffer:
+                            cprint(f"   ⚠️ Skipping {symbol}: would breach cash buffer ({CASH_PERCENTAGE}%)", "yellow")
+                            add_console_log(f"Skipped {symbol}: would breach cash buffer after margin {margin_usd}", "warning")
+                            continue
 
                     # ============================================================
                     # CLOSE: Close entire position
@@ -3006,7 +3167,80 @@ Return ONLY valid JSON with the following structure:
 
                 # Phase 2: AI-Driven Smart Allocation
                 cprint("\n📌 PHASE 2: AI Smart Allocation", "cyan", attrs=["bold"])
+                
+                # === ALLOCATION PHASE (rebalance-first) ===
                 allocation_actions = self.allocate_portfolio()
+                if not allocation_actions:
+                    # Normal idle state — nothing to do this cycle
+                    add_console_log("No allocation actions generated", "info")
+                else:
+                    # 1) Build current open_positions and total_equity (fresh)
+                    open_positions = {}
+                    for sym in self.symbols:
+                        try:
+                            if EXCHANGE == "HYPERLIQUID":
+                                pos_data = n.get_position(sym, self.account)
+                            else:
+                                pos_data = n.get_position(sym)
+                            _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
+                            if im_in_pos and pos_size != 0:
+                                notional = abs(float(pos_size) * float(entry_px))
+                                margin = notional / LEVERAGE
+                                open_positions[sym] = {
+                                    "direction": "LONG" if is_long else "SHORT",
+                                    "margin_usd": round(margin, 2),
+                                    "pnl_percent": round(float(pnl_pct), 2),
+                                }
+                        except Exception:
+                            continue
+
+                    if EXCHANGE == "HYPERLIQUID":
+                        total_equity = n.get_account_value(
+                            self.account.address if hasattr(self.account, "address") else self.account
+                        )
+                    else:
+                        total_equity = get_account_balance(self.account)
+
+                    # 2) Plan and execute rebalance (CLOSE/REDUCE) actions first
+                    rebalance_actions = self.plan_rebalance_actions(open_positions, allocation_actions, total_equity)
+                    if rebalance_actions:
+                        add_console_log(f"Executing {len(rebalance_actions)} rebalance actions", "info")
+                        self.execute_allocations(rebalance_actions)
+                        # Give exchange a moment to settle positions and free margin
+                        time.sleep(1)
+
+                        # Refresh open_positions and total_equity after rebalance
+                        open_positions = {}
+                        for sym in self.symbols:
+                            try:
+                                if EXCHANGE == "HYPERLIQUID":
+                                    pos_data = n.get_position(sym, self.account)
+                                else:
+                                    pos_data = n.get_position(sym)
+                                _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
+                                if im_in_pos and pos_size != 0:
+                                    notional = abs(float(pos_size) * float(entry_px))
+                                    margin = notional / LEVERAGE
+                                    open_positions[sym] = {
+                                        "direction": "LONG" if is_long else "SHORT",
+                                        "margin_usd": round(margin, 2),
+                                        "pnl_percent": round(float(pnl_pct), 2),
+                                    }
+                            except Exception:
+                                continue
+
+                        if EXCHANGE == "HYPERLIQUID":
+                            total_equity = n.get_account_value(
+                                self.account.address if hasattr(self.account, "address") else self.account
+                            )
+                        else:
+                            total_equity = get_account_balance(self.account)
+
+                    # 3) Filter only OPEN/INCREASE actions from original allocation and execute them
+                    open_actions = [a for a in allocation_actions if a.get("action") in ("OPEN_LONG", "OPEN_SHORT", "INCREASE")]
+                    if open_actions:
+                        add_console_log(f"Executing {len(open_actions)} open actions", "info")
+                        self.execute_allocations(open_actions)
 
                 if self.should_stop():
                     add_console_log("ℹ️ Stop signal received - skipping execution", "warning")
