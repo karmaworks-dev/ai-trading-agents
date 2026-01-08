@@ -40,6 +40,44 @@ def extract_json_from_text(text):
     return None
 
 
+def normalize_action(action: str) -> str:
+    """Safely convert action field to uppercase string, removing markdown formatting."""
+    if not isinstance(action, str):
+        action = str(action)
+    # Remove markdown formatting
+    action = action.replace("**", "").replace("*", "").strip().upper()
+    return action
+
+
+def normalize_confidence(confidence) -> int:
+    """
+    Safely convert confidence to integer (0-100).
+
+    Handles:
+    - Float values 0.0-1.0 (converts to 0-100)
+    - Int values 0-100
+    - String values
+    - Invalid inputs (defaults to 50)
+    """
+    try:
+        if confidence is None:
+            return 50  # Default
+
+        # Convert to float first
+        conf_float = float(confidence)
+
+        # If value is between 0 and 1, it's likely already normalized (0.0-1.0)
+        if 0 <= conf_float <= 1:
+            conf_int = int(conf_float * 100)
+        else:
+            conf_int = int(conf_float)
+
+        # Clamp to 0-100 range
+        return min(100, max(0, conf_int))
+    except (ValueError, TypeError):
+        return 50  # Default confidence on parse error
+
+
 # ============================================================================
 # 🚨 CRITICAL: THIS MUST BE HERE (BEFORE 'src' IMPORTS)
 # ============================================================================
@@ -225,6 +263,14 @@ from src.config import EXCHANGE as CONFIG_EXCHANGE
 # Convert to uppercase for consistency with checks throughout this file
 EXCHANGE = CONFIG_EXCHANGE.upper() if CONFIG_EXCHANGE else "HYPERLIQUID"
 
+# 💰 IMPORT RISK & POSITION SETTINGS FROM CONFIG
+# These are centrally defined in config.py and imported here to avoid duplication
+from src.config import (
+    MAX_POSITION_PERCENTAGE as CONFIG_MAX_POSITION_PERCENTAGE,
+    LEVERAGE as CONFIG_LEVERAGE,
+    CASH_PERCENTAGE as CONFIG_CASH_PERCENTAGE
+)
+
 # 🌊 AI MODE SELECTION (Default - can be overridden by user settings)
 DEFAULT_SWARM_MODE = False  # True = Swarm Mode (all Models), False = Single Model
 
@@ -264,19 +310,21 @@ AI_TEMPERATURE = 0.6   # Official recommended "sweet spot"
 AI_MAX_TOKENS = 8024   # Increased for multi-step reasoning
 
 # 💰 POSITION SIZING & RISK MANAGEMENT
-USE_PORTFOLIO_ALLOCATION = True 
-MAX_POSITION_PERCENTAGE = 90      
-LEVERAGE = 20                     
+# ⚠️ NOTE: These are imported from config.py above to avoid duplication
+# Do NOT edit these values here - they are set centrally in config.py
+USE_PORTFOLIO_ALLOCATION = True
+MAX_POSITION_PERCENTAGE = CONFIG_MAX_POSITION_PERCENTAGE  # Imported from config.py
+LEVERAGE = CONFIG_LEVERAGE                                # Imported from config.py
 
 # Stop Loss & Take Profit
 STOP_LOSS_PERCENTAGE = 2.0      # SL @ -2% PnL
-TAKE_PROFIT_PERCENTAGE = 5.0    # TP @ +5% PnL 
-PNL_CHECK_INTERVAL = 5          # check PnL every 5 minutes          
+TAKE_PROFIT_PERCENTAGE = 5.0    # TP @ +5% PnL
+PNL_CHECK_INTERVAL = 5          # check PnL every 5 minutes
 
-# Legacy settings 
-usd_size = 25                  
-max_usd_order_size = 3           
-CASH_PERCENTAGE = 10
+# Legacy settings
+usd_size = 25
+max_usd_order_size = 3
+CASH_PERCENTAGE = CONFIG_CASH_PERCENTAGE  # Imported from config.py
 
 # 📊 MARKET DATA COLLECTION (Default values - can be overridden)
 DAYSBACK_4_DATA = 2              # Default: 2 days (overridable via __init__)
@@ -1554,6 +1602,11 @@ Return ONLY valid JSON with the following structure:
             try:
                 response = self.chat_with_ai(POSITION_ANALYSIS_PROMPT, user_prompt)
 
+                # LOG RAW RESPONSE IMMEDIATELY (for debugging)
+                add_console_log(f"Raw AI position analysis response ({len(response)} chars)", "info")
+                if len(response) < 500:
+                    add_console_log(f"Response: {response[:200]}", "debug")
+
                 # Strip Markdown fences if model wrapped response in code blocks
                 if "```json" in response:
                     response = response.split("```json")[1].split("```")[0]
@@ -1561,9 +1614,15 @@ Return ONLY valid JSON with the following structure:
                     response = response.split("```")[1].split("```")[0]
 
                 # Try safe JSON extraction first
-                decisions = extract_json_from_text(response)
+                try:
+                    decisions = extract_json_from_text(response)
+                except Exception as json_error:
+                    decisions = None
+                    add_console_log(f"JSON parse error in position analysis: {json_error}", "warning")
+
                 if not decisions:
                     cprint("⚠️ AI response not valid JSON. Attempting text fallback...", "yellow")
+                    add_console_log("Using keyword fallback for position analysis", "warning")
 
                     text = response.lower()
                     decisions = {}
@@ -1596,10 +1655,12 @@ Return ONLY valid JSON with the following structure:
                             }
 
                     cprint(f"🧠 Fallback interpreted decisions: {decisions}", "cyan")
+                    add_console_log(f"Fallback decisions: {decisions}", "warning")
 
                 if not decisions:
                     cprint("❌ Error: Could not interpret AI analysis at all.", "red")
-                    cprint(f"   Raw response: {response}", "yellow")
+                    cprint(f"   Raw response: {response[:500]}", "yellow")
+                    add_console_log(f"Could not interpret position analysis response: {response[:200]}", "error")
                     return validated_decisions
 
                 # ============================================================================
@@ -2114,7 +2175,10 @@ Return ONLY valid JSON with the following structure:
 
             for _, row in self.recommendations_df.iterrows():
                 token = row["token"]
-                action = str(row["action"]).upper()
+                # Use type-safe action normalization
+                action = normalize_action(row["action"])
+                # Use type-safe confidence normalization
+                confidence = normalize_confidence(row.get("confidence", 50))
 
                 if token not in self.symbols:
                     removed.append(f"{token}: not in symbols")
@@ -2131,7 +2195,7 @@ Return ONLY valid JSON with the following structure:
                 signals.append({
                     "symbol": token,
                     "action": action,
-                    "confidence": int(row["confidence"]),
+                    "confidence": confidence,
                 })
 
             if removed:
@@ -2189,14 +2253,24 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("AI returned no response, using fallback", "warning")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
+            # LOG RAW RESPONSE FOR DEBUGGING
+            add_console_log(f"Received AI allocation response ({len(ai_response)} chars)", "info")
+            if len(ai_response) < 1000:
+                add_console_log(f"Full response: {ai_response[:500]}", "debug")
+
             # ==========================================================
             # STEP 5 — PARSE AI RESPONSE
             # ==========================================================
             try:
                 allocation = extract_json_from_text(ai_response)
+                if not allocation:
+                    raise ValueError("extract_json_from_text returned None")
                 actions = allocation.get("actions", [])
             except Exception as e:
-                add_console_log(f"AI JSON parse failed: {e}", "error")
+                add_console_log(f"AI JSON parse failed: {str(e)}", "error")
+                add_console_log(f"Failed response (first 200 chars): {ai_response[:200]}", "error")
+                cprint(f"❌ JSON parsing failed: {e}", "red")
+                cprint(f"   Response: {ai_response[:300]}", "yellow")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             if not actions:
@@ -3164,6 +3238,38 @@ Return ONLY valid JSON with the following structure:
                 "info"
             )
 
+            # VALIDATION: Check if market data collection was successful
+            if not market_data or len(market_data) == 0:
+                cprint("❌ No market data collected for any tokens", "red")
+                add_console_log("No market data collected - aborting cycle", "error")
+                return
+
+            # Validate that each token has actual data (not empty DataFrames)
+            valid_tokens = []
+            invalid_tokens = []
+            for token, data in market_data.items():
+                if data is None:
+                    invalid_tokens.append(f"{token}: None")
+                elif hasattr(data, 'empty') and data.empty:
+                    invalid_tokens.append(f"{token}: empty DataFrame")
+                elif isinstance(data, dict) and len(data) == 0:
+                    invalid_tokens.append(f"{token}: empty dict")
+                else:
+                    valid_tokens.append(token)
+
+            if invalid_tokens:
+                cprint(f"⚠️ {len(invalid_tokens)} tokens have invalid/empty data:", "yellow")
+                for inv in invalid_tokens:
+                    cprint(f"   - {inv}", "yellow")
+                add_console_log(f"Invalid market data for {len(invalid_tokens)} tokens", "warning")
+
+            if not valid_tokens or len(valid_tokens) < len(tokens_to_trade) * 0.5:
+                cprint(f"❌ Less than 50% of tokens have valid data ({len(valid_tokens)}/{len(tokens_to_trade)})", "red")
+                add_console_log("Insufficient market data - aborting cycle", "error")
+                return
+
+            cprint(f"✅ Valid market data for {len(valid_tokens)} tokens", "green")
+
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
                 return
@@ -3219,6 +3325,20 @@ Return ONLY valid JSON with the following structure:
                     f"⚠️ Potential staleness: {market_data_fetch_duration:.2f}s lag on {self.timeframe} timeframe",
                     "warning"
                 )
+
+            # VALIDATION: Verify refreshed market data is still valid
+            if not market_data or len(market_data) == 0:
+                cprint("⚠️ Market data refresh returned empty collection", "yellow")
+                add_console_log("Refreshed market data is empty - proceeding with previous data", "warning")
+            else:
+                # Count valid tokens after refresh
+                refreshed_valid_count = sum(
+                    1 for data in market_data.values()
+                    if data is not None and (not hasattr(data, 'empty') or not data.empty)
+                )
+                if refreshed_valid_count < len(tokens_to_trade) * 0.5:
+                    cprint(f"⚠️ Only {refreshed_valid_count}/{len(tokens_to_trade)} tokens have valid refreshed data", "yellow")
+                    add_console_log(f"Low data quality after refresh ({refreshed_valid_count} valid)", "warning")
 
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
