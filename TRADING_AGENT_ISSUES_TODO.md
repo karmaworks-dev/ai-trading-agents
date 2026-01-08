@@ -1,8 +1,8 @@
 # Trading Agent - Issues & Bug Tracker
 
-**Status**: ✅ Critical & High severity bugs patched (7 fixes applied)
+**Status**: ✅ Critical, High & Medium severity bugs patched (12 fixes applied)
 
-**Last Updated**: 2025-01-08
+**Last Updated**: 2025-01-08 (Second patch session)
 
 ## SUMMARY OF FIXES
 
@@ -15,6 +15,11 @@
 | 5 | Dead code conditional (line 2018) | 🟠 High | ✅ Fixed | Code cleanup |
 | 6 | **Market data not formatted in single mode** (line 1906) | 🔴 Critical | ✅ Fixed | **Caused all NOTHING signals** |
 | 7 | Overwritten action variable (line 1960) | 🔴 Critical | ✅ Fixed | Wrong reasoning message |
+| 8 | **Markdown formatting in AI responses** (line 1987, 1228) | 🔴 Critical | ✅ Fixed | **Broke action parsing** |
+| 9 | Position close verification timeout (line 1677) | 🟡 Medium | ✅ Fixed | False "close failed" errors |
+| 10 | Grace period for re-entry (line 803) | 🟡 Medium | ✅ Fixed | Ghost position re-entry |
+| 11 | Swarm consensus documentation (line 1036) | 🟡 Medium | ✅ Fixed | Algorithm now documented |
+| 12 | Market data staleness tracking (line 3183) | 🟡 Medium | ✅ Fixed | Added staleness logging |
 
 ---
 
@@ -191,152 +196,160 @@ pos_data = n.get_position(sym, self.account)
 
 ---
 
-## MEDIUM SEVERITY ISSUES - NEEDS FIXING 🟡
+## CRITICAL BUG #8 - FIXED ✅
 
-### 6. Position Close Verification Loop (Lines 1638-1655)
-**Severity**: 🟡 MEDIUM - Race condition, incomplete closes reported as failed
+### 8. ✅ Lines 1987, 1228 - Markdown formatting in AI responses
+**Severity**: 🔴 CRITICAL - Broke action parsing causing all signals to fail
+**Status**: FIXED in current session
+**Priority**: Reported by user during patch session
 
-**Location**: `execute_position_closes()` method
-
-**Problem**:
+**What was wrong**:
 ```python
-while verification_attempts < max_verification_attempts:
-    time.sleep(1)  # Wait 1 second between checks
-    verification_attempts += 1
-
-    pos_data = n.get_position(symbol, self.account)
-    _, im_in_pos, pos_size, _, _, _, _ = pos_data
-
-    if not im_in_pos or pos_size == 0:
-        position_closed = True
-        break  # Success!
-    else:
-        cprint(f"⏳ Verifying {symbol} closure... (attempt {verification_attempts}/{max_verification_attempts})", "yellow")
-
-if position_closed:
-    # Good
-else:
-    # Max 5 seconds passed = FAIL
-    cprint(f"❌ {symbol} position close verification FAILED", "red")
+# AI returns: "**NOTHING** | 35%" or "**BUY** | 82%"
+# Parser does:
+action = lines[0].strip()  # → "**NOTHING**" (asterisks not removed!)
+if action in ["BUY", "SELL"]:  # → False, because "**BUY**" != "BUY"
 ```
-
-**Issue**:
-- Only waits max 5 seconds (5 x 1-second sleeps)
-- HyperLiquid can take 5-10+ seconds to confirm position closure
-- If exchange is slow, reports "close failed" even though close will succeed later
-- Next cycle tries to close again → wasted API calls + confusion
-
-**Recommendation**:
-- Increase max_verification_attempts to 15+ (15+ seconds)
-- OR add exponential backoff: 1s, 2s, 4s, 8s instead of fixed 1s
-- OR trust the close_complete_position() return value and remove verification
-
-**Test Case**:
-- Monitor close timing during high-volatility periods
-- Log actual close confirmation times from exchange
-
----
-
-### 7. Swarm Mode Consensus Voting (Lines 1789-1850)
-**Severity**: 🟡 MEDIUM - Confidence calculation accuracy unknown
-
-**Location**: `analyze_market_data()` method, swarm mode path
-
-**Problem**:
-- 6 AI models vote: Buy, Sell, or Nothing
-- Code counts votes but exact consensus algorithm not visible in current read
-- Need to verify:
-  - How are ties broken? (e.g., 3 Buy, 2 Sell, 1 Nothing)
-  - Is confidence = (winning_votes / total_votes * 100)?
-  - Does "Nothing" count as abstain or as a vote?
-
-**Risk**:
-- Confidence percentages could be misleading
-- 50-50 splits could arbitrarily pick one side
-- Might be too conservative or too aggressive
-
-**Recommendation**:
-- Document the swarm_agent.py consensus logic
-- Consider majority-only threshold (must have >50% votes)
-- Add logging to show voting breakdown for debugging
-
----
-
-### 8. Recently Closed Tracking Grace Period (Lines 2316-2334)
-**Severity**: 🟡 MEDIUM - Potential re-entry too soon after close
-
-**Location**: `_fallback_equal_allocation()` method
-
-**Problem**:
-```python
-self.recently_closed[token] = time.time()  # Recorded when position closed
-# ...later in fallback allocation...
-elif sym in self.recently_closed:
-    closed_ts = self.recently_closed.get(sym, 0)
-    if (now_ts - closed_ts) < getattr(self, "REENTRY_GRACE_PERIOD", 15):
-        # Within grace period → allow re-entry
-```
-
-**Issue**:
-- Grace period is 15 seconds (hardcoded in getattr default)
-- `_cleanup_recently_closed()` only runs periodically (line 3038)
-- If position closed and immediately opens in same cycle, grace period is too short
-- Could cause re-entry on "ghost position" before margin is freed
-
-**Scenario**:
-1. Position closed at T=0
-2. Fallback allocation runs at T=1 (within grace period)
-3. Signal is re-entry, margin check passes
-4. Tries to open new position but exchange margin check fails
-
-**Recommendation**:
-- Increase grace period from 15s to 30-45s (one full cycle)
-- OR implement "margin freed" check instead of time-based
-- OR add sleep before attempting opposite position entry
-
----
-
-### 9. Market Data Stale After Position Closes (Lines 3098-3107)
-**Severity**: 🟡 MEDIUM - Analysis on outdated candles
-
-**Location**: `run_trading_cycle()` method, Phase 4
-
-**Problem**:
-```python
-# Phase 2: Close positions (1-10 seconds)
-self.execute_position_closes(close_decisions)
-time.sleep(2)  # Wait for exchange
-
-# Phase 3: Refetch market data
-market_data = collect_all_tokens(
-    tokens=tokens_to_trade,
-    days_back=self.days_back,
-    timeframe=self.timeframe,  # e.g., 30m
-    exchange=EXCHANGE,
-)
-
-# Phase 4: Analyze (using market_data from 10+ seconds ago)
-for token, data in market_data.items():
-    analysis = self.analyze_market_data(token, data)
-```
-
-**Issue**:
-- If close takes 8 seconds + 2 second sleep = 10+ seconds elapsed
-- OHLCV data is fetched at that point but might still be for old candle
-- Example: If we're at 10:30:35 and candle closes at 10:30:00
-  - Fetch returns 10:00-10:30 candle data
-  - Our analysis misses first 35 seconds of current 10:30-11:00 candle
-  - Miss early reversals, momentum shifts
 
 **Impact**:
-- Signals lag the market by 30+ seconds
-- Especially problematic with 5-15 minute timeframes
-- Less of an issue with 30m+ timeframes
+- AI responses with markdown bold formatting (`**action**`) not parsed correctly
+- Actions like `**NOTHING**`, `**BUY**`, `**SELL**` failed to match expected values
+- All formatted responses treated as invalid → defaulted to NOTHING
+- Both single mode and swarm mode affected
 
-**Recommendation**:
-- Add timestamp logging to identify actual staleness
-- Consider using WebSocket for real-time candle updates
-- Or fetch fresh candle only for current token being analyzed
+**Fix applied**:
+```python
+# Single mode (line 1987)
+action = lines[0].strip() if lines else "NOTHING"
+action = action.replace("**", "").replace("*", "").strip()  # Remove markdown formatting
+
+# Swarm mode (line 1228)
+response_clean = response_upper.strip().split('\n')[0].strip()
+response_clean = response_clean.replace("**", "").replace("*", "").strip()  # Remove markdown
+```
+
+---
+
+## MEDIUM SEVERITY BUGS - FIXED ✅
+
+### 9. ✅ Lines 1674-1680 - Position close verification timeout
+**Severity**: 🟡 MEDIUM - False "close failed" errors
+**Status**: FIXED in current session
+
+**What was wrong**:
+```python
+max_verification_attempts = 5  # Only 5 seconds max
+while verification_attempts < max_verification_attempts:
+    time.sleep(1)
+    # Check if position closed
+```
+
+**Impact**:
+- Only waited 5 seconds for position close verification
+- HyperLiquid can take 5-10+ seconds during high volatility
+- Reported "close failed" even when close would succeed later
+- Next cycle would retry unnecessarily
+
+**Fix applied**:
+```python
+# Increased from 5 to 15 attempts (15 seconds)
+max_verification_attempts = 15  # HyperLiquid needs 5-10+ seconds during volatility
+```
+
+---
+
+### 10. ✅ Lines 799, 803 - Grace period for re-entry too short
+**Severity**: 🟡 MEDIUM - Ghost position re-entry attempts
+**Status**: FIXED in current session
+
+**What was wrong**:
+```python
+self.REENTRY_GRACE_PERIOD = 15  # Only 15 seconds
+# Exchange might not have freed margin yet
+```
+
+**Impact**:
+- 15 seconds too short for exchange to confirm close and free margin
+- Could attempt re-entry on "ghost position" before margin freed
+- Exchange would reject new position due to insufficient margin
+- Caused failed entry attempts and confusion
+
+**Fix applied**:
+```python
+# Increased from 15s to 45s
+self.REENTRY_GRACE_PERIOD = 45  # Give exchange time to confirm and free margin
+# Updated all references to use 45s default in getattr() calls
+```
+
+---
+
+### 11. ✅ Line 1036 - Swarm consensus algorithm documentation
+**Severity**: 🟡 MEDIUM - Algorithm clarity needed
+**Status**: FIXED (documentation added) in current session
+
+**Issue**:
+- Swarm consensus algorithm not clearly documented
+- Unclear how ties are broken
+- Unclear if confidence = vote percentage or average model confidence
+- Unclear if "NOTHING" counts as vote or abstention
+
+**Fix applied**:
+Added comprehensive documentation to `_calculate_swarm_consensus()` method explaining:
+1. Vote Collection: Each model votes BUY/SELL/NOTHING with confidence (0-100%)
+2. Vote Counting: Simple count of votes per action
+3. Average Confidence: Average confidence from models that voted for each action
+4. Tie Detection: If top 2 vote counts equal → return NOTHING (conservative)
+5. Majority Selection: Action with most votes wins (simple majority, NOT >50%)
+6. Final Confidence: **Average confidence from winning action's voters** (NOT vote percentage)
+7. Threshold Check: If below MIN_SWARM_CONFIDENCE → downgrade to NOTHING
+
+Edge cases documented:
+- "NOTHING" votes count as actual votes (not abstentions)
+- Ties handled conservatively
+- Failed models skipped
+- No responses → NOTHING with 0%
+
+---
+
+### 12. ✅ Lines 3154-3216 - Market data staleness tracking
+**Severity**: 🟡 MEDIUM - Signals could lag market
+**Status**: FIXED (tracking added) in current session
+
+**What was wrong**:
+```python
+# After position closes (8s) + sleep (2s) = 10+ seconds
+market_data = collect_all_tokens(...)  # Might fetch stale candle data
+# No visibility into staleness
+```
+
+**Impact**:
+- Market data fetched after position closes could be 10-30+ seconds old
+- Especially problematic on 1m, 5m, 15m timeframes
+- Signals lag market, missing early reversals
+- No way to identify or debug staleness issues
+
+**Fix applied**:
+```python
+# Added timing and staleness tracking
+market_data_fetch_start = time.time()
+add_console_log(f"⏰ Fetching market data at {datetime.now().strftime('%H:%M:%S')}", "info")
+
+market_data = collect_all_tokens(...)
+
+market_data_fetch_duration = time.time() - market_data_fetch_start
+add_console_log(f"📊 Market data fetch completed in {market_data_fetch_duration:.2f}s", "info")
+
+# Warn on short timeframes if fetch took >5s
+if self.timeframe in ["1m", "5m", "15m"] and market_data_fetch_duration > 5:
+    cprint(f"⚠️ WARNING: Market data fetch took {market_data_fetch_duration:.2f}s on {self.timeframe} timeframe", "yellow")
+    cprint(f"   Signals may lag market by {market_data_fetch_duration:.0f}+ seconds", "yellow")
+```
+
+---
+
+## MEDIUM SEVERITY ISSUES - ALL FIXED ✅
+
+All Medium severity issues identified in the original audit have been patched. See issues #9-12 above for details.
 
 ---
 
@@ -592,33 +605,32 @@ if conf < 0.6:  # Comparing 0.006 to 0.6!
 | 3 | 🔴 Critical | Undefined var | ✅ Fixed | Done | P0 |
 | 4 | 🟠 High | Double trading | ✅ Fixed | Done | P0 |
 | 5 | 🟠 High | Dead code | ✅ Fixed | Done | P0 |
-| 6 | 🟡 Medium | Race condition | ⏳ TODO | 1-2h | P1 |
-| 7 | 🟡 Medium | Consensus logic | ⏳ TODO | 1-2h | P1 |
-| 8 | 🟡 Medium | Grace period | ⏳ TODO | 1-2h | P1 |
-| 9 | 🟡 Medium | Stale data | ⏳ TODO | 2-3h | P2 |
-| 10 | 🟢 Low | Config duplication | ⏳ TODO | 30m | P2 |
-| 11 | 🟢 Low | Leverage config | ⏳ TODO | 30m | P2 |
-| 12 | 🟢 Low | Error handling | ⏳ TODO | 1-2h | P3 |
-| 13 | 🟢 Low | Empty data | ⏳ TODO | 30m | P3 |
-| 14 | 🟢 Low | Rate limiting | ⏳ TODO | 2-3h | P3 |
-| 15 | 🟢 Low | Missing funcs | ⏳ TODO | 1-2h | P3 |
-| 16 | 🟢 Low | Type safety | ⏳ TODO | 2-3h | P3 |
-| 17 | 🟢 Low | Performance | ⏳ TODO | 1-3h | P3 |
+| 6 | 🔴 Critical | Market data format | ✅ Fixed | Done | P0 |
+| 7 | 🔴 Critical | Variable overwrite | ✅ Fixed | Done | P0 |
+| 8 | 🔴 Critical | Markdown parsing | ✅ Fixed | Done | P0 |
+| 9 | 🟡 Medium | Verification timeout | ✅ Fixed | Done | P1 |
+| 10 | 🟡 Medium | Grace period | ✅ Fixed | Done | P1 |
+| 11 | 🟡 Medium | Documentation | ✅ Fixed | Done | P1 |
+| 12 | 🟡 Medium | Staleness tracking | ✅ Fixed | Done | P1 |
+| 13 | 🟢 Low | Config duplication | ⏳ TODO | 30m | P2 |
+| 14 | 🟢 Low | Leverage config | ⏳ TODO | 30m | P2 |
+| 15 | 🟢 Low | Error handling | ⏳ TODO | 1-2h | P3 |
+| 16 | 🟢 Low | Empty data | ⏳ TODO | 30m | P3 |
+| 17 | 🟢 Low | Rate limiting | ⏳ TODO | 2-3h | P3 |
+| 18 | 🟢 Low | Missing funcs | ⏳ TODO | 1-2h | P3 |
+| 19 | 🟢 Low | Type safety | ⏳ TODO | 2-3h | P3 |
+| 20 | 🟢 Low | Performance | ⏳ TODO | 1-3h | P3 |
 
 ---
 
 ## NEXT STEPS
 
 ### Immediate (within 24h)
-- ✅ [DONE] Fix critical bugs (items 1-5)
-- Test the fixes with live trading
-- Run trading cycle 3-5 times to verify no crashes
-
-### Short Term (this week)
-- [ ] Fix position close verification timeout (issue #6)
-- [ ] Verify swarm consensus algorithm (issue #7)
-- [ ] Improve grace period logic (issue #8)
-- [ ] Add market data staleness check (issue #9)
+- ✅ [DONE] Fix all critical bugs (issues #1-8)
+- ✅ [DONE] Fix all medium severity bugs (issues #9-12)
+- [ ] Test the fixes with live trading
+- [ ] Run trading cycle 3-5 times to verify no crashes
+- [ ] Commit and push changes to branch
 
 ### Medium Term (next week)
 - [ ] Consolidate config variables (issues #10-11)
@@ -662,4 +674,6 @@ After applying all fixes, test with:
 
 **Document compiled by**: Claude Code
 **Date**: 2025-01-08
-**Patches applied**: 5/5 critical & high severity items
+**Session 1 Patches**: 7/7 critical & high severity bugs (issues #1-7)
+**Session 2 Patches**: 5/5 additional bugs (1 critical + 4 medium severity) (issues #8-12)
+**Total Patches**: 12/12 critical, high & medium severity bugs
