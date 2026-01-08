@@ -796,7 +796,11 @@ class TradingAgent:
 
         # Add recently_closed tracker for allocation flow fixes
         self.recently_closed = {}  # dict: symbol -> timestamp (float, seconds since epoch)
-        self.REENTRY_GRACE_PERIOD = 15  # seconds - short grace period to ignore ghost positions
+        # BUGFIX: Increased from 15s to 45s (Medium Issue #8)
+        # Previous 15s was too short - exchange needs time to confirm close and free margin
+        # Could cause re-entry attempts on "ghost positions" before margin is actually freed
+        # 45s provides buffer for slow exchange responses while still being within same cycle
+        self.REENTRY_GRACE_PERIOD = 45  # seconds - grace period to ignore ghost positions after close
 
         self.recommendations_df = pd.DataFrame(
             columns=["token", "action", "confidence", "reasoning"]
@@ -1037,6 +1041,24 @@ FULL DATASET:
         """
         Calculate consensus from individual swarm responses with confidence weighting.
 
+        ALGORITHM (Medium Issue #7 Documentation):
+        ==========================================
+        1. Vote Collection: Each model votes BUY/SELL/NOTHING with confidence (0-100%)
+        2. Vote Counting: Count votes for each action (e.g., {"BUY": 4, "SELL": 1, "NOTHING": 1})
+        3. Average Confidence: For each action, calculate average confidence from models that voted for it
+        4. Tie Detection: If top 2 vote counts are equal (and > 0) → return NOTHING (conservative)
+        5. Majority Selection: Action with most votes wins (simple majority, NOT >50% required)
+        6. Final Confidence: Average confidence from models that voted for winning action
+           - Example: 4 models vote BUY with [85%, 90%, 75%, 80%] → final_confidence = 82.5%
+           - NOT calculated as (winning_votes/total_votes * 100) - that's vote_percentage
+        7. Threshold Check: If final_confidence < MIN_SWARM_CONFIDENCE → downgrade to NOTHING
+
+        Edge Cases Handled:
+        - "NOTHING" votes count as actual votes (not abstentions)
+        - Ties: If BUY=2, SELL=2, NOTHING=2 → return NOTHING with avg confidence
+        - Failed models: Skipped, only successful responses count toward total_votes
+        - No responses: Returns NOTHING with 0% confidence
+
         Key features:
         1. Extracts both action AND confidence from each model
         2. Logs individual votes with confidence (e.g., "Model 1 - BUY | 85%")
@@ -1203,8 +1225,11 @@ FULL DATASET:
             - action: "BUY", "SELL", or "NOTHING"
             - confidence: 0-100 (defaults to 50 if not found)
         """
-        # Clean the response (remove extra whitespace, newlines)
+        # Clean the response (remove extra whitespace, newlines, markdown formatting)
         response_clean = response_upper.strip().split('\n')[0].strip()
+        # BUGFIX: Strip markdown formatting (**, *, etc.) from response
+        # AI sometimes returns "**BUY**" or "**NOTHING**" instead of plain text
+        response_clean = response_clean.replace("**", "").replace("*", "").strip()
 
         # Default confidence if not found
         confidence = 50
@@ -1671,9 +1696,12 @@ Return ONLY valid JSON with the following structure:
                     if close_result:
                         # Verify position is actually closed
                         verification_attempts = 0
-                        max_verification_attempts = 5
+                        # BUGFIX: Increased from 5 to 15 attempts (5s → 15s)
+                        # HyperLiquid can take 5-10+ seconds to confirm position closure during high volatility
+                        # Previous 5-second timeout caused false "close failed" errors even when close succeeded
+                        max_verification_attempts = 15
                         position_closed = False
-                        
+
                         while verification_attempts < max_verification_attempts:
                             time.sleep(1)  # Wait 1 second between checks
                             verification_attempts += 1
@@ -1960,7 +1988,10 @@ Return ONLY valid JSON with the following structure:
                     return None
 
                 lines = response.split("\n")
+                # BUGFIX: Strip markdown formatting (**, *, etc.) from action
+                # AI sometimes returns "**NOTHING**" or "**BUY**" instead of plain text
                 action = lines[0].strip() if lines else "NOTHING"
+                action = action.replace("**", "").replace("*", "").strip()  # Remove markdown bold/italic
 
                 confidence = 0
                 for line in lines:
@@ -2362,7 +2393,7 @@ Return ONLY valid JSON with the following structure:
                 # 2) If we closed this symbol recently in this cycle, allow re-entry (grace window)
                 elif sym in self.recently_closed:
                     closed_ts = self.recently_closed.get(sym, 0)
-                    if (now_ts - closed_ts) < getattr(self, "REENTRY_GRACE_PERIOD", 15):
+                    if (now_ts - closed_ts) < getattr(self, "REENTRY_GRACE_PERIOD", 45):
                         # still within grace window -> treat as flat
                         pass
                     else:
@@ -3057,7 +3088,7 @@ Return ONLY valid JSON with the following structure:
         """Clean up recently_closed entries older than grace period to prevent memory leaks"""
         try:
             now_ts = time.time()
-            grace_period = getattr(self, "REENTRY_GRACE_PERIOD", 15)
+            grace_period = getattr(self, "REENTRY_GRACE_PERIOD", 45)
             
             # Remove entries older than grace period
             old_entries = []
@@ -3120,13 +3151,18 @@ Return ONLY valid JSON with the following structure:
             add_console_log(f"📊 Collecting market data for {len(tokens_to_trade)} tokens...", "info")
             cprint("📊 Collecting market data for analysis...", "white", "on_blue")
 
+            market_data_fetch_start = time.time()
             market_data = collect_all_tokens(
                 tokens=tokens_to_trade,
                 days_back=self.days_back,
                 timeframe=self.timeframe,
                 exchange=EXCHANGE,
             )
-            add_console_log(f"Market data collected for {len(market_data)} tokens", "info")
+            market_data_fetch_duration = time.time() - market_data_fetch_start
+            add_console_log(
+                f"Market data collected for {len(market_data)} tokens in {market_data_fetch_duration:.2f}s",
+                "info"
+            )
 
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
@@ -3148,13 +3184,41 @@ Return ONLY valid JSON with the following structure:
             # STEP 4: REFETCH POSITIONS & MARKET DATA AFTER CLOSURES
             time.sleep(2)
             open_positions = self.fetch_all_open_positions()
+
+            # BUGFIX (Medium Issue #9): Add staleness tracking for market data
+            # Log fetch time to identify if data is stale after position closes
+            market_data_fetch_start = time.time()
             cprint("📊 Refreshing market data after position updates...", "white", "on_blue")
+            add_console_log(f"⏰ Fetching market data at {datetime.now().strftime('%H:%M:%S')}", "info")
+
             market_data = collect_all_tokens(
                 tokens=tokens_to_trade,
                 days_back=self.days_back,
                 timeframe=self.timeframe,
                 exchange=EXCHANGE,
             )
+
+            market_data_fetch_duration = time.time() - market_data_fetch_start
+            add_console_log(
+                f"📊 Market data fetch completed in {market_data_fetch_duration:.2f}s "
+                f"(Timeframe: {self.timeframe})",
+                "info"
+            )
+
+            # Log staleness warning for short timeframes
+            if self.timeframe in ["1m", "5m", "15m"] and market_data_fetch_duration > 5:
+                cprint(
+                    f"⚠️ WARNING: Market data fetch took {market_data_fetch_duration:.2f}s on {self.timeframe} timeframe",
+                    "yellow"
+                )
+                cprint(
+                    f"   Signals may lag market by {market_data_fetch_duration:.0f}+ seconds",
+                    "yellow"
+                )
+                add_console_log(
+                    f"⚠️ Potential staleness: {market_data_fetch_duration:.2f}s lag on {self.timeframe} timeframe",
+                    "warning"
+                )
 
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
