@@ -1,8 +1,79 @@
 # Trading Agent - Issues & Bug Tracker
 
-**Status**: ✅ Critical & High severity bugs patched (5 fixes applied)
+**Status**: ✅ Critical & High severity bugs patched (7 fixes applied)
 
 **Last Updated**: 2025-01-08
+
+## SUMMARY OF FIXES
+
+| # | Issue | Severity | Status | Impact |
+|----|-------|----------|--------|--------|
+| 1 | Undefined `decision` variable (line 2886) | 🔴 Critical | ✅ Fixed | Would crash on position close |
+| 2 | Undefined `min_order_notional` (line 2311) | 🔴 Critical | ✅ Fixed | Would crash on fallback allocation |
+| 3 | Parameter mismatch `total_equity` (line 2341) | 🔴 Critical | ✅ Fixed | Would crash on margin calc |
+| 4 | Redundant execution Phase 3 (line 3250) | 🟠 High | ✅ Fixed | Would duplicate trades |
+| 5 | Dead code conditional (line 2018) | 🟠 High | ✅ Fixed | Code cleanup |
+| 6 | **Market data not formatted in single mode** (line 1906) | 🔴 Critical | ✅ Fixed | **Caused all NOTHING signals** |
+| 7 | Overwritten action variable (line 1960) | 🔴 Critical | ✅ Fixed | Wrong reasoning message |
+
+---
+
+## CRITICAL BUGS - FIXED ✅
+
+### 6. ✅ Lines 1906-1916 - Market data formatting in single mode
+**Severity**: 🔴 CRITICAL - Caused all symbols to return NOTHING | 35%
+**Status**: FIXED in commit [hash]
+
+**What was wrong**:
+```python
+# SINGLE MODE was doing:
+response = self.chat_with_ai(
+    TRADING_PROMPT.format(...),
+    f"Market Data to Analyze:\n{market_data}",  # ← Just stringifies object!
+)
+
+# While SWARM MODE was doing:
+base_market_data = self._format_market_data_for_swarm(token, market_data)  # ← Properly formatted
+formatted_data = f"{position_context}\n\n{base_market_data}"
+```
+
+**Impact**:
+- Single mode passed DataFrame/dict as raw string to AI
+- AI received unstructured, unparseable data
+- Returned 35% confidence for all symbols (can't analyze garbage)
+- All signals filtered out by 70% confidence threshold
+- Result: NOTHING | 35% for every symbol
+
+**Fix applied**:
+```python
+# Use proper formatting function in single mode too
+base_market_data = self._format_market_data_for_swarm(token, market_data)
+response = self.chat_with_ai(
+    TRADING_PROMPT.format(...),
+    f"{position_context}\n\n{base_market_data}",
+)
+```
+
+---
+
+### 7. ✅ Line 1960 - Using overwritten action variable
+**Severity**: 🔴 CRITICAL - Incorrect reasoning message
+**Status**: FIXED in commit [hash]
+
+**What was wrong**:
+```python
+action = "NOTHING"  # Line 1959 - overwrites action
+reasoning = f"Original: {action} ({confidence}%) → ..."  # Line 1960 - uses overwritten value!
+# Result: "Original: NOTHING (35%) → Downgraded to NOTHING..."
+```
+
+**Fix applied**:
+```python
+original_action = action  # Store before overwriting
+action = "NOTHING"
+reasoning = f"Original: {original_action} ({confidence}%) → ..."
+# Result: "Original: BUY (35%) → Downgraded to NOTHING..."
+```
 
 ---
 
@@ -271,7 +342,31 @@ for token, data in market_data.items():
 
 ## LOW SEVERITY ISSUES - SHOULD FIX 🟢
 
-### 10. Configuration Variable Duplication
+### 10. Confidence Threshold Too High (Post-Fix Observation)
+**Severity**: 🟡 MEDIUM - May still filter too many valid signals
+**Location**: `trading_agent.py` line 225: `MIN_SINGLE_CONFIDENCE = 70`
+
+**Problem**:
+- After fixing market data formatting, AI will return more varied confidence levels
+- But 70% threshold is quite aggressive
+- If AI returns 50-65% for uncertain-but-tradeable markets, signals get filtered
+- Example: AAVE has 65% confidence → BUY → filtered to NOTHING because 65% < 70%
+
+**Recommendation**:
+- Test with current data to see what confidence ranges AI actually returns
+- Consider lowering to 55-60% for more sensitivity
+- Or adjust based on market volatility (higher threshold in low-vol, lower in high-vol)
+- Monitor win rate: if threshold too low → more losses, if too high → missing trades
+
+**Test Steps**:
+1. Run full cycle with MIN_SINGLE_CONFIDENCE = 70 (current)
+2. Log all AI confidence levels before filtering
+3. If many signals in 55-69% range are being filtered, lower threshold to 60%
+4. Monitor win rate improvement
+
+---
+
+### 11. Configuration Variable Duplication
 **Severity**: 🟢 LOW - Confusion about which value is used
 **Location**: `config.py` lines 55, 143; `trading_agent.py` line 252
 
