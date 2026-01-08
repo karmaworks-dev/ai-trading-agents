@@ -1903,13 +1903,17 @@ Return ONLY valid JSON with the following structure:
                     f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
                 )
 
+                # BUGFIX: Use proper market data formatting (was just stringifying, causing AI to return low confidence)
+                # Format market data the same way swarm mode does for consistency
+                base_market_data = self._format_market_data_for_swarm(token, market_data)
+
                 response = self.chat_with_ai(
                     TRADING_PROMPT.format(
                         strategy_context=strategy_context_text,
                         position_context=position_context,
                         performance_context=performance_context,
                     ),
-                    f"Market Data to Analyze:\n{market_data}",
+                    f"{position_context}\n\n{base_market_data}",  # Use formatted data instead of raw stringification
                 )
 
                 if not response:
@@ -1943,6 +1947,7 @@ Return ONLY valid JSON with the following structure:
 
                 # Apply confidence threshold for single model
                 if action in ["BUY", "SELL"] and confidence < self.min_single_confidence:
+                    original_action = action  # BUGFIX: Store original before overwriting
                     cprint(
                         f"⚠️ LOW CONFIDENCE: {confidence}% < {self.min_single_confidence}% threshold",
                         "yellow",
@@ -1950,9 +1955,9 @@ Return ONLY valid JSON with the following structure:
                     )
                     cprint(f"   → Downgrading {action} to NOTHING", "yellow")
                     add_console_log(f"{token} -> NOTHING | {confidence}% (low confidence)", "warning")
-                    
+
                     action = "NOTHING"
-                    reasoning = f"Original: {action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
+                    reasoning = f"Original: {original_action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
 
                 self.recommendations_df = pd.concat(
                     [
