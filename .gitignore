@@ -228,3 +228,4 @@ dist/
 # Local cache directory
 .cache/
 .env
+test_json_parsing.py

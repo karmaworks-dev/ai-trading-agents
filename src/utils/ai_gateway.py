@@ -41,6 +41,9 @@ class AIResponse:
 
 def extract_json_from_text(text: str) -> Optional[Dict]:
     """Safely extract JSON object from AI model responses containing text."""
+    if not isinstance(text, str):
+        return None
+
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         try:
