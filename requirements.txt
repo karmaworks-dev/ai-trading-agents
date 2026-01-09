@@ -184,3 +184,4 @@ websockets==15.0
 flask==3.0.0
 werkzeug==3.0.0
 flask_cors
+flask-sqlalchemy

@@ -29,13 +29,37 @@ import re
 
 def extract_json_from_text(text):
     """Safely extract JSON object from AI model responses containing text."""
+    # Remove markdown code fences first
+    text = re.sub(r'```json\s*', '', text)
+    text = re.sub(r'```\s*', '', text)
+
+    # Find JSON object
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
+        json_str = match.group()
         try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            print("⚠️ JSON extraction failed even after matching braces.")
-            return None
+            # BUGFIX: Parse JSON, then re-serialize to clean any whitespace issues in keys
+            # This handles cases where AI returns malformed JSON with newlines in keys like '\n "actions"'
+            parsed = json.loads(json_str)
+            # Re-serialize and parse again to ensure clean keys
+            cleaned = json.dumps(parsed)
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON extraction failed: {e}")
+            print(f"   First 200 chars of extracted JSON: {json_str[:200]}")
+
+            # Try to fix common JSON issues
+            try:
+                # Remove any newlines within keys (common AI formatting error)
+                fixed_json = re.sub(r'"\s*\n\s*"', '""', json_str)
+                # Remove trailing commas before closing brackets/braces
+                fixed_json = re.sub(r',\s*([\]}])', r'\1', fixed_json)
+                parsed = json.loads(fixed_json)
+                print("✅ JSON fixed with error recovery")
+                return parsed
+            except:
+                print("❌ JSON recovery failed")
+                return None
     print("⚠️ No JSON object found in AI response.")
     return None
 
@@ -2361,7 +2385,27 @@ Return ONLY valid JSON with the following structure:
                 allocation = extract_json_from_text(ai_response)
                 if not allocation:
                     raise ValueError("extract_json_from_text returned None")
-                actions = allocation.get("actions", [])
+
+                # BUGFIX: Log the keys in the allocation dict to debug key formatting issues
+                add_console_log(f"Allocation keys: {list(allocation.keys())}", "debug")
+
+                # BUGFIX: Handle case where "actions" key might have whitespace or formatting issues
+                actions = None
+                for key in allocation.keys():
+                    # Check for "actions" key with any amount of whitespace
+                    if key.strip().lower() == "actions":
+                        actions = allocation[key]
+                        if key != "actions":
+                            add_console_log(f"⚠️ Found malformed 'actions' key: '{repr(key)}' - using it anyway", "warning")
+                        break
+
+                if actions is None:
+                    # Fallback to direct access
+                    actions = allocation.get("actions", [])
+
+                if not actions:
+                    add_console_log("⚠️ 'actions' key not found or empty in allocation", "warning")
+
             except Exception as e:
                 add_console_log(f"AI JSON parse failed: {str(e)}", "error")
                 add_console_log(f"Failed response (first 200 chars): {ai_response[:200]}", "error")

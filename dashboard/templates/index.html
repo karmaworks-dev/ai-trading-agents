@@ -328,7 +328,7 @@
                     <div class="setting-section">
                         <h3 class="section-title">Position Management</h3>
                         <p class="section-desc">Control when positions can be closed</p>
-                        
+
                         <div class="setting-row">
                             <div class="setting-group half">
                                 <label for="min-age-hours">Min Hold Time (hours)</label>
@@ -342,6 +342,72 @@
                                 <div class="input-with-hint">
                                     <input type="number" id="min-close-confidence" class="setting-input" min="0" max="100" value="70" />
                                     <span class="input-hint">AI confidence needed to close position (60-80%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Money Settings -->
+                    <div class="setting-section">
+                        <h3 class="section-title">💰 Position Sizing (USD)</h3>
+                        <p class="section-desc">Configure position sizes in USD</p>
+
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="usd-size">Position Size (USD)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="usd-size" class="setting-input" min="10" max="10000" step="0.01" value="12" />
+                                    <span class="input-hint">Default position size per trade ($10-$10,000)</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="max-usd-order-size">Max Order Size (USD)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="max-usd-order-size" class="setting-input" min="10" max="10000" step="0.01" value="12" />
+                                    <span class="input-hint">Maximum single order size ($10-$10,000)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Circuit Breakers -->
+                    <div class="setting-section">
+                        <h3 class="section-title">🛑 System Circuit Breakers</h3>
+                        <p class="section-desc">Automatic safety limits to protect your capital</p>
+
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="max-loss-usd">Stop Trading at Loss (USD)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="max-loss-usd" class="setting-input" min="0" max="10000" step="0.01" value="2" />
+                                    <span class="input-hint">Stop all trading if total loss reaches $X</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="max-gain-usd">Stop Trading at Gain (USD)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="max-gain-usd" class="setting-input" min="0" max="10000" step="0.01" value="3" />
+                                    <span class="input-hint">Stop trading and lock in profits at $X gain</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <div class="setting-group half">
+                                <label for="minimum-balance-usd">Emergency Exit Balance (USD)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="minimum-balance-usd" class="setting-input" min="0" max="1000" step="0.01" value="1" />
+                                    <span class="input-hint">Close ALL positions if balance drops below $X</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="use-ai-confirmation">AI Confirmation for Exits</label>
+                                <div class="input-with-hint">
+                                    <select id="use-ai-confirmation" class="setting-input">
+                                        <option value="true" selected>Enabled (Safer)</option>
+                                        <option value="false">Disabled (Faster)</option>
+                                    </select>
+                                    <span class="input-hint">Require AI confirmation before emergency exits</span>
                                 </div>
                             </div>
                         </div>
