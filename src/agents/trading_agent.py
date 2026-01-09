@@ -32,7 +32,8 @@ def extract_json_from_text(text):
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         try:
-            return json.loads(match.group())
+            json_str = match.group().replace('\\n', '\n').replace('\\t', '\t')
+            return json.loads(json_str)
         except json.JSONDecodeError:
             print("⚠️ JSON extraction failed even after matching braces.")
             return None
