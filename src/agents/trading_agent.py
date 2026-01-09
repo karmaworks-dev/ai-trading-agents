@@ -29,37 +29,53 @@ import re
 
 def extract_json_from_text(text):
     """Safely extract JSON object from AI model responses containing text."""
+    if not text:
+        print("⚠️ Empty text provided to extract_json_from_text")
+        return None
+
     # Remove markdown code fences first
     text = re.sub(r'```json\s*', '', text)
     text = re.sub(r'```\s*', '', text)
 
-    # Find JSON object
-    match = re.search(r"\{.*\}", text, re.DOTALL)
+    # Find JSON object (non-greedy match to avoid capturing multiple objects)
+    match = re.search(r"\{.*?\}", text, re.DOTALL)
+    if not match:
+        # Try greedy match as fallback
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+
     if match:
         json_str = match.group()
+
+        # Pre-clean common issues before parsing
+        # Remove newlines and extra whitespace within the JSON
+        json_str = re.sub(r'\s*\n\s*', ' ', json_str)
+        # Remove any literal newline characters in keys
+        json_str = json_str.replace('\\n ', '').replace('\n ', '')
+
         try:
-            # BUGFIX: Parse JSON, then re-serialize to clean any whitespace issues in keys
-            # This handles cases where AI returns malformed JSON with newlines in keys like '\n "actions"'
+            # Try to parse the cleaned JSON
             parsed = json.loads(json_str)
-            # Re-serialize and parse again to ensure clean keys
-            cleaned = json.dumps(parsed)
-            return json.loads(cleaned)
+            return parsed
         except json.JSONDecodeError as e:
             print(f"⚠️ JSON extraction failed: {e}")
             print(f"   First 200 chars of extracted JSON: {json_str[:200]}")
 
-            # Try to fix common JSON issues
+            # Try additional fixes for common JSON issues
             try:
-                # Remove any newlines within keys (common AI formatting error)
-                fixed_json = re.sub(r'"\s*\n\s*"', '""', json_str)
                 # Remove trailing commas before closing brackets/braces
-                fixed_json = re.sub(r',\s*([\]}])', r'\1', fixed_json)
+                fixed_json = re.sub(r',\s*([\]}])', r'\1', json_str)
+                # Fix any double commas
+                fixed_json = re.sub(r',,+', ',', fixed_json)
+                # Remove any remaining problematic whitespace in keys
+                fixed_json = re.sub(r'"\s+([^"]+)\s+":', r'"\1":', fixed_json)
+
                 parsed = json.loads(fixed_json)
                 print("✅ JSON fixed with error recovery")
                 return parsed
-            except:
-                print("❌ JSON recovery failed")
+            except Exception as recovery_error:
+                print(f"❌ JSON recovery failed: {recovery_error}")
                 return None
+
     print("⚠️ No JSON object found in AI response.")
     return None
 
@@ -539,19 +555,19 @@ RESPONSE FORMAT (MANDATORY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Return ONLY valid JSON in this EXACT structure:
 
-{
+{{
   "actions": [
-    {
+    {{
       "symbol": "HYPE",
       "action": "OPEN_LONG | OPEN_SHORT | REDUCE | CLOSE | INCREASE",
       "margin_usd": 123.45,
       "confidence": 65,
       "reason": "Short explanation"
-    }
+    }}
   ],
   "cash_buffer_usd": 100.0,
   "reasoning": "Overall allocation logic summary"
-}
+}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STRICT RULES
@@ -2273,6 +2289,10 @@ Return ONLY valid JSON with the following structure:
                     # BUGFIX: Removed redundant conditional (both branches were identical)
                     pos_data = n.get_position(sym, self.account)
 
+                    # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                    if not pos_data or len(pos_data) < 7:
+                        continue
+
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     if im_in_pos and pos_size != 0:
                         notional = abs(float(pos_size) * float(entry_px))
@@ -2724,6 +2744,11 @@ Return ONLY valid JSON with the following structure:
                     else:
                         pos_data = n.get_position(symbol)
 
+                    # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                    if not pos_data or len(pos_data) < 7:
+                        cprint(f"⚠️ Invalid position data for {symbol}, skipping", "yellow")
+                        continue
+
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     current_notional = abs(float(pos_size) * float(entry_px)) if im_in_pos else 0
                     current_dir = "LONG" if is_long else "SHORT"
@@ -2763,7 +2788,8 @@ Return ONLY valid JSON with the following structure:
                             continue
 
                         # Ensure cash buffer is preserved after placing this margin
-                        required_buffer = live_total_equity * (CASH_PERCENTAGE / 100.0)
+                        # BUGFIX: Use available_balance as base (not total_equity) for correct cash buffer calculation
+                        required_buffer = live_available_balance * (CASH_PERCENTAGE / 100.0)
                         if (live_available_balance - margin_usd) < required_buffer:
                             cprint(f"   ⚠️ Skipping {symbol}: would breach cash buffer ({CASH_PERCENTAGE}%)", "yellow")
                             add_console_log(f"Skipped {symbol}: would breach cash buffer after margin {margin_usd}", "warning")
@@ -3538,6 +3564,11 @@ Return ONLY valid JSON with the following structure:
                                 pos_data = n.get_position(sym, self.account)
                             else:
                                 pos_data = n.get_position(sym)
+
+                            # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                            if not pos_data or len(pos_data) < 7:
+                                continue
+
                             _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                             if im_in_pos and pos_size != 0:
                                 notional = abs(float(pos_size) * float(entry_px))
@@ -3573,6 +3604,11 @@ Return ONLY valid JSON with the following structure:
                                     pos_data = n.get_position(sym, self.account)
                                 else:
                                     pos_data = n.get_position(sym)
+
+                                # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                                if not pos_data or len(pos_data) < 7:
+                                    continue
+
                                 _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                                 if im_in_pos and pos_size != 0:
                                     notional = abs(float(pos_size) * float(entry_px))
