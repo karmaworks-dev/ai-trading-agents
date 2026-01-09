@@ -2289,6 +2289,10 @@ Return ONLY valid JSON with the following structure:
                     # BUGFIX: Removed redundant conditional (both branches were identical)
                     pos_data = n.get_position(sym, self.account)
 
+                    # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                    if not pos_data or len(pos_data) < 7:
+                        continue
+
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     if im_in_pos and pos_size != 0:
                         notional = abs(float(pos_size) * float(entry_px))
@@ -2740,6 +2744,11 @@ Return ONLY valid JSON with the following structure:
                     else:
                         pos_data = n.get_position(symbol)
 
+                    # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                    if not pos_data or len(pos_data) < 7:
+                        cprint(f"⚠️ Invalid position data for {symbol}, skipping", "yellow")
+                        continue
+
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     current_notional = abs(float(pos_size) * float(entry_px)) if im_in_pos else 0
                     current_dir = "LONG" if is_long else "SHORT"
@@ -2779,7 +2788,8 @@ Return ONLY valid JSON with the following structure:
                             continue
 
                         # Ensure cash buffer is preserved after placing this margin
-                        required_buffer = live_total_equity * (CASH_PERCENTAGE / 100.0)
+                        # BUGFIX: Use available_balance as base (not total_equity) for correct cash buffer calculation
+                        required_buffer = live_available_balance * (CASH_PERCENTAGE / 100.0)
                         if (live_available_balance - margin_usd) < required_buffer:
                             cprint(f"   ⚠️ Skipping {symbol}: would breach cash buffer ({CASH_PERCENTAGE}%)", "yellow")
                             add_console_log(f"Skipped {symbol}: would breach cash buffer after margin {margin_usd}", "warning")
@@ -3554,6 +3564,11 @@ Return ONLY valid JSON with the following structure:
                                 pos_data = n.get_position(sym, self.account)
                             else:
                                 pos_data = n.get_position(sym)
+
+                            # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                            if not pos_data or len(pos_data) < 7:
+                                continue
+
                             _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                             if im_in_pos and pos_size != 0:
                                 notional = abs(float(pos_size) * float(entry_px))
@@ -3589,6 +3604,11 @@ Return ONLY valid JSON with the following structure:
                                     pos_data = n.get_position(sym, self.account)
                                 else:
                                     pos_data = n.get_position(sym)
+
+                                # BUGFIX: Add null check before tuple unpacking to prevent crashes
+                                if not pos_data or len(pos_data) < 7:
+                                    continue
+
                                 _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                                 if im_in_pos and pos_size != 0:
                                     notional = abs(float(pos_size) * float(entry_px))
