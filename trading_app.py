@@ -150,9 +150,6 @@ websocket_positions = []
 websocket_positions_lock = threading.Lock()
 websocket_positions_updated = threading.Event()
 
-# SSE (Server-Sent Events) client connections for real-time position streaming
-sse_clients = []
-
 # Thread synchronization
 state_lock = threading.Lock()  # Lock for agent state variables
 # log_queue imported from src.utils.logging_utils
@@ -681,67 +678,6 @@ def get_account_data():
         }
 
 
-def _fetch_websocket_positions(address):
-    """
-    Helper function to fetch positions via WebSocket.
-    Extracted to eliminate code duplication.
-    Returns list of positions or None if WebSocket unavailable.
-    """
-    try:
-        from src.websocket import get_data_manager, is_websocket_connected
-
-        if not is_websocket_connected():
-            return None
-
-        dm = get_data_manager()
-        ws_positions = dm.get_all_positions(address)
-
-        if not ws_positions:
-            return None
-
-        positions = []
-        for pos in ws_positions:
-            symbol = pos.get('coin', pos.get('symbol', 'Unknown'))
-            size = pos.get('size', 0)
-
-            if size == 0:
-                continue
-
-            entry_px = pos.get('entry_price', 0)
-            pnl_perc = pos.get('pnl_percent', 0)
-            is_long = size > 0
-            side = "LONG" if is_long else "SHORT"
-
-            # Get mark price from WebSocket
-            try:
-                mark_price = dm.get_current_price(symbol)
-            except Exception:
-                mark_price = entry_px
-
-            position_value = abs(size) * mark_price
-
-            positions.append({
-                "symbol": symbol,
-                "size": float(size),
-                "entry_price": float(entry_px),
-                "mark_price": float(mark_price),
-                "position_value": float(position_value),
-                "pnl_percent": float(pnl_perc),
-                "pnl_value": float(pos.unrealized_pnl) if hasattr(pos, 'unrealized_pnl') else 0,
-                "side": side
-            })
-
-        print(f"📡 WebSocket: {len(positions)} positions (real-time)")
-        return positions
-
-    except ImportError:
-        print("⚠️ WebSocket module not available, falling back to API")
-        return None
-    except Exception as ws_err:
-        print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
-        return None
-
-
 def get_positions_data():
     """Fetch ALL live open positions from HyperLiquid using WebSocket (real-time)"""
     if not EXCHANGE_CONNECTED or n is None:
@@ -752,11 +688,97 @@ def get_positions_data():
         # Get account
         account = _get_account()
         address = os.getenv("ACCOUNT_ADDRESS", account.address)
+        
+        # Try WebSocket first for real-time data
+        try:
+            from src.websocket import get_data_manager, is_websocket_connected
+            if is_websocket_connected():
+                dm = get_data_manager()
+                ws_positions = dm.get_all_positions(address)
+                if ws_positions:
+                    positions = []
+                    for pos in ws_positions:
+                        symbol = pos.get('coin', pos.get('symbol', 'Unknown'))
+                        size = pos.get('size', 0)
+                        if size == 0:
+                            continue
+                        entry_px = pos.get('entry_price', 0)
+                        pnl_perc = pos.get('pnl_percent', 0)
+                        is_long = size > 0
+                        side = "LONG" if is_long else "SHORT"
+                        
+                        # Get mark price from WebSocket
+                        try:
+                            mark_price = dm.get_current_price(symbol)
+                        except Exception:
+                            mark_price = entry_px
+                        
+                        position_value = abs(size) * mark_price
+                        positions.append({
+                            "symbol": symbol,
+                            "size": float(size),
+                            "entry_price": float(entry_px),
+                            "mark_price": float(mark_price),
+                            "position_value": float(position_value),
+                            "pnl_percent": float(pnl_perc),
+                            "pnl_value": float(pos.unrealized_pnl) if hasattr(pos, 'unrealized_pnl') else 0,
+                            "side": side
+                        })
+                    print(f"📡 WebSocket: {len(positions)} positions (real-time)")
+                    return positions
+        except ImportError:
+            print("⚠️ WebSocket module not available, falling back to API")
+        except Exception as ws_err:
+            print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
+        address = os.getenv("ACCOUNT_ADDRESS", account.address)
 
-        # Try WebSocket first for real-time data (BUGFIX: deduplicated code)
-        ws_positions = _fetch_websocket_positions(address)
-        if ws_positions is not None:
-            return ws_positions
+        # Try WebSocket first for real-time data
+        try:
+            from src.websocket import get_data_manager, is_websocket_connected
+
+            if is_websocket_connected():
+                dm = get_data_manager()
+                ws_positions = dm.get_all_positions(address)
+
+                if ws_positions:
+                    positions = []
+                    for pos in ws_positions:
+                        symbol = pos.get('coin', pos.get('symbol', 'Unknown'))
+                        size = pos.get('size', 0)
+
+                        if size == 0:
+                            continue
+
+                        entry_px = pos.get('entry_price', 0)
+                        pnl_perc = pos.get('pnl_percent', 0)
+                        is_long = size > 0
+                        side = "LONG" if is_long else "SHORT"
+
+                        # Get mark price from WebSocket
+                        try:
+                            mark_price = dm.get_current_price(symbol)
+                        except Exception:
+                            mark_price = entry_px
+
+                        position_value = abs(size) * mark_price
+
+                        positions.append({
+                            "symbol": symbol,
+                            "size": float(size),
+                            "entry_price": float(entry_px),
+                            "mark_price": float(mark_price),
+                            "position_value": float(position_value),
+                            "pnl_percent": float(pnl_perc),
+                            "pnl_value": float(pos.unrealized_pnl) if hasattr(pos, 'unrealized_pnl') else 0,
+                            "side": side
+                        })
+
+                    print(f"📡 WebSocket: {len(positions)} positions (real-time)")
+                    return positions
+        except ImportError:
+            print("⚠️ WebSocket module not available, falling back to API")
+        except Exception as ws_err:
+            print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
 
         # Fallback to API polling
         print(f"🔍 API fallback: Fetching positions for {address[:8]}...")
@@ -1161,10 +1183,6 @@ def api_login():
         session['username'] = user.username
         session['user_id'] = user.id
 
-        # BUGFIX: Generate CSRF token for session security
-        import secrets
-        session['csrf_token'] = secrets.token_hex(32)
-
         # Update last login
         user.last_login = datetime.utcnow()
         db.session.commit()
@@ -1173,8 +1191,7 @@ def api_login():
 
         return jsonify({
             'success': True,
-            'message': 'Login successful',
-            'csrf_token': session['csrf_token']
+            'message': 'Login successful'
         })
 
     # Fallback to legacy .env credentials for backward compatibility
@@ -1186,17 +1203,11 @@ def api_login():
         session['logged_in'] = True
         session['username'] = VALID_CREDENTIALS['username']
         session['user_id'] = None  # Legacy user has no ID
-
-        # BUGFIX: Generate CSRF token for session security
-        import secrets
-        session['csrf_token'] = secrets.token_hex(32)
-
         add_console_log(f"User {VALID_CREDENTIALS['username']} logged in (legacy)", "success")
 
         return jsonify({
             'success': True,
-            'message': 'Login successful',
-            'csrf_token': session['csrf_token']
+            'message': 'Login successful'
         })
     else:
         return jsonify({
@@ -1207,18 +1218,7 @@ def api_login():
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
-    """Handle logout requests with CSRF protection"""
-    # BUGFIX: Add CSRF protection to prevent unauthorized logout attacks
-    csrf_token = request.headers.get('X-CSRF-Token') or request.json.get('csrf_token') if request.json else None
-    session_token = session.get('csrf_token')
-
-    if not csrf_token or csrf_token != session_token:
-        add_console_log("Logout attempt with invalid CSRF token", "warning")
-        return jsonify({
-            'success': False,
-            'error': 'Invalid CSRF token'
-        }), 403
-
+    """Handle logout requests"""
     username = session.get('username', 'Unknown')
     session.clear()
     add_console_log(f"User {username} logged out", "info")
@@ -2788,6 +2788,9 @@ atexit.register(lambda: cleanup_and_exit() if not shutdown_in_progress else None
 if __name__ == '__main__':
     # Get port from environment or default to 5000
     port = int(os.getenv('PORT', 5000))
+
+    # Global list to store SSE client connections for broadcasting
+    sse_clients = []
 
     # Start WebSocket feeds for real-time data
     print("📡 Starting WebSocket feeds...")
