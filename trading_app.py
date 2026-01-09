@@ -604,7 +604,7 @@ except ImportError:
 # ============================================================================
 
 def get_account_data():
-    """Fetch live account data from HyperLiquid using WebSocket (real-time)"""
+    """Fetch live account data from HyperLiquid"""
     if not EXCHANGE_CONNECTED or n is None:
         # Demo mode data
         return {
@@ -615,53 +615,29 @@ def get_account_data():
             "exchange": "HyperLiquid (Disconnected)",
             "agent_running": agent_running
         }
-
+    
     try:
         account = _get_account()
         address = os.getenv("ACCOUNT_ADDRESS", account.address)
-
-        # Try WebSocket first for real-time data
-        available_balance = None
-        total_equity = None
-
-        try:
-            from src.websocket import get_data_manager, is_websocket_connected
-            if is_websocket_connected():
-                dm = get_data_manager()
-
-                # Get account data from WebSocket
-                total_equity = dm.get_account_value(address)
-                available_balance = dm.get_balance(address)
-
-                # Use WebSocket data if valid
-                if total_equity > 0:
-                    print("✅ Using WebSocket data for account")
-                else:
-                    # Fall back to API if WebSocket returns 0
-                    available_balance = None
-                    total_equity = None
-        except Exception as ws_error:
-            print(f"⚠️ WebSocket account data failed: {ws_error}, falling back to API")
-
-        # Fall back to API if WebSocket data not available
-        if available_balance is None or total_equity is None:
-            if hasattr(n, 'get_available_balance'):
-                available_balance = float(n.get_available_balance(address))
-            else:
-                available_balance = 10.0
-
-            if hasattr(n, 'get_account_value'):
-                total_equity = float(n.get_account_value(address))
-            else:
-                total_equity = 10.0
-
+        
+        # Get live data using the correct function names
+        if hasattr(n, 'get_available_balance'):
+            available_balance = float(n.get_available_balance(address))
+        else:
+            available_balance = 10.0
+        
+        if hasattr(n, 'get_account_value'):
+            total_equity = float(n.get_account_value(address))
+        else:
+            total_equity = 10.0
+        
         # Calculate PnL (starting balance from config or default $10)
         starting_balance = 10.0
         pnl = total_equity - starting_balance
-
+        
         # Save to history
         save_balance_history(total_equity)
-
+        
         return {
             "account_balance": round(available_balance, 2),
             "total_equity": round(total_equity, 2),
@@ -670,12 +646,12 @@ def get_account_data():
             "exchange": "HyperLiquid",
             "agent_running": agent_running
         }
-
+        
     except Exception as e:
         error_msg = f"Error fetching account data: {str(e)}"
         print(f"❌ {error_msg}")
         add_console_log(f"❌ {error_msg}")
-
+        
         return {
             "account_balance": 0.0,
             "total_equity": 0.0,
