@@ -96,33 +96,17 @@ app.config['SECRET_KEY'] = flask_secret
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# ============================================================================
-# DATABASE SETUP
-# ============================================================================
-# Configure SQLAlchemy database (using SQLite for simplicity)
-DB_FILE = BASE_DIR / "src" / "data" / "trading.db"
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_FILE}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Import database models and initialize
-from src.utils.database import db, init_db, User, UserSettings, UserSecrets, migrate_from_json
-
-# Initialize database
-init_db(app)
-
-# Migrate from JSON on first run (if no users exist)
-with app.app_context():
-    try:
-        migrate_from_json()
-    except Exception as e:
-        print(f"⚠️ Migration warning: {e}")
-
-# Legacy credentials (kept for backward compatibility)
+# Login credentials (loaded from environment variables for security)
 VALID_CREDENTIALS = {
     'username': os.getenv('DASHBOARD_USERNAME', ''),
     'email': os.getenv('DASHBOARD_EMAIL', ''),
     'password': os.getenv('DASHBOARD_PASSWORD', '')
 }
+
+# Validate credentials are set
+if not all(VALID_CREDENTIALS.values()):
+    print("⚠️ WARNING: Dashboard credentials not fully configured in .env!")
+    print("⚠️ Set DASHBOARD_USERNAME, DASHBOARD_EMAIL, and DASHBOARD_PASSWORD")
 
 # Enable CORS
 CORS(app)
@@ -1172,38 +1156,14 @@ def api_login():
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
 
-    # Try database authentication first
-    user = User.query.filter(
-        (User.username == username) | (User.email == username)
-    ).first()
-
-    if user and user.check_password(password):
-        # Database authentication successful
-        session['logged_in'] = True
-        session['username'] = user.username
-        session['user_id'] = user.id
-
-        # Update last login
-        user.last_login = datetime.utcnow()
-        db.session.commit()
-
-        add_console_log(f"User {user.username} logged in", "success")
-
-        return jsonify({
-            'success': True,
-            'message': 'Login successful'
-        })
-
-    # Fallback to legacy .env credentials for backward compatibility
-    elif ((username == VALID_CREDENTIALS['username'] or
-           username == VALID_CREDENTIALS['email']) and
-          password == VALID_CREDENTIALS['password'] and
-          VALID_CREDENTIALS['username']):
+    # Check credentials (username OR email, and password)
+    if ((username == VALID_CREDENTIALS['username'] or
+         username == VALID_CREDENTIALS['email']) and
+        password == VALID_CREDENTIALS['password']):
 
         session['logged_in'] = True
         session['username'] = VALID_CREDENTIALS['username']
-        session['user_id'] = None  # Legacy user has no ID
-        add_console_log(f"User {VALID_CREDENTIALS['username']} logged in (legacy)", "success")
+        add_console_log(f"User {VALID_CREDENTIALS['username']} logged in", "success")
 
         return jsonify({
             'success': True,
@@ -1737,21 +1697,9 @@ def get_agent_status():
 @login_required
 def settings():
     """Get or update user settings"""
-    user_id = session.get('user_id')
-
     if request.method == 'GET':
         # Load and return current settings
-        if user_id:
-            # Database user - load from database
-            user_settings_obj = UserSettings.query.filter_by(user_id=user_id).first()
-            if not user_settings_obj:
-                # Create default settings for user
-                user_settings_obj = UserSettings.create_default_for_user(user_id)
-            user_settings = user_settings_obj.to_dict()
-        else:
-            # Legacy user - load from JSON
-            user_settings = load_settings()
-
+        user_settings = load_settings()
         return jsonify({
             'success': True,
             'settings': user_settings
@@ -1782,57 +1730,7 @@ def settings():
                 }), 400
 
             # Save settings
-            if user_id:
-                # Database user - save to database
-                user_settings_obj = UserSettings.query.filter_by(user_id=user_id).first()
-                if not user_settings_obj:
-                    user_settings_obj = UserSettings(user_id=user_id)
-                    db.session.add(user_settings_obj)
-
-                # Update all fields
-                user_settings_obj.timeframe = data.get('timeframe', '30m')
-                user_settings_obj.days_back = data.get('days_back', 2)
-                user_settings_obj.sleep_minutes = data.get('sleep_minutes', 15)
-                user_settings_obj.swarm_mode = data.get('swarm_mode', 'single')
-                user_settings_obj.set_monitored_tokens(data.get('monitored_tokens', []))
-                user_settings_obj.ai_provider = data.get('ai_provider', 'openrouter')
-                user_settings_obj.ai_model = data.get('ai_model', 'nex-agi/deepseek-v3.1-nex-n1:free')
-                user_settings_obj.ai_temperature = data.get('ai_temperature', 0.5)
-                user_settings_obj.ai_max_tokens = data.get('ai_max_tokens', 2048)
-                user_settings_obj.set_swarm_models(data.get('swarm_models', []))
-
-                # Risk management
-                user_settings_obj.stop_loss_percent = data.get('stop_loss_percent', 2.0)
-                user_settings_obj.take_profit_percent = data.get('take_profit_percent', 5.0)
-
-                # Position sizing
-                user_settings_obj.max_position_percentage = data.get('max_position_percentage', 90.0)
-                user_settings_obj.leverage = data.get('leverage', 20)
-                user_settings_obj.cash_percentage = data.get('cash_percentage', 10.0)
-
-                # Position management
-                user_settings_obj.min_age_hours = data.get('min_age_hours', 0.1)
-                user_settings_obj.min_close_confidence = data.get('min_close_confidence', 70)
-
-                # Confidence thresholds
-                user_settings_obj.min_single_confidence = data.get('min_single_confidence', 60)
-                user_settings_obj.min_swarm_confidence = data.get('min_swarm_confidence', 65)
-
-                # Money/system settings
-                user_settings_obj.usd_size = data.get('usd_size', 12.0)
-                user_settings_obj.max_usd_order_size = data.get('max_usd_order_size', 12.0)
-                user_settings_obj.max_loss_usd = data.get('max_loss_usd', 2.0)
-                user_settings_obj.max_gain_usd = data.get('max_gain_usd', 3.0)
-                user_settings_obj.minimum_balance_usd = data.get('minimum_balance_usd', 1.0)
-                user_settings_obj.use_ai_confirmation = data.get('use_ai_confirmation', True)
-
-                db.session.commit()
-                save_success = True
-            else:
-                # Legacy user - save to JSON
-                save_success = save_settings(data)
-
-            if save_success:
+            if save_settings(data):
                 # Build detailed log message
                 log_parts = [
                     f"Timeframe={data.get('timeframe')}",
@@ -1859,8 +1757,6 @@ def settings():
 
         except Exception as e:
             print(f"❌ Error updating settings: {e}")
-            import traceback
-            traceback.print_exc()
             return jsonify({
                 'success': False,
                 'message': f'Error: {str(e)}'

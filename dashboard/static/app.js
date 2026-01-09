@@ -760,27 +760,19 @@ function applySettings(settings) {
     // Confidence thresholds
     document.getElementById('min-single-confidence').value = settings.min_single_confidence || 60;
     document.getElementById('min-swarm-confidence').value = settings.min_swarm_confidence || 65;
-
+    
     // Risk management
-    document.getElementById('stop-loss-pct').value = settings.stop_loss_percent || settings.stop_loss_pct || 2.0;
-    document.getElementById('take-profit-pct').value = settings.take_profit_percent || settings.take_profit_pct || 5.0;
-
+    document.getElementById('stop-loss-pct').value = settings.stop_loss_pct || 2.0;
+    document.getElementById('take-profit-pct').value = settings.take_profit_pct || 5.0;
+    
     // Position sizing
-    document.getElementById('max-position-pct').value = settings.max_position_percentage || settings.max_position_pct || 90;
+    document.getElementById('max-position-pct').value = settings.max_position_pct || 90;
     document.getElementById('leverage').value = settings.leverage || 20;
-    document.getElementById('cash-buffer-pct').value = settings.cash_percentage || settings.cash_buffer_pct || 10;
-
+    document.getElementById('cash-buffer-pct').value = settings.cash_buffer_pct || 10;
+    
     // Position management
     document.getElementById('min-age-hours').value = settings.min_age_hours || 0.1;
     document.getElementById('min-close-confidence').value = settings.min_close_confidence || 70;
-
-    // Money/System Settings (USD)
-    document.getElementById('usd-size').value = settings.usd_size || 12;
-    document.getElementById('max-usd-order-size').value = settings.max_usd_order_size || 12;
-    document.getElementById('max-loss-usd').value = settings.max_loss_usd || 2;
-    document.getElementById('max-gain-usd').value = settings.max_gain_usd || 3;
-    document.getElementById('minimum-balance-usd').value = settings.minimum_balance_usd || 1;
-    document.getElementById('use-ai-confirmation').value = settings.use_ai_confirmation !== false ? 'true' : 'false';
 
     // Token settings - tier-based defaults
     if (!settings.monitored_tokens) {
@@ -1125,30 +1117,16 @@ async function saveSettings() {
         // Swarm models
         swarm_models: collectSwarmModels(),
 
-        // Confidence Thresholds
+        // Risk Management Settings
         min_single_confidence: parseInt(document.getElementById('min-single-confidence').value),
         min_swarm_confidence: parseInt(document.getElementById('min-swarm-confidence').value),
-
-        // Risk Management Settings
-        stop_loss_percent: parseFloat(document.getElementById('stop-loss-pct').value),
-        take_profit_percent: parseFloat(document.getElementById('take-profit-pct').value),
-
-        // Position Sizing
-        max_position_percentage: parseFloat(document.getElementById('max-position-pct').value),
+        stop_loss_pct: parseFloat(document.getElementById('stop-loss-pct').value),
+        take_profit_pct: parseFloat(document.getElementById('take-profit-pct').value),
+        max_position_pct: parseInt(document.getElementById('max-position-pct').value),
         leverage: parseInt(document.getElementById('leverage').value),
-        cash_percentage: parseFloat(document.getElementById('cash-buffer-pct').value),
-
-        // Position Management
+        cash_buffer_pct: parseInt(document.getElementById('cash-buffer-pct').value),
         min_age_hours: parseFloat(document.getElementById('min-age-hours').value),
-        min_close_confidence: parseInt(document.getElementById('min-close-confidence').value),
-
-        // Money/System Settings (USD)
-        usd_size: parseFloat(document.getElementById('usd-size').value),
-        max_usd_order_size: parseFloat(document.getElementById('max-usd-order-size').value),
-        max_loss_usd: parseFloat(document.getElementById('max-loss-usd').value),
-        max_gain_usd: parseFloat(document.getElementById('max-gain-usd').value),
-        minimum_balance_usd: parseFloat(document.getElementById('minimum-balance-usd').value),
-        use_ai_confirmation: document.getElementById('use-ai-confirmation').value === 'true'
+        min_close_confidence: parseInt(document.getElementById('min-close-confidence').value)
     };
 
     try {
