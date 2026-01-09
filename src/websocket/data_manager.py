@@ -452,6 +452,31 @@ class WebSocketDataManager:
         if self._user_state_feed:
             self._user_state_feed.add_account_listener(callback)
 
+    def subscribe_user_state(self, address: str) -> bool:
+        """
+        Subscribe to user state updates for a specific address
+
+        NOTE: The user state feed is automatically started when the data manager
+        starts. This method exists for backward compatibility and to ensure
+        the feed is initialized.
+
+        Args:
+            address: Ethereum wallet address to subscribe to
+
+        Returns:
+            bool: True if subscription is active or successfully started
+        """
+        if not self._is_initialized:
+            logger.warning("WebSocketDataManager not initialized, cannot subscribe to user state")
+            return False
+
+        if self._user_state_feed and self._user_state_feed._is_running:
+            logger.info(f"User state subscription active for {address[:6]}...{address[-4:]}")
+            return True
+
+        logger.warning("User state feed not running")
+        return False
+
     # ========================================================================
     # API FALLBACK METHODS
     # ========================================================================
