@@ -2429,6 +2429,9 @@ Return ONLY valid JSON with the following structure:
             except Exception as e:
                 add_console_log(f"AI JSON parse failed: {str(e)}", "error")
                 add_console_log(f"Failed response (first 200 chars): {ai_response[:200]}", "error")
+                add_console_log(f"DEBUG: Response length={len(ai_response)}, error_type={type(e).__name__}", "debug")
+                if len(ai_response) < 2000:
+                    add_console_log(f"DEBUG: Full response={ai_response}", "debug")
                 cprint(f"❌ JSON parsing failed: {e}", "red")
                 cprint(f"   Response: {ai_response[:300]}", "yellow")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
