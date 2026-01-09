@@ -735,15 +735,15 @@ class TradingAgent:
                 if is_websocket_enabled():
                     cprint("🟢 WebSocket feeds started successfully", "green")
 
-                    # Subscribe to user state for real-time account updates
+                    # Set account address for user state feed
                     if hasattr(self, 'address') and self.address:
                         try:
-                            dm = get_data_manager()
-                            if dm:
-                                dm.subscribe_user_state(self.address)
-                                cprint(f"📍 Subscribed to user state: {self.address[:6]}...{self.address[-4:]}", "green")
+                            import os
+                            # Set the account address in environment for WebSocket
+                            os.environ['ACCOUNT_ADDRESS'] = self.address
+                            cprint(f"📍 User state feed active for: {self.address[:6]}...{self.address[-4:]}", "green")
                         except Exception as e:
-                            cprint(f"⚠️  User state subscription failed: {e}", "yellow")
+                            cprint(f"⚠️  User state setup failed: {e}", "yellow")
                 else:
                     cprint("🟡 WebSocket feeds not enabled — using REST fallback", "yellow")
             except Exception as e:
