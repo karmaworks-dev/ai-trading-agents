@@ -82,15 +82,16 @@ class WebSocketDataManager:
         if auto_start:
             self.start(coins)
 
-    def start(self, coins: List[str] = None) -> bool:
+    def start(self, coins: List[str] = None, blocking: bool = False) -> bool:
         """
-        Start the WebSocket data feeds
+        Start the WebSocket data feeds (non-blocking by default)
 
         Args:
             coins: List of coins to monitor
+            blocking: If True, wait for connection (legacy behavior). Default False.
 
         Returns:
-            bool: True if started successfully
+            bool: True if initialization started successfully
         """
         if self._is_initialized:
             return True
@@ -99,6 +100,39 @@ class WebSocketDataManager:
             logger.info("WebSocket feeds disabled by config")
             return False
 
+        # Get coins from config if not provided
+        if coins is None:
+            try:
+                from src.config import HYPERLIQUID_SYMBOLS
+                coins = HYPERLIQUID_SYMBOLS
+            except ImportError:
+                coins = ['BTC', 'ETH', 'SOL']
+
+        # Store coins for background initialization
+        self._pending_coins = coins
+
+        # Start initialization in background thread to avoid blocking
+        init_thread = threading.Thread(
+            target=self._initialize_feeds,
+            args=(coins, blocking),
+            daemon=True,
+            name="WebSocketInitThread"
+        )
+        init_thread.start()
+
+        if blocking:
+            # Wait for initialization to complete (legacy behavior)
+            init_thread.join(timeout=15)
+            return self._is_initialized
+        else:
+            # Non-blocking: return immediately, feeds will connect in background
+            cprint("WebSocket feeds starting in background...", "cyan")
+            return True
+
+    def _initialize_feeds(self, coins: List[str], blocking: bool = False):
+        """
+        Internal method to initialize WebSocket feeds (runs in background thread)
+        """
         with self._lock:
             try:
                 from src.websocket.hyperliquid_ws import HyperliquidWebSocket
@@ -110,23 +144,15 @@ class WebSocketDataManager:
                 self._ws_client = HyperliquidWebSocket(auto_reconnect=True)
                 self._ws_client.connect()
 
-                # Wait for connection
-                timeout = 10
+                # Wait for connection with shorter timeout (non-blocking behavior)
+                timeout = 5 if not blocking else 10
                 start = time.time()
                 while not self._ws_client.is_connected and (time.time() - start) < timeout:
                     time.sleep(0.1)
 
                 if not self._ws_client.is_connected:
-                    logger.error("Failed to connect WebSocket")
-                    return False
-
-                # Get coins from config if not provided
-                if coins is None:
-                    try:
-                        from src.config import HYPERLIQUID_SYMBOLS
-                        coins = HYPERLIQUID_SYMBOLS
-                    except ImportError:
-                        coins = ['BTC', 'ETH', 'SOL']
+                    logger.warning("WebSocket connection slow, continuing with API fallback available")
+                    # Don't return False - let it continue connecting in background
 
                 # Create price feed with shared WebSocket
                 self._price_feed = PriceFeed(ws_client=self._ws_client)
@@ -136,19 +162,17 @@ class WebSocketDataManager:
                 self._orderbook_feed = OrderBookFeed(ws_client=self._ws_client)
                 self._orderbook_feed.start(coins)
 
-                # Create user state feed with shared WebSocket
+                # Create user state feed with shared WebSocket (non-blocking)
                 self._user_state_feed = UserStateFeed(ws_client=self._ws_client)
-                self._user_state_feed.start()
+                self._user_state_feed.start_async()
 
                 self._is_initialized = True
                 cprint("WebSocket data manager started", "green")
                 logger.info(f"Data manager initialized for {len(coins)} coins + user state")
-                return True
 
             except Exception as e:
                 logger.error(f"Failed to start data manager: {e}")
                 cprint(f"Failed to start WebSocket data manager: {e}", "red")
-                return False
 
     def stop(self):
         """Stop all WebSocket feeds"""
