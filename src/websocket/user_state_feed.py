@@ -153,9 +153,14 @@ class UserStateFeed:
         self._ws = ws_client
         self._owns_ws = ws_client is None
 
-        # Store explicit user address if provided, otherwise read lazily from env
-        self._explicit_user_address = user_address
-        self._user_address = user_address or ""  # Will be populated lazily if empty
+        # Get user address
+        if user_address:
+            self._user_address = user_address
+        else:
+            self._user_address = os.getenv("ACCOUNT_ADDRESS", "")
+
+        if not self._user_address:
+            logger.warning("No user address provided - user state feed will not work")
 
         # State storage
         self._positions: Dict[str, Position] = {}
@@ -231,81 +236,26 @@ class UserStateFeed:
         if callback not in self._on_order_update_callbacks:
             self._on_order_update_callbacks.append(callback)
 
-    def start(self, blocking: bool = True) -> bool:
+    def start(self) -> bool:
         """
         Start the user state feed
 
-        Args:
-            blocking: If True, wait for connection (default). If False, start async.
-
         Returns:
-            bool: True if started successfully (or started in background)
+            bool: True if started successfully
         """
         if self._is_running:
             cprint("User state feed already running", "yellow")
             return True
 
-        # For blocking mode, check address now. For async, check later.
-        if blocking and not self._user_address:
-            # Try to get from environment
-            self._user_address = os.getenv("ACCOUNT_ADDRESS", "")
-            if not self._user_address:
-                cprint("Cannot start user state feed: no user address", "red")
-                return False
-
-        if blocking:
-            return self._start_sync()
-        else:
-            return self.start_async()
-
-    def start_async(self) -> bool:
-        """
-        Start the user state feed asynchronously (non-blocking)
-
-        Returns:
-            bool: True if background initialization started
-        """
-        if self._is_running:
-            return True
-
-        # Start in background thread (address will be resolved lazily)
-        init_thread = threading.Thread(
-            target=self._start_sync,
-            daemon=True,
-            name="UserStateFeedInitThread"
-        )
-        init_thread.start()
-        cprint("User state feed starting in background...", "cyan")
-        return True
-
-    def _start_sync(self) -> bool:
-        """
-        Synchronous start implementation (internal)
-        """
-        # Resolve user address lazily from environment if not already set
         if not self._user_address:
-            self._user_address = os.getenv("ACCOUNT_ADDRESS", "")
-            # Wait a bit for the address to be set by main thread (up to 2 seconds)
-            wait_start = time.time()
-            while not self._user_address and (time.time() - wait_start) < 2:
-                time.sleep(0.1)
-                self._user_address = os.getenv("ACCOUNT_ADDRESS", "")
-
-        if not self._user_address:
-            logger.warning("No user address available - user state feed will not start")
-            cprint("⚠️ User state feed skipped: no ACCOUNT_ADDRESS in environment", "yellow")
+            cprint("Cannot start user state feed: no user address", "red")
             return False
 
         cprint(f"Starting user state feed for {self._user_address[:8]}...", "cyan")
         logger.info(f"Starting user state feed for {self._user_address}")
 
-        # Load initial state from API in background (don't block)
-        state_thread = threading.Thread(
-            target=self._load_initial_state,
-            daemon=True,
-            name="LoadInitialStateThread"
-        )
-        state_thread.start()
+        # Load initial state from API
+        self._load_initial_state()
 
         # Create WebSocket if needed
         if self._owns_ws:
@@ -328,58 +278,24 @@ class UserStateFeed:
 
             self._ws._on_message_callback = combined_handler
 
-        # Wait for connection with shorter timeout
-        timeout = 5
+        # Wait for connection
+        timeout = 10
         start = time.time()
         while not self._ws.is_connected and (time.time() - start) < timeout:
             time.sleep(0.1)
 
         if not self._ws.is_connected:
-            logger.warning("WebSocket connection slow, will retry in background")
-            # Don't fail - let it connect in background, API fallback is available
+            cprint("Failed to connect WebSocket", "red")
+            return False
 
-        # Subscribe to user channels (will queue if not yet connected)
-        try:
-            if self._ws.is_connected:
-                self._ws.subscribe_user_fills(self._user_address)
-                self._ws.subscribe_order_updates(self._user_address)
-                self._ws.subscribe_user_events(self._user_address)
-            else:
-                # Schedule subscription for when connected
-                self._schedule_subscriptions()
-        except Exception as e:
-            logger.warning(f"Subscription failed, will retry: {e}")
+        # Subscribe to user channels
+        self._ws.subscribe_user_fills(self._user_address)
+        self._ws.subscribe_order_updates(self._user_address)
+        self._ws.subscribe_user_events(self._user_address)
 
         self._is_running = True
         cprint("User state feed started successfully", "green")
         return True
-
-    def _schedule_subscriptions(self):
-        """Schedule WebSocket subscriptions for when connection is ready"""
-        def subscribe_when_ready():
-            # Wait for connection
-            timeout = 30
-            start = time.time()
-            while not self._ws.is_connected and (time.time() - start) < timeout:
-                time.sleep(0.5)
-
-            if self._ws.is_connected:
-                try:
-                    self._ws.subscribe_user_fills(self._user_address)
-                    self._ws.subscribe_order_updates(self._user_address)
-                    self._ws.subscribe_user_events(self._user_address)
-                    logger.info("Delayed WebSocket subscriptions completed")
-                except Exception as e:
-                    logger.error(f"Failed to subscribe: {e}")
-            else:
-                logger.error("WebSocket connection timeout - subscriptions failed")
-
-        sub_thread = threading.Thread(
-            target=subscribe_when_ready,
-            daemon=True,
-            name="DelayedSubscriptionThread"
-        )
-        sub_thread.start()
 
     def stop(self):
         """Stop the user state feed"""
@@ -697,49 +613,10 @@ class UserStateFeed:
         with self._lock:
             return self._positions.get(coin)
 
-    def get_recent_fills(self, limit: int = None) -> List[Fill]:
-        """Get recent fills
-
-        Args:
-            limit: Maximum number of fills to return (default: all)
-
-        Returns:
-            List of Fill objects
-        """
+    def get_recent_fills(self) -> List[Fill]:
+        """Get recent fills"""
         with self._lock:
-            fills = self._recent_fills.copy()
-            if limit and limit > 0:
-                return fills[:limit]
-            return fills
-
-    def is_position_stale(self, coin: str, threshold_seconds: float = 30.0) -> bool:
-        """Check if position data is stale
-
-        Args:
-            coin: Coin symbol
-            threshold_seconds: Max age in seconds before considered stale
-
-        Returns:
-            True if position is stale or doesn't exist
-        """
-        with self._lock:
-            pos = self._positions.get(coin)
-            if not pos:
-                return True
-            age = (datetime.now() - pos.last_update).total_seconds()
-            return age > threshold_seconds
-
-    def has_position(self, coin: str) -> bool:
-        """Check if a position exists for a coin
-
-        Args:
-            coin: Coin symbol
-
-        Returns:
-            True if position exists
-        """
-        with self._lock:
-            return coin in self._positions
+            return self._recent_fills.copy()
 
     def get_account_state(self) -> AccountState:
         """Get current account state"""
