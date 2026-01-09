@@ -19,9 +19,7 @@ EXCLUDED_TOKENS = [USDC_ADDRESS, SOL_ADDRESS]
 # ⚡ HyperLiquid Configuration
 # Main trading tokens - diversified portfolio
 HYPERLIQUID_SYMBOLS = ['BTC', 'ETH', 'SOL', 'LTC', 'AAVE', 'HYPE']
-# NOTE: HYPERLIQUID_LEVERAGE is deprecated - use global LEVERAGE setting below (line 144)
-# This is kept for backward compatibility only
-HYPERLIQUID_LEVERAGE = 20  # DEPRECATED: Use global LEVERAGE instead (kept for legacy compatibility)
+HYPERLIQUID_LEVERAGE = 10  # Current leverage setting (matches trading_agent.py)
 
 # Position sizing 🎯
 # CRITICAL FOR $10 ACCOUNT:
@@ -52,15 +50,16 @@ TOKEN_EXCHANGE_MAP = {
     'FARTCOIN': 'hyperliquid',
 }
 
-# 🛡️ Legacy Risk Management Settings (Use consolidated settings below at line 142+)
-# NOTE: These are replaced by consolidated settings - kept for backward compatibility
+# 🛡️ Risk Management Settings (Tuned for $10 Account)
+CASH_PERCENTAGE = 20  # Keep 20% of account as backup
+MAX_POSITION_PERCENTAGE = 80  # Allow using full balance since account is small
 TAKE_PROFIT_PERCENT = 4.5  # Take profit at +4.5%
 STOP_LOSS_PERCENT = 1.5   # Stop loss at -1.5%
 STOPLOSS_PRICE = 0    # Not used in this specific agent logic yet
 BREAKOUT_PRICE = 0
 SLEEP_AFTER_CLOSE = 30 # Sleep 30s after closing a trade
 
-MAX_LOSS_GAIN_CHECK_HOURS = 12
+MAX_LOSS_GAIN_CHECK_HOURS = 12 
 SLEEP_BETWEEN_RUNS_MINUTES = 1 # Check markets every minute
 
 # Max Loss/Gain Settings
@@ -139,13 +138,11 @@ minimum_trades_in_last_hour = 2
 MIN_TRADES_LAST_HOUR = 2  # Alias for nice_funcs.py compatibility
 REALTIME_CLIPS_ENABLED = False
 
-# 💰 POSITION SIZING & RISK MANAGEMENT (GLOBAL SETTINGS - SINGLE SOURCE OF TRUTH)
-# ⚠️ IMPORTANT: These are the ONLY place to set these values!
-# Do NOT redefine these in individual agents - import from config.py instead
+# 💰 POSITION SIZING & RISK MANAGEMENT
 USE_PORTFOLIO_ALLOCATION = True
-MAX_POSITION_PERCENTAGE = 90      # Max % of balance to use per position (0-100%)
-LEVERAGE = 20                      # Global leverage multiplier (HyperLiquid allows 1-50x)
-CASH_PERCENTAGE = 10               # Reserve cash % to keep as buffer (0-100%)
+MAX_POSITION_PERCENTAGE = 90  # Max % of balance per position
+LEVERAGE = 20  # Leverage multiplier
+CASH_PERCENTAGE = 10  # Reserve cash %
 
 # Stop Loss & Take Profit
 STOP_LOSS_PERCENTAGE = 2.0  # SL @ -2% PnL
@@ -158,28 +155,3 @@ MIN_SWARM_CONFIDENCE = 65  # Swarm consensus threshold (55-65% recommended)
 # ⚙️ POSITION MANAGEMENT SETTINGS
 MIN_AGE_HOURS = 0.1  # Minimum hold time before close (hours)
 MIN_CLOSE_CONFIDENCE = 70  # AI confidence needed to close position
-
-# ============================================================================
-# 🔍 CONFIGURATION VALIDATION
-# ============================================================================
-# Validate LEVERAGE is within HyperLiquid's allowed range (1-50x)
-if not (1 <= LEVERAGE <= 50):
-    import warnings
-    warnings.warn(
-        f"⚠️ LEVERAGE setting {LEVERAGE}x is outside HyperLiquid's allowed range (1-50x). "
-        f"This may cause trading failures. Please adjust LEVERAGE in config.py.",
-        stacklevel=2
-    )
-
-# Validate percentages are in valid range (0-100%)
-for setting_name, setting_value in [
-    ("MAX_POSITION_PERCENTAGE", MAX_POSITION_PERCENTAGE),
-    ("CASH_PERCENTAGE", CASH_PERCENTAGE),
-]:
-    if not (0 <= setting_value <= 100):
-        import warnings
-        warnings.warn(
-            f"⚠️ {setting_name} is {setting_value}%, which is outside valid range (0-100%). "
-            f"Please adjust in config.py.",
-            stacklevel=2
-        )

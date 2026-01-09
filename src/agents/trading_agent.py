@@ -40,44 +40,6 @@ def extract_json_from_text(text):
     return None
 
 
-def normalize_action(action: str) -> str:
-    """Safely convert action field to uppercase string, removing markdown formatting."""
-    if not isinstance(action, str):
-        action = str(action)
-    # Remove markdown formatting
-    action = action.replace("**", "").replace("*", "").strip().upper()
-    return action
-
-
-def normalize_confidence(confidence) -> int:
-    """
-    Safely convert confidence to integer (0-100).
-
-    Handles:
-    - Float values 0.0-1.0 (converts to 0-100)
-    - Int values 0-100
-    - String values
-    - Invalid inputs (defaults to 50)
-    """
-    try:
-        if confidence is None:
-            return 50  # Default
-
-        # Convert to float first
-        conf_float = float(confidence)
-
-        # If value is between 0 and 1, it's likely already normalized (0.0-1.0)
-        if 0 <= conf_float <= 1:
-            conf_int = int(conf_float * 100)
-        else:
-            conf_int = int(conf_float)
-
-        # Clamp to 0-100 range
-        return min(100, max(0, conf_int))
-    except (ValueError, TypeError):
-        return 50  # Default confidence on parse error
-
-
 # ============================================================================
 # 🚨 CRITICAL: THIS MUST BE HERE (BEFORE 'src' IMPORTS)
 # ============================================================================
@@ -263,14 +225,6 @@ from src.config import EXCHANGE as CONFIG_EXCHANGE
 # Convert to uppercase for consistency with checks throughout this file
 EXCHANGE = CONFIG_EXCHANGE.upper() if CONFIG_EXCHANGE else "HYPERLIQUID"
 
-# 💰 IMPORT RISK & POSITION SETTINGS FROM CONFIG
-# These are centrally defined in config.py and imported here to avoid duplication
-from src.config import (
-    MAX_POSITION_PERCENTAGE as CONFIG_MAX_POSITION_PERCENTAGE,
-    LEVERAGE as CONFIG_LEVERAGE,
-    CASH_PERCENTAGE as CONFIG_CASH_PERCENTAGE
-)
-
 # 🌊 AI MODE SELECTION (Default - can be overridden by user settings)
 DEFAULT_SWARM_MODE = False  # True = Swarm Mode (all Models), False = Single Model
 
@@ -310,21 +264,19 @@ AI_TEMPERATURE = 0.6   # Official recommended "sweet spot"
 AI_MAX_TOKENS = 8024   # Increased for multi-step reasoning
 
 # 💰 POSITION SIZING & RISK MANAGEMENT
-# ⚠️ NOTE: These are imported from config.py above to avoid duplication
-# Do NOT edit these values here - they are set centrally in config.py
-USE_PORTFOLIO_ALLOCATION = True
-MAX_POSITION_PERCENTAGE = CONFIG_MAX_POSITION_PERCENTAGE  # Imported from config.py
-LEVERAGE = CONFIG_LEVERAGE                                # Imported from config.py
+USE_PORTFOLIO_ALLOCATION = True 
+MAX_POSITION_PERCENTAGE = 90      
+LEVERAGE = 20                     
 
 # Stop Loss & Take Profit
 STOP_LOSS_PERCENTAGE = 2.0      # SL @ -2% PnL
-TAKE_PROFIT_PERCENTAGE = 5.0    # TP @ +5% PnL
-PNL_CHECK_INTERVAL = 5          # check PnL every 5 minutes
+TAKE_PROFIT_PERCENTAGE = 5.0    # TP @ +5% PnL 
+PNL_CHECK_INTERVAL = 5          # check PnL every 5 minutes          
 
-# Legacy settings
-usd_size = 25
-max_usd_order_size = 3
-CASH_PERCENTAGE = CONFIG_CASH_PERCENTAGE  # Imported from config.py
+# Legacy settings 
+usd_size = 25                  
+max_usd_order_size = 3           
+CASH_PERCENTAGE = 10
 
 # 📊 MARKET DATA COLLECTION (Default values - can be overridden)
 DAYSBACK_4_DATA = 2              # Default: 2 days (overridable via __init__)
@@ -1417,102 +1369,6 @@ FULL DATASET:
         cprint("=" * 60 + "\n", "cyan")
         return all_positions
 
-    def fetch_market_data_for_symbols(self, symbols_list, use_websocket_when_available=True):
-        """
-        Fetch market data for SPECIFIC symbols only (not all).
-
-        This is much more efficient than re-fetching all symbols.
-        Use case: Only refetch data for symbols with open positions.
-
-        Args:
-            symbols_list: List of symbols to fetch data for
-            use_websocket_when_available: If True, prefer WebSocket data over API
-
-        Returns:
-            dict: market_data keyed by symbol
-        """
-        if not symbols_list:
-            add_console_log("No symbols to fetch data for", "info")
-            return {}
-
-        # Try WebSocket first if enabled
-        if use_websocket_when_available and WEBSOCKET_AVAILABLE and is_websocket_enabled():
-            try:
-                data_manager = get_data_manager()
-                if data_manager:
-                    add_console_log(f"📡 Fetching {len(symbols_list)} symbols via WebSocket", "info")
-                    market_data = {}
-                    for symbol in symbols_list:
-                        ws_data = data_manager.get_latest_candle(symbol)
-                        if ws_data:
-                            market_data[symbol] = ws_data
-                    if market_data:
-                        add_console_log(f"📡 WebSocket provided data for {len(market_data)} symbols", "success")
-                        return market_data
-                    else:
-                        add_console_log("⚠️ WebSocket data incomplete, falling back to API", "warning")
-            except Exception as ws_error:
-                add_console_log(f"⚠️ WebSocket fetch failed: {ws_error}. Falling back to API.", "warning")
-
-        # Fallback to API for specific symbols
-        add_console_log(f"📊 Fetching {len(symbols_list)} symbols via API", "info")
-        fetch_start = time.time()
-        try:
-            market_data = collect_all_tokens(
-                tokens=symbols_list,
-                days_back=self.days_back,
-                timeframe=self.timeframe,
-                exchange=EXCHANGE,
-            )
-            fetch_duration = time.time() - fetch_start
-            add_console_log(
-                f"✅ Fetched {len(market_data)}/{len(symbols_list)} symbols in {fetch_duration:.2f}s",
-                "success"
-            )
-            return market_data
-        except Exception as api_error:
-            add_console_log(f"❌ Market data fetch failed: {api_error}", "error")
-            return {}
-
-    def get_fresh_data_for_symbol(self, symbol, existing_data=None, max_age_seconds=30):
-        """
-        Get fresh market data for a single symbol if existing data is too old.
-
-        Use case: During analysis loop, optionally refresh data for individual symbols
-        being analyzed to ensure freshness without bulk fetches.
-
-        Args:
-            symbol: Symbol to fetch data for
-            existing_data: Existing market data (if stale, will be refreshed)
-            max_age_seconds: Consider data stale if older than this (0 = always fetch)
-
-        Returns:
-            dict: Fresh market data for the symbol, or existing_data if still fresh
-        """
-        # If no existing data, fetch fresh
-        if existing_data is None:
-            try:
-                fresh = self.fetch_market_data_for_symbols([symbol], use_websocket_when_available=True)
-                return fresh.get(symbol)
-            except Exception as e:
-                add_console_log(f"⚠️ Could not fetch fresh data for {symbol}: {e}", "warning")
-                return None
-
-        # Check if existing data is stale (has timestamp)
-        if hasattr(existing_data, 'index') and len(existing_data) > 0:
-            # It's a DataFrame - use it as-is (already recent from STEP 2)
-            return existing_data
-
-        # For dict data, always try fresh if requested
-        if max_age_seconds == 0:
-            try:
-                fresh = self.fetch_market_data_for_symbols([symbol], use_websocket_when_available=True)
-                return fresh.get(symbol, existing_data)
-            except:
-                return existing_data
-
-        return existing_data
-
     def validate_close_decision(self, symbol, pnl_percent, age_hours, ai_confidence, ai_decision="CLOSE"):
         """
         Three-Tier Position Close Validation System.
@@ -1698,11 +1554,6 @@ Return ONLY valid JSON with the following structure:
             try:
                 response = self.chat_with_ai(POSITION_ANALYSIS_PROMPT, user_prompt)
 
-                # LOG RAW RESPONSE IMMEDIATELY (for debugging)
-                add_console_log(f"Raw AI position analysis response ({len(response)} chars)", "info")
-                if len(response) < 500:
-                    add_console_log(f"Response: {response[:200]}", "debug")
-
                 # Strip Markdown fences if model wrapped response in code blocks
                 if "```json" in response:
                     response = response.split("```json")[1].split("```")[0]
@@ -1710,15 +1561,9 @@ Return ONLY valid JSON with the following structure:
                     response = response.split("```")[1].split("```")[0]
 
                 # Try safe JSON extraction first
-                try:
-                    decisions = extract_json_from_text(response)
-                except Exception as json_error:
-                    decisions = None
-                    add_console_log(f"JSON parse error in position analysis: {json_error}", "warning")
-
+                decisions = extract_json_from_text(response)
                 if not decisions:
                     cprint("⚠️ AI response not valid JSON. Attempting text fallback...", "yellow")
-                    add_console_log("Using keyword fallback for position analysis", "warning")
 
                     text = response.lower()
                     decisions = {}
@@ -1751,12 +1596,10 @@ Return ONLY valid JSON with the following structure:
                             }
 
                     cprint(f"🧠 Fallback interpreted decisions: {decisions}", "cyan")
-                    add_console_log(f"Fallback decisions: {decisions}", "warning")
 
                 if not decisions:
                     cprint("❌ Error: Could not interpret AI analysis at all.", "red")
-                    cprint(f"   Raw response: {response[:500]}", "yellow")
-                    add_console_log(f"Could not interpret position analysis response: {response[:200]}", "error")
+                    cprint(f"   Raw response: {response}", "yellow")
                     return validated_decisions
 
                 # ============================================================================
@@ -2271,10 +2114,7 @@ Return ONLY valid JSON with the following structure:
 
             for _, row in self.recommendations_df.iterrows():
                 token = row["token"]
-                # Use type-safe action normalization
-                action = normalize_action(row["action"])
-                # Use type-safe confidence normalization
-                confidence = normalize_confidence(row.get("confidence", 50))
+                action = str(row["action"]).upper()
 
                 if token not in self.symbols:
                     removed.append(f"{token}: not in symbols")
@@ -2291,7 +2131,7 @@ Return ONLY valid JSON with the following structure:
                 signals.append({
                     "symbol": token,
                     "action": action,
-                    "confidence": confidence,
+                    "confidence": int(row["confidence"]),
                 })
 
             if removed:
@@ -2349,24 +2189,14 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("AI returned no response, using fallback", "warning")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
-            # LOG RAW RESPONSE FOR DEBUGGING
-            add_console_log(f"Received AI allocation response ({len(ai_response)} chars)", "info")
-            if len(ai_response) < 1000:
-                add_console_log(f"Full response: {ai_response[:500]}", "debug")
-
             # ==========================================================
             # STEP 5 — PARSE AI RESPONSE
             # ==========================================================
             try:
                 allocation = extract_json_from_text(ai_response)
-                if not allocation:
-                    raise ValueError("extract_json_from_text returned None")
                 actions = allocation.get("actions", [])
             except Exception as e:
-                add_console_log(f"AI JSON parse failed: {str(e)}", "error")
-                add_console_log(f"Failed response (first 200 chars): {ai_response[:200]}", "error")
-                cprint(f"❌ JSON parsing failed: {e}", "red")
-                cprint(f"   Response: {ai_response[:300]}", "yellow")
+                add_console_log(f"AI JSON parse failed: {e}", "error")
                 return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             if not actions:
@@ -3334,38 +3164,6 @@ Return ONLY valid JSON with the following structure:
                 "info"
             )
 
-            # VALIDATION: Check if market data collection was successful
-            if not market_data or len(market_data) == 0:
-                cprint("❌ No market data collected for any tokens", "red")
-                add_console_log("No market data collected - aborting cycle", "error")
-                return
-
-            # Validate that each token has actual data (not empty DataFrames)
-            valid_tokens = []
-            invalid_tokens = []
-            for token, data in market_data.items():
-                if data is None:
-                    invalid_tokens.append(f"{token}: None")
-                elif hasattr(data, 'empty') and data.empty:
-                    invalid_tokens.append(f"{token}: empty DataFrame")
-                elif isinstance(data, dict) and len(data) == 0:
-                    invalid_tokens.append(f"{token}: empty dict")
-                else:
-                    valid_tokens.append(token)
-
-            if invalid_tokens:
-                cprint(f"⚠️ {len(invalid_tokens)} tokens have invalid/empty data:", "yellow")
-                for inv in invalid_tokens:
-                    cprint(f"   - {inv}", "yellow")
-                add_console_log(f"Invalid market data for {len(invalid_tokens)} tokens", "warning")
-
-            if not valid_tokens or len(valid_tokens) < len(tokens_to_trade) * 0.5:
-                cprint(f"❌ Less than 50% of tokens have valid data ({len(valid_tokens)}/{len(tokens_to_trade)})", "red")
-                add_console_log("Insufficient market data - aborting cycle", "error")
-                return
-
-            cprint(f"✅ Valid market data for {len(valid_tokens)} tokens", "green")
-
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
                 return
@@ -3383,40 +3181,44 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 4: REFETCH POSITIONS & SELECTIVE MARKET DATA AFTER CLOSURES
-            # OPTIMIZATION: Only refetch data for symbols with open positions
-            # This reduces API calls significantly (e.g., 3 symbols instead of 11)
+            # STEP 4: REFETCH POSITIONS & MARKET DATA AFTER CLOSURES
             time.sleep(2)
             open_positions = self.fetch_all_open_positions()
 
-            cprint("\n📊 STEP 4: Selective Data Refresh", "white", "on_blue", attrs=["bold"])
-            add_console_log(f"⏰ Refreshing market data after position updates at {datetime.now().strftime('%H:%M:%S')}", "info")
+            # BUGFIX (Medium Issue #9): Add staleness tracking for market data
+            # Log fetch time to identify if data is stale after position closes
+            market_data_fetch_start = time.time()
+            cprint("📊 Refreshing market data after position updates...", "white", "on_blue")
+            add_console_log(f"⏰ Fetching market data at {datetime.now().strftime('%H:%M:%S')}", "info")
 
-            # Only refetch data for symbols that have open positions
-            symbols_needing_refresh = list(open_positions.keys()) if open_positions else []
+            market_data = collect_all_tokens(
+                tokens=tokens_to_trade,
+                days_back=self.days_back,
+                timeframe=self.timeframe,
+                exchange=EXCHANGE,
+            )
 
-            if symbols_needing_refresh:
-                cprint(f"🔄 Refetching market data for {len(symbols_needing_refresh)} open position(s)...", "cyan")
-                add_console_log(f"Refetching {len(symbols_needing_refresh)} symbols with open positions", "info")
+            market_data_fetch_duration = time.time() - market_data_fetch_start
+            add_console_log(
+                f"📊 Market data fetch completed in {market_data_fetch_duration:.2f}s "
+                f"(Timeframe: {self.timeframe})",
+                "info"
+            )
 
-                market_data_fetch_start = time.time()
-                refreshed_data = self.fetch_market_data_for_symbols(symbols_needing_refresh)
-                market_data_fetch_duration = time.time() - market_data_fetch_start
-
-                add_console_log(
-                    f"Selective refresh: {len(refreshed_data)}/{len(symbols_needing_refresh)} symbols in {market_data_fetch_duration:.2f}s",
-                    "info"
+            # Log staleness warning for short timeframes
+            if self.timeframe in ["1m", "5m", "15m"] and market_data_fetch_duration > 5:
+                cprint(
+                    f"⚠️ WARNING: Market data fetch took {market_data_fetch_duration:.2f}s on {self.timeframe} timeframe",
+                    "yellow"
                 )
-
-                # Merge refreshed data back into market_data (update only refreshed symbols)
-                for symbol, data in refreshed_data.items():
-                    market_data[symbol] = data
-
-                cprint(f"✅ Merged {len(refreshed_data)} refreshed candles into market data", "green")
-            else:
-                cprint("ℹ️ No open positions - skipping market data refresh (using initial fetch)", "cyan")
-                add_console_log("No open positions, skipping market data refetch", "info")
-                market_data_fetch_duration = 0
+                cprint(
+                    f"   Signals may lag market by {market_data_fetch_duration:.0f}+ seconds",
+                    "yellow"
+                )
+                add_console_log(
+                    f"⚠️ Potential staleness: {market_data_fetch_duration:.2f}s lag on {self.timeframe} timeframe",
+                    "warning"
+                )
 
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
