@@ -32,8 +32,7 @@ def extract_json_from_text(text):
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         try:
-            json_str = match.group().replace('\\n', '\n').replace('\\t', '\t')
-            return json.loads(json_str)
+            return json.loads(match.group())
         except json.JSONDecodeError:
             print("⚠️ JSON extraction failed even after matching braces.")
             return None
@@ -735,15 +734,15 @@ class TradingAgent:
                 if is_websocket_enabled():
                     cprint("🟢 WebSocket feeds started successfully", "green")
 
-                    # Set account address for user state feed
+                    # Subscribe to user state for real-time account updates
                     if hasattr(self, 'address') and self.address:
                         try:
-                            import os
-                            # Set the account address in environment for WebSocket
-                            os.environ['ACCOUNT_ADDRESS'] = self.address
-                            cprint(f"📍 User state feed active for: {self.address[:6]}...{self.address[-4:]}", "green")
+                            dm = get_data_manager()
+                            if dm:
+                                dm.subscribe_user_state(self.address)
+                                cprint(f"📍 Subscribed to user state: {self.address[:6]}...{self.address[-4:]}", "green")
                         except Exception as e:
-                            cprint(f"⚠️  User state setup failed: {e}", "yellow")
+                            cprint(f"⚠️  User state subscription failed: {e}", "yellow")
                 else:
                     cprint("🟡 WebSocket feeds not enabled — using REST fallback", "yellow")
             except Exception as e:

@@ -75,13 +75,14 @@ def run_agents():
                             account = EthAccount.from_key(clean_key)
                             account_address = account.address
 
-                            # Set the account address in environment for WebSocket
-                            os.environ['ACCOUNT_ADDRESS'] = account_address
-                            cprint(f"📍 User state feed active for: {account_address[:6]}...{account_address[-4:]}", "green")
+                            dm = get_data_manager()
+                            if dm:
+                                dm.subscribe_user_state(account_address)
+                                cprint(f"📍 Subscribed to user state: {account_address[:6]}...{account_address[-4:]}", "green")
                         else:
                             cprint("⚠️  HYPER_LIQUID_ETH_PRIVATE_KEY not found in .env", "yellow")
                     except Exception as e:
-                        cprint(f"⚠️  User state setup failed: {e}", "yellow")
+                        cprint(f"⚠️  User state subscription failed: {e}", "yellow")
                 else:
                     cprint("🟡 WebSocket feeds not enabled — using REST fallback", "yellow")
             except Exception as e:
