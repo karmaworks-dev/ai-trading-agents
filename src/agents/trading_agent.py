@@ -37,23 +37,59 @@ def extract_json_from_text(text):
     text = re.sub(r'```json\s*', '', text)
     text = re.sub(r'```\s*', '', text)
 
-    # Find JSON object (non-greedy match to avoid capturing multiple objects)
-    match = re.search(r"\{.*?\}", text, re.DOTALL)
-    if not match:
-        # Try greedy match as fallback
-        match = re.search(r"\{.*\}", text, re.DOTALL)
+    # Strategy 1: Find complete JSON object using bracket counting
+    first_brace = text.find('{')
+    if first_brace >= 0:
+        brace_count = 0
+        in_string = False
+        escape_next = False
 
+        for i in range(first_brace, len(text)):
+            char = text[i]
+
+            # Handle string escaping
+            if escape_next:
+                escape_next = False
+                continue
+            if char == '\\':
+                escape_next = True
+                continue
+
+            # Track if we're inside a string (don't count braces in strings)
+            if char == '"':
+                in_string = not in_string
+                continue
+
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        # Found complete JSON object
+                        json_str = text[first_brace:i+1]
+                        try:
+                            parsed = json.loads(json_str)
+                            return parsed
+                        except json.JSONDecodeError as e:
+                            print(f"⚠️ JSON parsing failed after bracket matching: {e}")
+                            print(f"   First 200 chars: {json_str[:200]}")
+                            # Continue to fallback strategies
+                            break
+
+    # Strategy 2: Try to parse entire text as JSON (in case it's clean)
+    try:
+        parsed = json.loads(text.strip())
+        return parsed
+    except json.JSONDecodeError:
+        pass
+
+    # Strategy 3: Use greedy regex as last resort
+    match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         json_str = match.group()
 
-        # Pre-clean common issues before parsing
-        # Remove newlines and extra whitespace within the JSON
-        json_str = re.sub(r'\s*\n\s*', ' ', json_str)
-        # Remove any literal newline characters in keys
-        json_str = json_str.replace('\\n ', '').replace('\n ', '')
-
         try:
-            # Try to parse the cleaned JSON
             parsed = json.loads(json_str)
             return parsed
         except json.JSONDecodeError as e:
