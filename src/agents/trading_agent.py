@@ -2119,7 +2119,6 @@ Return ONLY valid JSON with the following structure:
                 cprint("📭 No signals left to allocate.", "yellow")
                 return []
 
-        try:
             # ==========================================================
             # STEP 3 — ACCOUNT EQUITY
             # ==========================================================
@@ -2275,9 +2274,6 @@ Return ONLY valid JSON with the following structure:
             traceback.print_exc()
             return []
 
-   
-   
-   
 
     def plan_rebalance_actions(self, open_positions, target_allocations, total_equity):
         """
