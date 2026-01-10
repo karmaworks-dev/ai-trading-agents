@@ -1232,6 +1232,18 @@ def stream_positions():
                             yield f"data: {json.dumps({'heartbeat': True, 'timestamp': datetime.now().isoformat()})}\n\n"
                             last_heartbeat = current_time
 
+                        # Send full position refresh every 10 cycles (300 seconds)
+                        if current_time - last_heartbeat > 300:
+                            try:
+                                positions = get_positions_data()
+                                positions_json = json.dumps(positions)
+                                yield f"data: {positions_json}\n\n"
+                                print(f"📡 Full position refresh sent: {len(positions)} positions")
+                            except Exception as e:
+                                error_data = json.dumps({'error': f'Full refresh error: {str(e)}'})
+                                yield f"data: {error_data}\n\n"
+                            last_heartbeat = current_time
+
                         # Fallback polling if WebSocket events not available
                         if not websocket_available:
                             positions = get_positions_data()
