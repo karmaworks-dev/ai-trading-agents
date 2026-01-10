@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start SSE stream for real-time position updates
     startPositionStream();
 
-    // Set up intervals (reduced frequency since positions use SSE)
-    updateInterval = setInterval(updateDashboard, 30000); // Account data every 30s
+    // Set up intervals (reduced frequency since WebSocket handles real-time updates)
+    updateInterval = setInterval(updateDashboard, 60000); // Fallback poll every 60s
     setInterval(updateConsole, 5000);
     setInterval(updateTimestamp, 1000); // Update timestamp every second
 
@@ -52,10 +52,25 @@ function startPositionStream() {
 
         positionEventSource.onmessage = (event) => {
             try {
-                const positions = JSON.parse(event.data);
-                if (!positions.error) {
-                    updatePositions(positions);
-                    console.log('[SSE] Position update received:', positions.length, 'positions');
+                const msg = JSON.parse(event.data);
+
+                // Handle typed messages
+                if (msg.type === 'positions') {
+                    updatePositions(msg.data);
+                    console.log('[SSE] Positions update:', msg.data.length, 'positions');
+                } else if (msg.type === 'account') {
+                    updateBalance(msg.data.balance, msg.data.equity);
+                    updatePnL(msg.data.pnl);
+                    console.log('[SSE] Account update: balance=$' + msg.data.balance.toFixed(2) + ', equity=$' + msg.data.equity.toFixed(2));
+                } else if (msg.type === 'heartbeat') {
+                    // Heartbeat - just log for debugging
+                    console.log('[SSE] Heartbeat:', msg.timestamp);
+                } else if (Array.isArray(msg)) {
+                    // Backward compatibility: raw position array (legacy)
+                    updatePositions(msg);
+                    console.log('[SSE] Position update (legacy):', msg.length, 'positions');
+                } else if (msg.error) {
+                    console.warn('[SSE] Error from server:', msg.error);
                 }
             } catch (e) {
                 console.error('[SSE] Parse error:', e);
