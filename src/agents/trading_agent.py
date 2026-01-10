@@ -2119,7 +2119,7 @@ Return ONLY valid JSON with the following structure:
                 cprint("📭 No signals left to allocate.", "yellow")
                 return []
 
-   try:
+        try:
             # ==========================================================
             # STEP 3 — ACCOUNT EQUITY
             # ==========================================================
