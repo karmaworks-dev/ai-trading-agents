@@ -2119,58 +2119,59 @@ Return ONLY valid JSON with the following structure:
                 cprint("📭 No signals left to allocate.", "yellow")
                 return []
 
-        # ==========================================================
-        # STEP 3 — ACCOUNT EQUITY
-        # ==========================================================
-        account_balance = get_account_balance(self.account)
-        total_equity = (
-            n.get_account_value(self.account.address)
-            if EXCHANGE == "HYPERLIQUID"
-            else account_balance
-        )
+   try:
+            # ==========================================================
+            # STEP 3 — ACCOUNT EQUITY
+            # ==========================================================
+            account_balance = get_account_balance(self.account)
+            total_equity = (
+                n.get_account_value(self.account.address)
+                if EXCHANGE == "HYPERLIQUID"
+                else account_balance
+            )
 
-        if total_equity <= 0:
-            cprint("❌ Total equity is zero", "red")
-            add_console_log("Allocation aborted: zero equity", "error")
-            return []
+            if total_equity <= 0:
+                cprint("❌ Total equity is zero", "red")
+                add_console_log("Allocation aborted: zero equity", "error")
+                return []
 
-        # Calculate allocatable USD after cash buffer
-        required_buffer_usd = total_equity * (CASH_PERCENTAGE / 100.0)
-        allocatable_usd = max(0, account_balance - required_buffer_usd)
+            # Calculate allocatable USD after cash buffer
+            required_buffer_usd = total_equity * (CASH_PERCENTAGE / 100.0)
+            allocatable_usd = max(0, account_balance - required_buffer_usd)
 
-        cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
-        cprint(f"💎 Total equity: ${total_equity:.2f}", "cyan")
-        cprint(f"🛡️ Required cash buffer: ${required_buffer_usd:.2f} ({CASH_PERCENTAGE}%)", "yellow")
-        cprint(f"🎯 Allocatable for trading: ${allocatable_usd:.2f}", "green")
+            cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
+            cprint(f"💎 Total equity: ${total_equity:.2f}", "cyan")
+            cprint(f"🛡️ Required cash buffer: ${required_buffer_usd:.2f} ({CASH_PERCENTAGE}%)", "yellow")
+            cprint(f"🎯 Allocatable for trading: ${allocatable_usd:.2f}", "green")
 
-        # ==========================================================
-        # STEP 4 — BUILD AI PROMPT
-        # ==========================================================
-        prompt = SMART_ALLOCATION_PROMPT.format(
-            portfolio_state=open_positions,
-            signals=signals,
-            total_equity=total_equity,
-            available_balance=account_balance,
-            required_buffer_usd=required_buffer_usd,
-            allocatable_usd=allocatable_usd,
-            leverage=LEVERAGE,
-            max_position_pct=MAX_POSITION_PERCENTAGE,
-            cash_buffer_pct=CASH_PERCENTAGE,
-            min_order=12.0,
-            cycle_minutes=SLEEP_BETWEEN_RUNS_MINUTES,
-        )
+            # ==========================================================
+            # STEP 4 — BUILD AI PROMPT
+            # ==========================================================
+            prompt = SMART_ALLOCATION_PROMPT.format(
+                portfolio_state=open_positions,
+                signals=signals,
+                total_equity=total_equity,
+                available_balance=account_balance,
+                required_buffer_usd=required_buffer_usd,
+                allocatable_usd=allocatable_usd,
+                leverage=LEVERAGE,
+                max_position_pct=MAX_POSITION_PERCENTAGE,
+                cash_buffer_pct=CASH_PERCENTAGE,
+                min_order=12.0,
+                cycle_minutes=SLEEP_BETWEEN_RUNS_MINUTES,
+            )
 
-        cprint("\n🤖 Requesting AI allocation...", "magenta")
-        add_console_log("Requesting AI allocation", "info")
+            cprint("\n🤖 Requesting AI allocation...", "magenta")
+            add_console_log("Requesting AI allocation", "info")
 
-        ai_response = self.chat_with_ai(
-            "You are a portfolio allocator. Return ONLY valid JSON.",
-            prompt
-        )
+            ai_response = self.chat_with_ai(
+                "You are a portfolio allocator. Return ONLY valid JSON.",
+                prompt
+            )
 
-        if not ai_response:
-            add_console_log("AI returned no response, using fallback", "warning")
-            return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
+            if not ai_response:
+                add_console_log("AI returned no response, using fallback", "warning")
+                return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
 
             # ==========================================================
             # STEP 5 — PARSE AI RESPONSE
@@ -2274,6 +2275,9 @@ Return ONLY valid JSON with the following structure:
             traceback.print_exc()
             return []
 
+   
+   
+   
 
     def plan_rebalance_actions(self, open_positions, target_allocations, total_equity):
         """
