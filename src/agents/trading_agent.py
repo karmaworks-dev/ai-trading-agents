@@ -467,19 +467,19 @@ RESPONSE FORMAT (MANDATORY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Return ONLY valid JSON in this EXACT structure:
 
-{
+{{
   "actions": [
-    {
+    {{
       "symbol": "HYPE",
       "action": "OPEN_LONG | OPEN_SHORT | REDUCE | CLOSE | INCREASE",
       "margin_usd": 123.45,
       "confidence": 65,
       "reason": "Short explanation"
-    }
+    }}
   ],
   "cash_buffer_usd": 100.0,
   "reasoning": "Overall allocation logic summary"
-}
+}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STRICT RULES
