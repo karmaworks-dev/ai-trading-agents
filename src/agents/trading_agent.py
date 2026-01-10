@@ -2377,8 +2377,8 @@ Return ONLY valid JSON with the following structure:
             return []
 
         # Calculate margin per position
-        usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)  # CRITICAL: Use total_equity
-        cash_buffer = total_equity * (CASH_PERCENTAGE / 100)  # CRITICAL: Use total_equity
+        usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)
+        cash_buffer = available_balance * (CASH_PERCENTAGE / 100)
 
         # Prevent division by zero
         if len(new_signals) == 0:
