@@ -507,10 +507,12 @@ AI TRADING SIGNALS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ACCOUNT CONSTRAINTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Total Equity: ${available_balance:.2f}
+- Total Account Equity: ${total_equity:.2f}
+- Available Cash: ${available_balance:.2f}
+- Required Cash Buffer: ${required_buffer_usd:.2f} ({cash_buffer_pct}% of equity)
+- ALLOCATABLE FOR TRADING: ${allocatable_usd:.2f}
 - Leverage: {leverage}x
 - Max Position %: {max_position_pct}%
-- Required Cash Buffer: {cash_buffer_pct}%
 - Minimum Order Size: ${min_order:.2f}
 - Minimum Hold Time: {cycle_minutes} minutes
 
@@ -523,6 +525,8 @@ ALLOCATION RULES
 4. Prefer opening new positions over many small trades
 5. If no good trade exists, CLOSE weakest position instead
 6. Return ONLY executable actions
+
+⚠️ CRITICAL: Total margin_usd for OPEN/INCREASE actions must NOT exceed ${allocatable_usd:.2f}
 
 REMEMBER:
 This JSON will be executed directly by a trading engine.
@@ -2115,49 +2119,58 @@ Return ONLY valid JSON with the following structure:
                 cprint("📭 No signals left to allocate.", "yellow")
                 return []
 
-            # ==========================================================
-            # STEP 3 — ACCOUNT EQUITY
-            # ==========================================================
-            account_balance = get_account_balance(self.account)
-            total_equity = (
-                n.get_account_value(self.account.address)
-                if EXCHANGE == "HYPERLIQUID"
-                else account_balance
-            )
+        # ==========================================================
+        # STEP 3 — ACCOUNT EQUITY
+        # ==========================================================
+        account_balance = get_account_balance(self.account)
+        total_equity = (
+            n.get_account_value(self.account.address)
+            if EXCHANGE == "HYPERLIQUID"
+            else account_balance
+        )
 
-            if total_equity <= 0:
-                cprint("❌ Total equity is zero", "red")
-                add_console_log("Allocation aborted: zero equity", "error")
-                return []
+        if total_equity <= 0:
+            cprint("❌ Total equity is zero", "red")
+            add_console_log("Allocation aborted: zero equity", "error")
+            return []
 
-            cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
-            cprint(f"💎 Total equity: ${total_equity:.2f}", "cyan")
+        # Calculate allocatable USD after cash buffer
+        required_buffer_usd = total_equity * (CASH_PERCENTAGE / 100.0)
+        allocatable_usd = max(0, account_balance - required_buffer_usd)
 
-            # ==========================================================
-            # STEP 4 — BUILD AI PROMPT
-            # ==========================================================
-            prompt = SMART_ALLOCATION_PROMPT.format(
-                portfolio_state=open_positions,
-                signals=signals,
-                available_balance=total_equity,
-                leverage=LEVERAGE,
-                max_position_pct=MAX_POSITION_PERCENTAGE,
-                cash_buffer_pct=CASH_PERCENTAGE,
-                min_order=12.0,
-                cycle_minutes=SLEEP_BETWEEN_RUNS_MINUTES,
-            )
+        cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
+        cprint(f"💎 Total equity: ${total_equity:.2f}", "cyan")
+        cprint(f"🛡️ Required cash buffer: ${required_buffer_usd:.2f} ({CASH_PERCENTAGE}%)", "yellow")
+        cprint(f"🎯 Allocatable for trading: ${allocatable_usd:.2f}", "green")
 
-            cprint("\n🤖 Requesting AI allocation...", "magenta")
-            add_console_log("Requesting AI allocation", "info")
+        # ==========================================================
+        # STEP 4 — BUILD AI PROMPT
+        # ==========================================================
+        prompt = SMART_ALLOCATION_PROMPT.format(
+            portfolio_state=open_positions,
+            signals=signals,
+            total_equity=total_equity,
+            available_balance=account_balance,
+            required_buffer_usd=required_buffer_usd,
+            allocatable_usd=allocatable_usd,
+            leverage=LEVERAGE,
+            max_position_pct=MAX_POSITION_PERCENTAGE,
+            cash_buffer_pct=CASH_PERCENTAGE,
+            min_order=12.0,
+            cycle_minutes=SLEEP_BETWEEN_RUNS_MINUTES,
+        )
 
-            ai_response = self.chat_with_ai(
-                "You are a portfolio allocator. Return ONLY valid JSON.",
-                prompt
-            )
+        cprint("\n🤖 Requesting AI allocation...", "magenta")
+        add_console_log("Requesting AI allocation", "info")
 
-            if not ai_response:
-                add_console_log("AI returned no response, using fallback", "warning")
-                return self._fallback_equal_allocation(signals, total_equity, open_positions)
+        ai_response = self.chat_with_ai(
+            "You are a portfolio allocator. Return ONLY valid JSON.",
+            prompt
+        )
+
+        if not ai_response:
+            add_console_log("AI returned no response, using fallback", "warning")
+            return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
 
             # ==========================================================
             # STEP 5 — PARSE AI RESPONSE
@@ -2167,11 +2180,11 @@ Return ONLY valid JSON with the following structure:
                 actions = allocation.get("actions", [])
             except Exception as e:
                 add_console_log(f"AI JSON parse failed: {e}", "error")
-                return self._fallback_equal_allocation(signals, total_equity, open_positions)
+                return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
 
             if not actions:
                 add_console_log("AI returned zero actions", "warning")
-                return self._fallback_equal_allocation(signals, total_equity, open_positions)
+                return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
 
             # ==========================================================
             # STEP 6 — VALIDATE ACTIONS (NO SILENCE)
@@ -2501,7 +2514,7 @@ Return ONLY valid JSON with the following structure:
                         live_available_balance = get_account_balance(self.account)
                         live_total_equity = live_available_balance
 
-                    # For OPEN / INCREASE actions enforce min notional and cash buffer
+                    # For OPEN / INCREASE actions enforce min notional only
                     if action_type in ("OPEN_LONG", "OPEN_SHORT", "INCREASE"):
                         margin_usd = action.get("margin_usd", 0)
                         if margin_usd <= 0:
@@ -2515,13 +2528,6 @@ Return ONLY valid JSON with the following structure:
                         if notional < min_notional:
                             cprint(f"   ⚠️ Skipping {symbol}: notional ${notional:.2f} < min ${min_notional:.2f}", "yellow")
                             add_console_log(f"Skipped {symbol}: notional below exchange minimum ({notional:.2f} < {min_notional})", "warning")
-                            continue
-
-                        # Ensure cash buffer is preserved after placing this margin
-                        required_buffer = live_total_equity * (CASH_PERCENTAGE / 100.0)
-                        if (live_available_balance - margin_usd) < required_buffer:
-                            cprint(f"   ⚠️ Skipping {symbol}: would breach cash buffer ({CASH_PERCENTAGE}%)", "yellow")
-                            add_console_log(f"Skipped {symbol}: would breach cash buffer after margin {margin_usd}", "warning")
                             continue
 
                     # ============================================================
@@ -3391,4 +3397,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

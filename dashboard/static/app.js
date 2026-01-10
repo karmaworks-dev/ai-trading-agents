@@ -83,26 +83,10 @@ function startPositionStream() {
 
 
 // Main update function
-// Smart update function - pauses heavy queries during agent execution
+// Smart update function - always do full updates regardless of execution state
 async function updateDashboard() {
     try {
-        // First check if agent is actively executing
-        const statusResponse = await fetch('/api/agent-status');
-        const agentStatus = await statusResponse.json();
-
-        // If agent is actively executing, do lightweight update
-        if (agentStatus.executing) {
-            console.log('[Dashboard] Agent executing - lightweight update only');
-
-            // Only update timestamp and agent badge (no API calls)
-            updateTimestamp();
-            // FIX: Use agent_running (not running) to match API response
-            updateAgentBadge(agentStatus.agent_running, agentStatus.executing);
-
-            return; // Skip heavy updates
-        }
-        
-        // Agent is idle - do full update
+        // Always do full update - no skipping during execution
         const response = await fetch('/api/data');
 
         if (!response.ok) {
@@ -129,6 +113,10 @@ async function updateDashboard() {
         updateExchange(data.exchange);
         updateTimestamp();
         updatePositions(data.positions);
+        
+        // Get agent execution status separately
+        const statusResponse = await fetch('/api/agent-status');
+        const agentStatus = await statusResponse.json();
         updateAgentBadge(data.agent_running, agentStatus.executing); // Pass execution state
         
         // Fetch trades
