@@ -1205,31 +1205,16 @@ def stream_positions():
                     print("📡 WebSocket not available - falling back to periodic polling")
                     #add_console_log("WebSocket unavailable - API polling active", "info")  can use for DEBUG only
 
-                # Send initial data immediately (positions + account)
+                # Send initial positions immediately
                 try:
-                    # Positions with type
                     positions = get_positions_data()
-                    pos_msg = {"type": "positions", "data": positions}
-                    yield f"data: {json.dumps(pos_msg)}\n\n"
-
-                    # Account with type
-                    account = get_account_data()
-                    acc_msg = {
-                        "type": "account",
-                        "data": {
-                            "balance": account.get("account_balance", 0),
-                            "equity": account.get("total_equity", 0),
-                            "pnl": account.get("pnl", 0)
-                        }
-                    }
-                    yield f"data: {json.dumps(acc_msg)}\n\n"
+                    positions_json = json.dumps(positions)
+                    yield f"data: {positions_json}\n\n"
                 except Exception as e:
                     error_data = json.dumps({'error': f'Initial data error: {str(e)}'})
                     yield f"data: {error_data}\n\n"
 
                 last_heartbeat = time.time()
-                last_full_refresh = time.time()
-                REFRESH_INTERVAL = 5  # Send full data every 5 seconds as backup
 
                 # Main streaming loop
                 while True:
@@ -1244,37 +1229,26 @@ def stream_positions():
                         # Send heartbeat every 30 seconds to keep connection alive
                         current_time = time.time()
                         if current_time - last_heartbeat > 30:
-                            heartbeat_msg = {"type": "heartbeat", "timestamp": datetime.now().isoformat()}
-                            yield f"data: {json.dumps(heartbeat_msg)}\n\n"
+                            yield f"data: {json.dumps({'heartbeat': True, 'timestamp': datetime.now().isoformat()})}\n\n"
                             last_heartbeat = current_time
 
-                        # Periodic full refresh as backup (every 5 seconds)
-                        if current_time - last_full_refresh > REFRESH_INTERVAL:
+                        # Send full position refresh every 10 cycles (300 seconds)
+                        if current_time - last_heartbeat > 300:
                             try:
-                                # Send positions with type
                                 positions = get_positions_data()
-                                pos_msg = {"type": "positions", "data": positions}
-                                yield f"data: {json.dumps(pos_msg)}\n\n"
-
-                                # Send account data with type
-                                account = get_account_data()
-                                acc_msg = {
-                                    "type": "account",
-                                    "data": {
-                                        "balance": account.get("account_balance", 0),
-                                        "equity": account.get("total_equity", 0),
-                                        "pnl": account.get("pnl", 0)
-                                    }
-                                }
-                                yield f"data: {json.dumps(acc_msg)}\n\n"
+                                positions_json = json.dumps(positions)
+                                yield f"data: {positions_json}\n\n"
+                                print(f"📡 Full position refresh sent: {len(positions)} positions")
                             except Exception as e:
-                                print(f"⚠️ Periodic refresh error: {e}")
-                            last_full_refresh = current_time
+                                error_data = json.dumps({'error': f'Full refresh error: {str(e)}'})
+                                yield f"data: {error_data}\n\n"
+                            last_heartbeat = current_time
 
                         # Fallback polling if WebSocket events not available
                         if not websocket_available:
-                            pos_msg = {"type": "positions", "data": get_positions_data()}
-                            yield f"data: {json.dumps(pos_msg)}\n\n"
+                            positions = get_positions_data()
+                            positions_json = json.dumps(positions)
+                            yield f"data: {positions_json}\n\n"
                             time.sleep(2)  # Poll every 2 seconds as fallback
 
                     except GeneratorExit:
@@ -2713,10 +2687,8 @@ if __name__ == '__main__':
                             with websocket_positions_lock:
                                 websocket_positions_updated.set()
 
-                            # Broadcast ALL positions with type (not just the changed one)
-                            all_positions = get_positions_data()  # Gets from WebSocket cache (fast)
-                            pos_msg = {"type": "positions", "data": all_positions}
-                            positions_json = json.dumps(pos_msg)
+                            # Broadcast to SSE clients
+                            positions_json = json.dumps([position_data])  # Single position format
                             for client_queue in sse_clients[:]:  # Copy list to avoid modification during iteration
                                 try:
                                     client_queue.put(f"data: {positions_json}\n\n")
@@ -2727,7 +2699,7 @@ if __name__ == '__main__':
                                     except ValueError:
                                         pass
 
-                            print(f"📡 WebSocket position update: {position_data.get('coin', 'Unknown')} ({len(all_positions)} total)")
+                            print(f"📡 WebSocket position update broadcasted: {position_data.get('coin', 'Unknown')}")
 
                         except Exception as e:
                             print(f"❌ WebSocket position update callback error: {e}")
@@ -2735,16 +2707,7 @@ if __name__ == '__main__':
                     def on_account_update(account_data):
                         """Broadcast account balance updates to all SSE clients"""
                         try:
-                            # Format account data with type for frontend
-                            acc_msg = {
-                                "type": "account",
-                                "data": {
-                                    "balance": account_data.get("withdrawable", account_data.get("account_balance", 0)),
-                                    "equity": account_data.get("account_value", account_data.get("total_equity", 0)),
-                                    "pnl": account_data.get("total_unrealized_pnl", account_data.get("pnl", 0))
-                                }
-                            }
-                            account_json = json.dumps(acc_msg)
+                            account_json = json.dumps(account_data)
                             for client_queue in sse_clients[:]:
                                 try:
                                     client_queue.put(f"data: {account_json}\n\n")
@@ -2755,7 +2718,7 @@ if __name__ == '__main__':
                                     except ValueError:
                                         pass
 
-                            print(f"📡 WebSocket account update: balance=${acc_msg['data']['balance']:.2f}")
+                            print("📡 WebSocket account update broadcasted")
                         except Exception as e:
                             print(f"❌ WebSocket account update callback error: {e}")
 
