@@ -1138,9 +1138,9 @@ FULL DATASET:
             vote_percentage = int((majority_count / total_votes) * 100)
 
             # Check minimum confidence threshold
-            if final_confidence < MIN_SWARM_CONFIDENCE and majority_action != "NOTHING":
+            if final_confidence < self.min_swarm_confidence and majority_action != "NOTHING":
                 cprint(
-                    f"\n⚠️ LOW CONFIDENCE: {final_confidence}% < {MIN_SWARM_CONFIDENCE}% threshold",
+                    f"\n⚠️ LOW CONFIDENCE: {final_confidence}% < {self.min_swarm_confidence}% threshold",
                     "yellow",
                     attrs=["bold"]
                 )
@@ -1154,7 +1154,7 @@ FULL DATASET:
                     count = vote_counts[action]
                     avg = avg_confidences[action]
                     reasoning += f"   {action}: {count} votes (avg {avg}% confidence)\n"
-                reasoning += f"\n⚠️ Confidence {final_confidence}% below {MIN_SWARM_CONFIDENCE}% threshold\n"
+                reasoning += f"\n⚠️ Confidence {final_confidence}% below {self.min_swarm_confidence}% threshold\n"
                 reasoning += f"   Original: {majority_action} | Downgraded to: NOTHING\n\n"
                 reasoning += "Individual Votes:\n"
                 reasoning += "\n".join(f"   {vote}" for vote in model_votes)
@@ -1528,6 +1528,11 @@ Return ONLY valid JSON with the following structure:
 
             try:
                 response = self.chat_with_ai(POSITION_ANALYSIS_PROMPT, user_prompt)
+
+                # Handle None response from AI
+                if not response:
+                    cprint("❌ No response from AI for position analysis", "red")
+                    return validated_decisions
 
                 # Strip Markdown fences if model wrapped response in code blocks
                 if "```json" in response:
@@ -1989,9 +1994,10 @@ Return ONLY valid JSON with the following structure:
                     )
                     cprint(f"   → Downgrading {action} to NOTHING", "yellow")
                     add_console_log(f"{token} -> NOTHING | {confidence}% (low confidence)", "warning")
-                    
+
+                    original_action = action
                     action = "NOTHING"
-                    reasoning = f"Original: {action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
+                    reasoning = f"Original: {original_action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
 
                 self.recommendations_df = pd.concat(
                     [
@@ -2330,6 +2336,9 @@ Return ONLY valid JSON with the following structure:
         """
         cprint("\n📊 Using fallback equal distribution...", "yellow")
 
+        # Minimum order notional (matching exchange requirements)
+        min_order_notional = 12.0
+
         actionable_signals = [s for s in signals if s["action"] in ["BUY", "SELL"]]
         if not actionable_signals:
             return []
@@ -2377,8 +2386,8 @@ Return ONLY valid JSON with the following structure:
             return []
 
         # Calculate margin per position
-        usable_margin = total_equity * (MAX_POSITION_PERCENTAGE / 100)  # CRITICAL: Use total_equity
-        cash_buffer = total_equity * (CASH_PERCENTAGE / 100)  # CRITICAL: Use total_equity
+        usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)
+        cash_buffer = available_balance * (CASH_PERCENTAGE / 100)
 
         # Prevent division by zero
         if len(new_signals) == 0:
@@ -2922,8 +2931,8 @@ Return ONLY valid JSON with the following structure:
                                 remove_position(token)
 
                             cprint("✅ Position closed successfully!", "white", "on_green")
-                            add_console_log(f"✅ Closed {token} {position_dir} | Reason: {decision['reasoning']}", "success")
-                            closed_count += 1
+                            add_console_log(f"✅ Closed {token} {position_dir} | Signal: {action} ({row['confidence']}%)", "success")
+                            positions_closed += 1
                         else:
                             cprint("⚠️ Position close may have failed - will retry next cycle", "yellow")
                             add_console_log(f"⚠️ Close failed for {token}", "warning")
@@ -3285,10 +3294,8 @@ Return ONLY valid JSON with the following structure:
                     add_console_log("ℹ️ Stop signal received - skipping execution", "warning")
                     return
 
-                # Phase 3: Execute the AI allocation plan
+                # Execution complete (rebalance + open actions already executed above)
                 if allocation_actions and isinstance(allocation_actions, list) and len(allocation_actions) > 0:
-                    cprint(f"\n📌 PHASE 3: Execute {len(allocation_actions)} Actions", "green", attrs=["bold"])
-                    self.execute_allocations(allocation_actions)
                     cprint(f"\n✅ {mode_name} mode execution complete!", "green", attrs=["bold"])
                     add_console_log(f"✅ {mode_name} execution complete", "success")
                 else:
