@@ -558,6 +558,10 @@ def get_backtest_console_logs():
 # IMPORT TRADING FUNCTIONS (Favoring src module)
 # ============================================================================
 EXCHANGE_CONNECTED = False
+
+# Cached Hyperliquid Info object to prevent rate limiting (429 errors)
+# The Info() constructor calls spot_meta() which makes an API request
+_cached_hl_info = None
 try:
     # 1. Prioritize importing from the src module
     from src import nice_funcs_hyperliquid as n
@@ -714,64 +718,17 @@ def get_positions_data():
             print("⚠️ WebSocket module not available, falling back to API")
         except Exception as ws_err:
             print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
-        address = os.getenv("ACCOUNT_ADDRESS", account.address)
-
-        # Try WebSocket first for real-time data
-        try:
-            from src.websocket import get_data_manager, is_websocket_connected
-
-            if is_websocket_connected():
-                dm = get_data_manager()
-                ws_positions = dm.get_all_positions(address)
-
-                if ws_positions:
-                    positions = []
-                    for pos in ws_positions:
-                        symbol = pos.get('coin', pos.get('symbol', 'Unknown'))
-                        size = pos.get('size', 0)
-
-                        if size == 0:
-                            continue
-
-                        entry_px = pos.get('entry_price', 0)
-                        pnl_perc = pos.get('pnl_percent', 0)
-                        is_long = size > 0
-                        side = "LONG" if is_long else "SHORT"
-
-                        # Get mark price from WebSocket
-                        try:
-                            mark_price = dm.get_current_price(symbol)
-                        except Exception:
-                            mark_price = entry_px
-
-                        position_value = abs(size) * mark_price
-
-                        positions.append({
-                            "symbol": symbol,
-                            "size": float(size),
-                            "entry_price": float(entry_px),
-                            "mark_price": float(mark_price),
-                            "position_value": float(position_value),
-                            "pnl_percent": float(pnl_perc),
-                            "pnl_value": float(pos.unrealized_pnl) if hasattr(pos, 'unrealized_pnl') else 0,
-                            "side": side
-                        })
-
-                    print(f"📡 WebSocket: {len(positions)} positions (real-time)")
-                    return positions
-        except ImportError:
-            print("⚠️ WebSocket module not available, falling back to API")
-        except Exception as ws_err:
-            print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
 
         # Fallback to API polling
         print(f"🔍 API fallback: Fetching positions for {address[:8]}...")
 
-        from hyperliquid.info import Info
-        from hyperliquid.utils import constants
+        global _cached_hl_info
+        if _cached_hl_info is None:
+            from hyperliquid.info import Info
+            from hyperliquid.utils import constants
+            _cached_hl_info = Info(constants.MAINNET_API_URL, skip_ws=True)
 
-        info = Info(constants.MAINNET_API_URL, skip_ws=True)
-        user_state = info.user_state(address)
+        user_state = _cached_hl_info.user_state(address)
 
         positions = []
 
