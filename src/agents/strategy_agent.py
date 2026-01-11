@@ -65,14 +65,8 @@ Remember:
 class StrategyAgent:
     """Manages strategy evaluation, validation, and optional execution."""
 
-    def __init__(self, execute_signals: bool = False, settings: dict = None):
-        """
-        Initialize the Strategy Agent.
-
-        Args:
-            execute_signals: Whether to execute approved signals automatically
-            settings: User settings dict (if None, loads from settings_manager)
-        """
+    def __init__(self, execute_signals: bool = False):
+        """Initialize the Strategy Agent."""
         self.execute_signals = execute_signals
         self.enabled_strategies = []
 
@@ -84,68 +78,27 @@ class StrategyAgent:
             self.em = None
             cprint("✅ Strategy Agent using direct nice_funcs", "green")
 
-        # --- Load strategies based on user settings ---
+        # --- Load strategies ---
         if ENABLE_STRATEGIES:
-            self._load_strategies_from_settings(settings)
-        else:
-            print("✅ Strategy Agent is disabled in config.py (ENABLE_STRATEGIES=False)")
+            try:
+                from src.strategies.custom.karma_compounding_agr import CompoundingAGRStrategy
+                from src.strategies.custom.quad_enhanced_strategy import QuadEnhancedStrategy
 
-        print(f"✅ Strategy Agent initialized with {len(self.enabled_strategies)} strategies!")
+                self.enabled_strategies.extend([
+                    CompoundingAGRStrategy(),
+                    QuadEnhancedStrategy()
+                ])
 
-    def _load_strategies_from_settings(self, settings: dict = None):
-        """
-        Load strategies based on user settings (enabled_strategies).
-        Uses the strategy registry for dynamic loading.
-
-        Args:
-            settings: User settings dict. If None, loads from settings_manager.
-        """
-        try:
-            # Import registry and settings manager
-            from src.strategies.strategy_registry import get_enabled_strategies, get_available_strategies
-            from src.utils.settings_manager import load_settings
-
-            # Load settings if not provided
-            if settings is None:
-                settings = load_settings()
-
-            # Get enabled strategies from registry
-            self.enabled_strategies = get_enabled_strategies(settings)
-
-            if self.enabled_strategies:
-                print(f"✅ Loaded {len(self.enabled_strategies)} strategies from settings:")
+                print(f"✅ Loaded {len(self.enabled_strategies)} strategies!")
                 for strategy in self.enabled_strategies:
                     print(f"   • {strategy.name}")
-            else:
-                # Show available strategies that user can enable
-                available = get_available_strategies()
-                print(f"ℹ️ No strategies enabled. Available strategies:")
-                for s in available:
-                    print(f"   • {s['name']} ({s['id']}): {s['description'][:50]}...")
 
-        except ImportError as e:
-            # Fallback to hardcoded loading if registry not available
-            print(f"⚠️ Strategy registry not available, using fallback: {e}")
-            self._load_strategies_fallback()
+            except Exception as e:
+                print(f"⚠️ Error loading strategies: {e}")
+        else:
+            print("✅ Strategy Agent is disabled in config.py")
 
-        except Exception as e:
-            print(f"⚠️ Error loading strategies from settings: {e}")
-            self._load_strategies_fallback()
-
-    def _load_strategies_fallback(self):
-        """Fallback: Load all strategies directly (legacy behavior)."""
-        try:
-            from src.strategies.custom.karma_compounding_agr import CompoundingAGRStrategy
-            from src.strategies.custom.quad_enhanced_strategy import QuadRotationStrategy
-
-            self.enabled_strategies.extend([
-                CompoundingAGRStrategy(),
-                QuadRotationStrategy()
-            ])
-            print(f"✅ Loaded {len(self.enabled_strategies)} strategies (fallback mode)")
-
-        except Exception as e:
-            print(f"⚠️ Error in fallback strategy loading: {e}")
+        print(f"✅ Strategy Agent initialized with {len(self.enabled_strategies)} strategies!")
 
     # ============================================================
     # 🧮 Evaluate signals using LLM
