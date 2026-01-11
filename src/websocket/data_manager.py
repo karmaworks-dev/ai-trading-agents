@@ -452,6 +452,72 @@ class WebSocketDataManager:
         if self._user_state_feed:
             self._user_state_feed.add_account_listener(callback)
 
+    def subscribe_user_state(self, user_address: str) -> bool:
+        """
+        Subscribe to user state updates for a specific address.
+
+        This method allows subscribing to user-specific events (positions, fills,
+        account updates) after the WebSocket manager has been initialized.
+
+        Args:
+            user_address: The user's wallet address to subscribe to
+
+        Returns:
+            bool: True if subscription was successful
+        """
+        if not user_address:
+            logger.warning("Cannot subscribe to user state: no address provided")
+            return False
+
+        with self._lock:
+            try:
+                # Check if we need to create/recreate the user state feed
+                if self._user_state_feed:
+                    # Check if already subscribed to this address
+                    if self._user_state_feed.user_address == user_address:
+                        if self._user_state_feed.is_running():
+                            logger.info(f"Already subscribed to user state for {user_address[:8]}...")
+                            return True
+                    else:
+                        # Different address - stop the old feed
+                        self._user_state_feed.stop()
+                        self._user_state_feed = None
+
+                # Create new user state feed with the address
+                from src.websocket.user_state_feed import UserStateFeed
+
+                self._user_state_feed = UserStateFeed(
+                    ws_client=self._ws_client,
+                    user_address=user_address
+                )
+
+                if self._user_state_feed.start():
+                    logger.info(f"Subscribed to user state for {user_address[:8]}...")
+                    return True
+                else:
+                    logger.error(f"Failed to start user state feed for {user_address[:8]}...")
+                    return False
+
+            except Exception as e:
+                logger.error(f"Error subscribing to user state: {e}")
+                return False
+
+    def has_position(self, symbol: str) -> bool:
+        """Check if there's an open position for a symbol"""
+        if self._user_state_feed:
+            return self._user_state_feed.get_position(symbol) is not None
+        return False
+
+    def is_position_stale(self, symbol: str, max_age_sec: float) -> bool:
+        """Check if position data is stale"""
+        if not self._user_state_feed:
+            return True
+        pos = self._user_state_feed.get_position(symbol)
+        if not pos:
+            return True
+        age = (datetime.now() - pos.last_update).total_seconds()
+        return age > max_age_sec
+
     # ========================================================================
     # API FALLBACK METHODS
     # ========================================================================

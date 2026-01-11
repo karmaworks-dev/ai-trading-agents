@@ -2191,6 +2191,7 @@ Return ONLY valid JSON with the following structure:
             # ==========================================================
             valid_actions = []
             rejected = {}
+            rejected_symbols = set()  # Track symbols rejected by risk manager
 
             def reject(reason):
                 rejected[reason] = rejected.get(reason, 0) + 1
@@ -2234,6 +2235,7 @@ Return ONLY valid JSON with the following structure:
                             account_balance=total_equity,
                         )
                         if not verdict["valid"]:
+                            rejected_symbols.add(sym)  # Track for fallback exclusion
                             reject(f"{sym}: risk rejected")
                             continue
                     except Exception as e:
@@ -2253,7 +2255,7 @@ Return ONLY valid JSON with the following structure:
 
             if not valid_actions:
                 add_console_log("All AI actions rejected — fallback triggered", "error")
-                return self._fallback_equal_allocation(signals, total_equity, open_positions)
+                return self._fallback_equal_allocation(signals, allocatable_usd, open_positions, rejected_symbols)
 
             # ==========================================================
             # STEP 8 — FINAL PLAN
@@ -2342,17 +2344,29 @@ Return ONLY valid JSON with the following structure:
             add_console_log(f"Planned {len(actions_sorted)} rebalance actions", "info")
         return actions_sorted
 
-    def _fallback_equal_allocation(self, signals, available_balance, open_positions):
+    def _fallback_equal_allocation(self, signals, available_balance, open_positions, excluded_symbols=None):
         """
         Fallback to equal distribution when AI allocation fails.
         Returns list of action dicts in the same format as AI.
+
+        Args:
+            excluded_symbols: Set of symbols rejected by risk manager (will be excluded)
         """
         cprint("\n📊 Using fallback equal distribution...", "yellow")
+
+        # Exclude symbols that were rejected by risk manager
+        excluded_symbols = excluded_symbols or set()
+        if excluded_symbols:
+            cprint(f"   Excluding risk-rejected symbols: {excluded_symbols}", "yellow")
 
         # Minimum order notional (matching exchange requirements)
         min_order_notional = 12.0
 
-        actionable_signals = [s for s in signals if s["action"] in ["BUY", "SELL"]]
+        actionable_signals = [
+            s for s in signals
+            if s["action"] in ["BUY", "SELL"]
+            and s["symbol"] not in excluded_symbols
+        ]
         if not actionable_signals:
             return []
 
