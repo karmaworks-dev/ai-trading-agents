@@ -109,6 +109,56 @@ def validate_symbol(symbol):
     return False, None
 
 
+def get_asset_max_leverage(symbol):
+    """
+    Get the maximum allowed leverage for a symbol from Hyperliquid.
+
+    Args:
+        symbol: Token symbol (e.g., 'BTC', 'TAO')
+
+    Returns:
+        int: Maximum leverage allowed by the exchange for this asset
+             Falls back to DEFAULT_LEVERAGE if unable to fetch
+    """
+    try:
+        universe = get_hyperliquid_universe()
+
+        # Try exact match first
+        if symbol in universe:
+            max_lev = universe[symbol].get('maxLeverage', DEFAULT_LEVERAGE)
+            return int(max_lev)
+
+        # Try uppercase
+        symbol_upper = symbol.upper()
+        if symbol_upper in universe:
+            max_lev = universe[symbol_upper].get('maxLeverage', DEFAULT_LEVERAGE)
+            return int(max_lev)
+
+        # Symbol not found, return default
+        return DEFAULT_LEVERAGE
+
+    except Exception as e:
+        print(f"⚠️ Error fetching max leverage for {symbol}: {e}")
+        return DEFAULT_LEVERAGE
+
+
+def get_effective_leverage(symbol, requested_leverage):
+    """
+    Get the effective leverage to use for a symbol, clamped to exchange max.
+
+    Args:
+        symbol: Token symbol
+        requested_leverage: The leverage requested by the system/user
+
+    Returns:
+        tuple: (effective_leverage, was_clamped, exchange_max)
+    """
+    exchange_max = get_asset_max_leverage(symbol)
+    effective = min(requested_leverage, exchange_max)
+    was_clamped = effective < requested_leverage
+    return effective, was_clamped, exchange_max
+
+
 def ask_bid(symbol):
     """Get ask and bid prices for a symbol"""
     url = 'https://api.hyperliquid.xyz/info'
@@ -316,21 +366,40 @@ def get_position(symbol_or_address, account=None):
 
 
 def set_leverage(symbol, leverage, account):
-    """Set leverage for a symbol"""
-    print(f'Setting leverage for {symbol} to {leverage}x')
+    """
+    Set leverage for a symbol, clamped to exchange maximum.
+
+    Args:
+        symbol: Token symbol
+        leverage: Requested leverage multiplier
+        account: HyperLiquid account object
+
+    Returns:
+        tuple: (result, actual_leverage) - API result and the leverage actually set
+    """
+    # Get effective leverage (clamped to exchange max)
+    effective_leverage, was_clamped, exchange_max = get_effective_leverage(symbol, leverage)
+
+    if was_clamped:
+        cprint(f'⚠️ Leverage clamped for {symbol}: requested {leverage}x but exchange max is {exchange_max}x → using {effective_leverage}x', 'yellow')
+        add_console_log(f"⚠️ {symbol} leverage: {leverage}x → {effective_leverage}x (max: {exchange_max}x)", "warning")
+    else:
+        print(f'Setting leverage for {symbol} to {effective_leverage}x')
+
     exchange = Exchange(account, constants.MAINNET_API_URL)
 
     # Update leverage (is_cross=True for cross margin)
-    result = exchange.update_leverage(leverage, symbol, is_cross=True)
-    print(f'✅ Leverage set to {leverage}x for {symbol}')
-    return result
+    result = exchange.update_leverage(effective_leverage, symbol, is_cross=True)
+    print(f'✅ Leverage set to {effective_leverage}x for {symbol}')
+
+    return result, effective_leverage
 
 def adjust_leverage_usd_size(symbol, usd_size, leverage, account):
     """Adjust leverage and calculate position size"""
     print(f'Adjusting leverage for {symbol} to {leverage}x with ${usd_size} size')
 
-    # Set the leverage
-    set_leverage(symbol, leverage, account)
+    # Set the leverage (may be clamped to exchange max)
+    _, actual_leverage = set_leverage(symbol, leverage, account)
 
     # Get current price
     ask, bid, _ = ask_bid(symbol)
@@ -345,7 +414,7 @@ def adjust_leverage_usd_size(symbol, usd_size, leverage, account):
 
     print(f'Position size: {pos_size} {symbol} (${usd_size} at ${mid_price:.2f})')
 
-    return leverage, pos_size
+    return actual_leverage, pos_size
 
 def cancel_all_orders(account):
     """Cancel all open orders"""
@@ -1164,31 +1233,42 @@ def ai_entry(symbol, amount, max_chunk_size=None, leverage=DEFAULT_LEVERAGE, acc
 
     Args:
         symbol: Token symbol
-        amount: Total USD amount to invest
+        amount: Total USD notional amount (will be adjusted if leverage is clamped)
         max_chunk_size: Ignored (kept for compatibility)
-        leverage: Leverage multiplier
+        leverage: Requested leverage multiplier (may be clamped to exchange max)
         account: HyperLiquid account object (optional, will create from env if not provided)
 
     Returns:
-        bool: True if successful
+        tuple: (success: bool, actual_leverage: int) - success status and actual leverage used
     """
     if account is None:
         account = _get_account_from_env()
 
-    # Set leverage
-    set_leverage(symbol, leverage, account)
+    # Set leverage (may be clamped to exchange max)
+    _, actual_leverage = set_leverage(symbol, leverage, account)
+
+    # If leverage was clamped, the margin requirement changes
+    # Original: margin = amount / leverage
+    # New margin requirement: margin = amount / actual_leverage
+    # To maintain the same margin spend, we need to adjust the notional
+    if actual_leverage != leverage:
+        # Recalculate notional to use same margin with lower leverage
+        original_margin = amount / leverage
+        adjusted_amount = original_margin * actual_leverage
+        cprint(f'📊 Adjusted notional for {symbol}: ${amount:.2f} → ${adjusted_amount:.2f} (to maintain ${original_margin:.2f} margin at {actual_leverage}x)', 'cyan')
+        amount = adjusted_amount
 
     result = market_buy(symbol, amount, account)
-    return result is not None
+    return result is not None, actual_leverage
 
 def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=None):
     """Open SHORT position explicitly
 
     Args:
         token: Token symbol
-        amount: USD NOTIONAL position size
+        amount: USD NOTIONAL position size (will be adjusted if leverage is clamped)
         slippage: Not used (kept for compatibility)
-        leverage: Leverage multiplier
+        leverage: Requested leverage multiplier (may be clamped to exchange max)
         account: HyperLiquid account object (optional, will create from env if not provided)
 
     Raises:
@@ -1196,7 +1276,7 @@ def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=
         Exception: If order fails
 
     Returns:
-        dict: Order response
+        tuple: (order_result: dict, actual_leverage: int) - Order response and actual leverage used
     """
     if account is None:
         account = _get_account_from_env()
@@ -1210,8 +1290,14 @@ def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=
         raise ValueError(error_msg)
 
     try:
-        # Set leverage
-        set_leverage(token, leverage, account)
+        # Set leverage (may be clamped to exchange max)
+        _, actual_leverage = set_leverage(token, leverage, account)
+
+        # If leverage was clamped, adjust the notional to maintain same margin
+        if actual_leverage != leverage:
+            original_margin = amount / leverage
+            amount = original_margin * actual_leverage
+            cprint(f'📊 Adjusted SHORT notional for {token}: to ${amount:.2f} (to maintain ${original_margin:.2f} margin at {actual_leverage}x)', 'cyan')
 
         # Get current ask price
         ask, bid, _ = ask_bid(token)
@@ -1233,11 +1319,11 @@ def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=
         sz_decimals, _ = get_sz_px_decimals(token)
         pos_size = round(pos_size, sz_decimals)
 
-        # Calculate required margin
-        required_margin = amount / leverage
+        # Calculate required margin with actual leverage
+        required_margin = amount / actual_leverage
 
         print(colored(f'📉 Opening SHORT: {pos_size} {token} @ ${sell_price}', 'red'))
-        print(colored(f'💰 Notional Position: ${amount:.2f} | Margin Required: ${required_margin:.2f} ({leverage}x)', 'cyan'))
+        print(colored(f'💰 Notional Position: ${amount:.2f} | Margin Required: ${required_margin:.2f} ({actual_leverage}x)', 'cyan'))
 
         # Place market sell to open short
         exchange = Exchange(account, constants.MAINNET_API_URL)
@@ -1252,7 +1338,7 @@ def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=
                 add_console_log(f"📉 SHORT {token} for ${position_value:.2f}", "trade")
             except Exception:
                 pass
-            return order_result
+            return order_result, actual_leverage
         else:
             error_msg = order_result.get('response', {}).get('error', 'Unknown error') if order_result else 'No response'
             print(colored(f'❌ Short position failed: {error_msg}', 'red'))
@@ -1262,8 +1348,6 @@ def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=
         print(colored(f'❌ Error opening short: {e}', 'red'))
         traceback.print_exc()
         raise  # Re-raise instead of returning None
-    
-    # close positions in opposite trade direction
 
 def close_complete_position(symbol, account, slippage=0.01, max_retries=3):
     """
