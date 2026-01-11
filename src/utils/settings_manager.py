@@ -117,13 +117,6 @@ DEFAULT_SETTINGS = {
         {"provider": "openrouter", "model": "tngtech/deepseek-r1t2-chimera:free", "temperature": 0.5, "max_tokens": 2048},
     ],
 
-    # Strategy settings - Enable/disable individual trading strategies
-    # Each strategy can be toggled on/off from the frontend
-    "enabled_strategies": {
-        "quad_rotation": True,      # Multi-stochastic rotation strategy
-        "compounding_agr": True,    # Adaptive position sizing strategy
-    },
-
     # Timestamp
     "last_updated": None
 }

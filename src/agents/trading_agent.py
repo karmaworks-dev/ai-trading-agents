@@ -2187,7 +2187,7 @@ Return ONLY valid JSON with the following structure:
                 return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
 
             # ==========================================================
-            # STEP 6 — VALIDATE ACTIONS (WITH SYMBOL NORMALIZATION)
+            # STEP 6 — VALIDATE ACTIONS (NO SILENCE)
             # ==========================================================
             valid_actions = []
             rejected = {}
@@ -2200,15 +2200,11 @@ Return ONLY valid JSON with the following structure:
                     reject("not a dict")
                     continue
 
-                raw_sym = a.get("symbol", "")
+                sym = a.get("symbol")
                 act = a.get("action")
 
-                # Normalize symbol (handles AI hallucinations like "BITCOIN" → "BTC")
-                sym = self.normalize_symbol(raw_sym)
-                a["symbol"] = sym  # Update action with normalized symbol
-
                 if sym not in self.symbols:
-                    reject(f"{raw_sym}: unknown symbol" + (f" (normalized: {sym})" if sym != raw_sym else ""))
+                    reject(f"{sym}: invalid symbol")
                     continue
 
                 if act not in ["OPEN_LONG", "OPEN_SHORT", "INCREASE", "REDUCE", "CLOSE"]:
@@ -2247,45 +2243,17 @@ Return ONLY valid JSON with the following structure:
                 valid_actions.append(a)
 
             # ==========================================================
-            # STEP 7 — LOG REJECTIONS & HANDLE PARTIAL FAILURES
+            # STEP 7 — LOG REJECTIONS
             # ==========================================================
-            total_rejected = sum(rejected.values())
-            valid_count = len(valid_actions)
-
             if rejected:
-                # Better logging: show valid vs rejected counts
-                cprint(f"\n⚠️ AI Actions: {valid_count} valid, {total_rejected} rejected", "yellow")
-                for reason, count in rejected.items():
-                    cprint(f"   • {reason} (×{count})", "white")
-
-                if valid_count > 0:
-                    # Some actions are valid - proceed with those
-                    add_console_log(f"AI allocation: {valid_count} valid, {total_rejected} rejected", "info")
-                else:
-                    # All rejected - will try partial recovery below
-                    add_console_log(f"AI allocation: {total_rejected} action(s) rejected", "warning")
+                cprint("\n❌ Rejected actions:", "red")
+                for r, c in rejected.items():
+                    cprint(f"   {r}: {c}", "white")
+                add_console_log(f"Rejected actions: {dict(rejected)}", "warning")
 
             if not valid_actions:
-                # Partial Recovery: Check if we have valid signals that AI didn't properly handle
-                ai_symbols = {a.get("symbol") for a in actions if isinstance(a, dict)}
-                uncovered_signals = [s for s in signals if s.get("symbol") not in ai_symbols]
-
-                if uncovered_signals:
-                    # AI returned actions for wrong symbols, but we have other valid signals
-                    cprint(f"\n🔄 Partial recovery: {len(uncovered_signals)} signals not covered by AI", "yellow")
-                    add_console_log(
-                        f"Using {len(uncovered_signals)} uncovered signals for fallback allocation",
-                        "warning"
-                    )
-                    return self._fallback_equal_allocation(uncovered_signals, allocatable_usd, open_positions)
-                else:
-                    # AI covered our signals but all were rejected - use all signals for fallback
-                    cprint(f"\n❌ All {total_rejected} AI action(s) rejected", "red")
-                    add_console_log(
-                        f"All {total_rejected} AI action(s) rejected — using fallback allocation",
-                        "error"
-                    )
-                    return self._fallback_equal_allocation(signals, total_equity, open_positions)
+                add_console_log("All AI actions rejected — fallback triggered", "error")
+                return self._fallback_equal_allocation(signals, total_equity, open_positions)
 
             # ==========================================================
             # STEP 8 — FINAL PLAN
@@ -2373,71 +2341,6 @@ Return ONLY valid JSON with the following structure:
         if actions_sorted:
             add_console_log(f"Planned {len(actions_sorted)} rebalance actions", "info")
         return actions_sorted
-
-    def normalize_symbol(self, raw_symbol: str) -> str:
-        """
-        Normalize AI-returned symbols to match self.symbols.
-
-        Handles common AI hallucinations like:
-        - "BITCOIN" → "BTC"
-        - "btc" → "BTC"
-        - "ETH/USD" → "ETH"
-        - "BTC-PERP" → "BTC"
-
-        Returns the normalized symbol if found in self.symbols,
-        otherwise returns the original (will be rejected by validation).
-        """
-        if not raw_symbol:
-            return raw_symbol
-
-        # Common cryptocurrency name aliases
-        SYMBOL_ALIASES = {
-            "BITCOIN": "BTC",
-            "ETHEREUM": "ETH",
-            "SOLANA": "SOL",
-            "LITECOIN": "LTC",
-            "DOGECOIN": "DOGE",
-            "HYPERLIQUID": "HYPE",
-            "AVALANCHE": "AVAX",
-            "CHAINLINK": "LINK",
-            "POLYGON": "MATIC",
-            "ARBITRUM": "ARB",
-            "OPTIMISM": "OP",
-            "COSMOS": "ATOM",
-            "POLKADOT": "DOT",
-            "UNISWAP": "UNI",
-            "AAVE": "AAVE",
-            "CELESTIA": "TIA",
-            "INJECTIVE": "INJ",
-            "JUPITER": "JUP",
-            "PEPE": "PEPE",
-            "BONK": "BONK",
-            "SHIBA": "SHIB",
-            "SHIBA INU": "SHIB",
-        }
-
-        upper = raw_symbol.upper().strip()
-
-        # Check aliases first
-        if upper in SYMBOL_ALIASES:
-            normalized = SYMBOL_ALIASES[upper]
-            if normalized in self.symbols:
-                return normalized
-
-        # Strip common suffixes (e.g., BTC/USD, BTC-USD, BTCUSD, BTC-PERP)
-        for suffix in ["/USD", "-USD", "USD", "/USDT", "-USDT", "USDT", "-PERP", "/PERP", "PERP"]:
-            if upper.endswith(suffix):
-                stripped = upper[:-len(suffix)]
-                if stripped in self.symbols:
-                    return stripped
-                break
-
-        # Check if uppercase version is in symbols
-        if upper in self.symbols:
-            return upper
-
-        # Return original if no normalization worked
-        return raw_symbol
 
     def _fallback_equal_allocation(self, signals, available_balance, open_positions):
         """
