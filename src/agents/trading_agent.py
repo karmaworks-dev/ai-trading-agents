@@ -2191,6 +2191,7 @@ Return ONLY valid JSON with the following structure:
             # ==========================================================
             valid_actions = []
             rejected = {}
+            rejected_symbols = set()  # Track symbols rejected by risk manager
 
             def reject(reason):
                 rejected[reason] = rejected.get(reason, 0) + 1
@@ -2238,6 +2239,7 @@ Return ONLY valid JSON with the following structure:
                             account_balance=total_equity,
                         )
                         if not verdict["valid"]:
+                            rejected_symbols.add(sym)  # Track for fallback exclusion
                             reject(f"{sym}: risk rejected")
                             continue
                     except Exception as e:
@@ -2443,13 +2445,25 @@ Return ONLY valid JSON with the following structure:
         """
         Fallback to equal distribution when AI allocation fails.
         Returns list of action dicts in the same format as AI.
+
+        Args:
+            excluded_symbols: Set of symbols rejected by risk manager (will be excluded)
         """
         cprint("\n📊 Using fallback equal distribution...", "yellow")
+
+        # Exclude symbols that were rejected by risk manager
+        excluded_symbols = excluded_symbols or set()
+        if excluded_symbols:
+            cprint(f"   Excluding risk-rejected symbols: {excluded_symbols}", "yellow")
 
         # Minimum order notional (matching exchange requirements)
         min_order_notional = 12.0
 
-        actionable_signals = [s for s in signals if s["action"] in ["BUY", "SELL"]]
+        actionable_signals = [
+            s for s in signals
+            if s["action"] in ["BUY", "SELL"]
+            and s["symbol"] not in excluded_symbols
+        ]
         if not actionable_signals:
             return []
 
