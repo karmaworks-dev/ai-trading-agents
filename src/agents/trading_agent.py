@@ -2230,15 +2230,24 @@ Return ONLY valid JSON with the following structure:
                 if RISK_MANAGER_AVAILABLE and self.risk_manager:
                     try:
                         conf = a.get("confidence", 50) / 100.0
+                        # Get actual entry price instead of hardcoded value
+                        try:
+                            entry_price = n.get_current_price(sym)
+                        except Exception:
+                            entry_price = 100.0  # Fallback if price fetch fails
+
                         verdict = self.risk_manager.validate_trade_decision(
                             symbol=sym,
                             action=act,
                             confidence=conf,
-                            entry_price=100.0,
+                            entry_price=entry_price,
                             account_balance=total_equity,
                         )
                         if not verdict["valid"]:
-                            reject(f"{sym}: risk rejected")
+                            # Get detailed rejection reason
+                            reason = verdict.get("reason", verdict.get("message", "unknown"))
+                            cprint(f"   ⚠️ Risk rejected {sym}: {reason}", "yellow")
+                            reject(f"{sym}: risk rejected ({reason})")
                             continue
                     except Exception as e:
                         reject(f"{sym}: risk error {e}")
@@ -2699,10 +2708,12 @@ Return ONLY valid JSON with the following structure:
                             # For HyperLiquid, we can directly open opposite position which will net against existing
                             if EXCHANGE == "HYPERLIQUID":
                                 cprint(f"   📈 Opening LONG to net against existing SHORT", "cyan")
-                                result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
-                                
+                                entry_result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
+                                # ai_entry now returns (success: bool, actual_leverage: int)
+                                result, actual_lev = entry_result if isinstance(entry_result, tuple) else (entry_result, LEVERAGE)
+
                                 if result:
-                                    cprint(f"   ✅ LONG position opened (netting against SHORT)", "green")
+                                    cprint(f"   ✅ LONG position opened (netting against SHORT) @ {actual_lev}x leverage", "green")
                                     add_console_log(f"✅ Opened LONG {symbol} ${notional:.2f} (netting)", "success")
                                     
                                     # Update tracker to reflect net position
@@ -2742,8 +2753,11 @@ Return ONLY valid JSON with the following structure:
 
                         # Execute trade and verify success
                         result = None
+                        actual_lev = LEVERAGE
                         if EXCHANGE == "HYPERLIQUID":
-                            result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
+                            entry_result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
+                            # ai_entry now returns (success: bool, actual_leverage: int)
+                            result, actual_lev = entry_result if isinstance(entry_result, tuple) else (entry_result, LEVERAGE)
                         elif EXCHANGE == "ASTER":
                             result = n.ai_entry(symbol, notional, leverage=LEVERAGE)
                         else:
@@ -2751,7 +2765,7 @@ Return ONLY valid JSON with the following structure:
 
                         # Verify trade executed successfully
                         if result:
-                            cprint(f"   ✅ LONG position opened!", "green")
+                            cprint(f"   ✅ LONG position opened @ {actual_lev}x leverage!", "green")
                             add_console_log(f"✅ Opened LONG {symbol} ${notional:.2f}", "success")
 
                             # Record in tracker
@@ -2791,10 +2805,12 @@ Return ONLY valid JSON with the following structure:
                             # For HyperLiquid, we can directly open opposite position which will net against existing
                             if EXCHANGE == "HYPERLIQUID":
                                 cprint(f"   📉 Opening SHORT to net against existing LONG", "cyan")
-                                result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
-                                
+                                short_result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
+                                # open_short now returns (order_result: dict, actual_leverage: int)
+                                result, actual_lev = short_result if isinstance(short_result, tuple) else (short_result, LEVERAGE)
+
                                 if result:
-                                    cprint(f"   ✅ SHORT position opened (netting against LONG)", "green")
+                                    cprint(f"   ✅ SHORT position opened (netting against LONG) @ {actual_lev}x leverage", "green")
                                     add_console_log(f"✅ Opened SHORT {symbol} ${notional:.2f} (netting)", "success")
                                     
                                     # Update tracker to reflect net position
@@ -2838,8 +2854,11 @@ Return ONLY valid JSON with the following structure:
 
                         # Execute trade and verify success
                         result = None
+                        actual_lev = LEVERAGE
                         if EXCHANGE == "HYPERLIQUID":
-                            result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
+                            short_result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
+                            # open_short now returns (order_result: dict, actual_leverage: int)
+                            result, actual_lev = short_result if isinstance(short_result, tuple) else (short_result, LEVERAGE)
                         elif EXCHANGE == "ASTER":
                             if hasattr(n, 'open_short'):
                                 result = n.open_short(symbol, notional, leverage=LEVERAGE)
@@ -2850,7 +2869,7 @@ Return ONLY valid JSON with the following structure:
 
                         # Verify trade executed successfully
                         if result:
-                            cprint(f"   ✅ SHORT position opened!", "green")
+                            cprint(f"   ✅ SHORT position opened @ {actual_lev}x leverage!", "green")
                             add_console_log(f"✅ Opened SHORT {symbol} ${notional:.2f}", "success")
 
                             # Record in tracker
