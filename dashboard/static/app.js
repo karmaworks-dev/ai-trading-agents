@@ -656,16 +656,18 @@ function switchSettingsTab(tabName) {
 // Load all settings from API
 async function loadSettings() {
     try {
-        // Load settings, tokens (live from Hyperliquid), and models in parallel
-        const [settingsRes, tokensRes, modelsRes] = await Promise.all([
+        // Load settings, tokens (live from Hyperliquid), models, and strategies in parallel
+        const [settingsRes, tokensRes, modelsRes, strategiesRes] = await Promise.all([
             fetch('/api/settings'),
             fetch('/api/tokens?live=true'),  // Fetch live tokens from Hyperliquid
-            fetch('/api/ai-models')
+            fetch('/api/ai-models'),
+            fetch('/api/strategies')  // Fetch available strategies
         ]);
 
         const settingsData = await settingsRes.json();
         const tokensData = await tokensRes.json();
         const modelsData = await modelsRes.json();
+        const strategiesData = await strategiesRes.json();
 
         // Store available data
         if (tokensData.success) {
@@ -682,6 +684,12 @@ async function loadSettings() {
             availableProviders = modelsData.providers;
             availableModels = modelsData.models;
             populateProviderDropdowns();
+        }
+
+        // Render strategies
+        if (strategiesData.success) {
+            renderStrategies(strategiesData.strategies);
+            console.log(`✅ Loaded ${strategiesData.total_count} strategies`);
         }
 
         // Apply settings
@@ -809,6 +817,101 @@ function populateTokenCategories() {
             </div>
         `).join('');
     });
+}
+
+// ========================================
+// STRATEGY MANAGEMENT
+// ========================================
+
+// Render strategies in the settings modal
+function renderStrategies(strategies) {
+    const container = document.getElementById('strategies-list');
+
+    if (!strategies || strategies.length === 0) {
+        container.innerHTML = '<div class="loading-state">No strategies available</div>';
+        return;
+    }
+
+    container.innerHTML = strategies.map(strategy => {
+        const riskClass = `risk-${strategy.risk_level}`;
+        const cardClass = strategy.enabled ? '' : 'disabled';
+        const timeframes = strategy.recommended_timeframes.join(', ');
+
+        return `
+            <div class="strategy-card ${cardClass}" data-strategy-id="${strategy.id}">
+                <div class="strategy-header">
+                    <div class="strategy-info">
+                        <div class="strategy-name">${strategy.name}</div>
+                        <div class="strategy-category">${strategy.category}</div>
+                    </div>
+                    <label class="strategy-toggle">
+                        <input type="checkbox"
+                               ${strategy.enabled ? 'checked' : ''}
+                               onchange="toggleStrategy('${strategy.id}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="strategy-description">${strategy.description}</div>
+                <div class="strategy-meta">
+                    <span class="${riskClass}">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        ${strategy.risk_level} risk
+                    </span>
+                    <span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        ${timeframes}
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Toggle a strategy on/off
+async function toggleStrategy(strategyId, enabled) {
+    try {
+        const response = await fetch(`/api/strategies/${strategyId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enabled })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update the card styling
+            const card = document.querySelector(`.strategy-card[data-strategy-id="${strategyId}"]`);
+            if (card) {
+                card.classList.toggle('disabled', !enabled);
+            }
+
+            const status = enabled ? 'enabled' : 'disabled';
+            console.log(`Strategy '${strategyId}' ${status}`);
+            addConsoleMessage(`Strategy '${strategyId}' ${status}`, 'info');
+        } else {
+            // Revert the toggle if failed
+            const checkbox = document.querySelector(`.strategy-card[data-strategy-id="${strategyId}"] input[type="checkbox"]`);
+            if (checkbox) {
+                checkbox.checked = !enabled;
+            }
+            showValidationMessage(data.message || 'Failed to toggle strategy', 'error');
+        }
+
+    } catch (error) {
+        console.error('Error toggling strategy:', error);
+        showValidationMessage('Failed to toggle strategy', 'error');
+
+        // Revert the toggle
+        const checkbox = document.querySelector(`.strategy-card[data-strategy-id="${strategyId}"] input[type="checkbox"]`);
+        if (checkbox) {
+            checkbox.checked = !enabled;
+        }
+    }
 }
 
 // Toggle category expand/collapse
