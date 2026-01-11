@@ -46,6 +46,126 @@ except ImportError:
         print(f"[{level.upper()}] {message}")
 
 # ============================================================================
+# API RETRY & RATE LIMIT HANDLING
+# ============================================================================
+
+# Rate limit tracking
+_api_call_times = []
+_API_RATE_LIMIT = 50  # Max calls per minute
+_API_RATE_WINDOW = 60  # Window in seconds
+
+def _check_rate_limit():
+    """Check if we're approaching rate limit and wait if needed."""
+    global _api_call_times
+    now = time.time()
+    # Remove calls older than the window
+    _api_call_times = [t for t in _api_call_times if now - t < _API_RATE_WINDOW]
+
+    if len(_api_call_times) >= _API_RATE_LIMIT:
+        wait_time = _API_RATE_WINDOW - (now - _api_call_times[0]) + 1
+        if wait_time > 0:
+            cprint(f"⏳ Rate limit approaching, waiting {wait_time:.1f}s...", "yellow")
+            add_console_log(f"Rate limit: waiting {wait_time:.1f}s", "warning")
+            time.sleep(wait_time)
+            _api_call_times = []
+
+    _api_call_times.append(now)
+
+def api_request_with_retry(url, data, max_retries=4, base_delay=2):
+    """
+    Make an API request with exponential backoff retry logic.
+
+    Handles:
+    - 429 (Rate Limit) - waits and retries
+    - 404 (Not Found) - retries in case of temporary issues
+    - 500/502/503/504 (Server Errors) - retries with backoff
+    - Network errors - retries with backoff
+
+    Args:
+        url: API endpoint URL
+        data: JSON data to POST
+        max_retries: Maximum number of retry attempts (default 4)
+        base_delay: Base delay in seconds for exponential backoff (default 2)
+
+    Returns:
+        Response JSON on success
+
+    Raises:
+        Exception on final failure after all retries
+    """
+    headers = {'Content-Type': 'application/json'}
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            # Check rate limit before making call
+            _check_rate_limit()
+
+            response = requests.post(url, headers=headers, data=json.dumps(data), timeout=30)
+
+            # Success
+            if response.status_code == 200:
+                return response.json()
+
+            # Rate limited - wait longer
+            if response.status_code == 429:
+                delay = base_delay * (2 ** attempt) * 2  # Double the delay for rate limits
+                cprint(f"⚠️ Rate limited (429), waiting {delay}s... (attempt {attempt + 1}/{max_retries})", "yellow")
+                add_console_log(f"API rate limited - retry in {delay}s", "warning")
+                time.sleep(delay)
+                continue
+
+            # Not found - might be temporary
+            if response.status_code == 404:
+                delay = base_delay * (2 ** attempt)
+                cprint(f"⚠️ Not found (404), retrying in {delay}s... (attempt {attempt + 1}/{max_retries})", "yellow")
+                time.sleep(delay)
+                continue
+
+            # Server errors - retry with backoff
+            if response.status_code in [500, 502, 503, 504]:
+                delay = base_delay * (2 ** attempt)
+                cprint(f"⚠️ Server error ({response.status_code}), retrying in {delay}s... (attempt {attempt + 1}/{max_retries})", "yellow")
+                add_console_log(f"API server error {response.status_code} - retry in {delay}s", "warning")
+                time.sleep(delay)
+                continue
+
+            # Other errors - raise immediately
+            last_error = f"API error: {response.status_code} - {response.text[:200]}"
+            raise Exception(last_error)
+
+        except requests.exceptions.Timeout:
+            delay = base_delay * (2 ** attempt)
+            cprint(f"⚠️ Request timeout, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})", "yellow")
+            add_console_log(f"API timeout - retry in {delay}s", "warning")
+            last_error = "Request timeout"
+            time.sleep(delay)
+            continue
+
+        except requests.exceptions.ConnectionError as e:
+            delay = base_delay * (2 ** attempt)
+            cprint(f"⚠️ Connection error, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})", "yellow")
+            add_console_log(f"API connection error - retry in {delay}s", "warning")
+            last_error = f"Connection error: {e}"
+            time.sleep(delay)
+            continue
+
+        except Exception as e:
+            if "API error" in str(e):
+                raise  # Re-raise API errors
+            delay = base_delay * (2 ** attempt)
+            last_error = str(e)
+            time.sleep(delay)
+            continue
+
+    # All retries exhausted
+    error_msg = f"API request failed after {max_retries} attempts: {last_error}"
+    cprint(f"❌ {error_msg}", "red")
+    add_console_log(f"API failed after {max_retries} retries", "error")
+    raise Exception(error_msg)
+
+
+# ============================================================================
 # CONFIGURATION
 # ============================================================================
 DEFAULT_LEVERAGE = 20  # Change this to adjust leverage globally (1-50x on HyperLiquid)
@@ -75,18 +195,15 @@ def get_hyperliquid_universe():
     """
     Get all available symbols from Hyperliquid universe.
     Returns a dict mapping symbol names to their metadata.
+    Uses retry logic for resilience against API errors.
     """
     url = 'https://api.hyperliquid.xyz/info'
-    headers = {'Content-Type': 'application/json'}
     data = {'type': 'meta'}
 
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        if response.status_code == 200:
-            meta = response.json()
-            universe = {coin['name']: coin for coin in meta.get('universe', [])}
-            return universe
-        return {}
+        meta = api_request_with_retry(url, data)
+        universe = {coin['name']: coin for coin in meta.get('universe', [])}
+        return universe
     except Exception as e:
         print(f"❌ Error getting Hyperliquid universe: {e}")
         return {}
@@ -160,23 +277,15 @@ def get_effective_leverage(symbol, requested_leverage):
 
 
 def ask_bid(symbol):
-    """Get ask and bid prices for a symbol"""
+    """Get ask and bid prices for a symbol with retry logic."""
     url = 'https://api.hyperliquid.xyz/info'
-    headers = {'Content-Type': 'application/json'}
-
     data = {
         'type': 'l2Book',
         'coin': symbol
     }
 
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-
-        # Validate HTTP response
-        if response.status_code != 200:
-            raise Exception(f"API returned status code {response.status_code}")
-
-        l2_data = response.json()
+        l2_data = api_request_with_retry(url, data)
 
         # Validate response structure
         if 'levels' not in l2_data:
@@ -200,26 +309,22 @@ def ask_bid(symbol):
 
     except Exception as e:
         print(f"❌ Error getting ask/bid for {symbol}: {e}")
-        # Return safe fallback values (will cause calling code to fail safely)
         raise
 
 def get_sz_px_decimals(symbol):
     """
-    Get size and price decimals for a symbol.
+    Get size and price decimals for a symbol with retry logic.
 
     Raises:
         ValueError: If symbol is not found on Hyperliquid
         Exception: If API call fails
     """
     url = 'https://api.hyperliquid.xyz/info'
-    headers = {'Content-Type': 'application/json'}
     data = {'type': 'meta'}
 
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-
-    if response.status_code == 200:
-        data = response.json()
-        symbols = data['universe']
+    try:
+        meta_data = api_request_with_retry(url, data)
+        symbols = meta_data['universe']
         symbol_info = next((s for s in symbols if s['name'] == symbol), None)
 
         # Also check uppercase version
@@ -234,8 +339,11 @@ def get_sz_px_decimals(symbol):
             print(f'❌ {error_msg}')
             add_console_log(f"❌ {symbol} not available on Hyperliquid", "error")
             raise ValueError(error_msg)
-    else:
-        error_msg = f"API error {response.status_code} when fetching symbol info"
+
+    except ValueError:
+        raise
+    except Exception as e:
+        error_msg = f"API error when fetching symbol info: {e}"
         print(f'❌ {error_msg}')
         raise Exception(error_msg)
 

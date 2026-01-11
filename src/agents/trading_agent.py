@@ -1885,7 +1885,18 @@ Return ONLY valid JSON with the following structure:
                 )
 
                 cprint(f"✅ Swarm analysis complete for {token[:8]}!", "green")
-                add_console_log(f"✅ Swarm  {token} -> {action} | {confidence}% Sure", "success")
+
+                # Detailed logging for frontend (swarm mode)
+                if action == "BUY":
+                    add_console_log(f"🌊📈 SWARM: {token} → LONG | {confidence}% consensus", "success")
+                    short_reason = reasoning.split('.')[0][:80] if reasoning else "Swarm consensus: buy"
+                    add_console_log(f"   Reason: {short_reason}...", "info")
+                elif action == "SELL":
+                    add_console_log(f"🌊📉 SWARM: {token} → SHORT | {confidence}% consensus", "success")
+                    short_reason = reasoning.split('.')[0][:80] if reasoning else "Swarm consensus: sell"
+                    add_console_log(f"   Reason: {short_reason}...", "info")
+                else:
+                    add_console_log(f"🌊⏸️ SWARM: {token} → HOLD | {confidence}% consensus", "info")
 
                 # Return raw result for dashboard or debugging
                 return swarm_result
@@ -2020,8 +2031,21 @@ Return ONLY valid JSON with the following structure:
                     ignore_index=True,
                 )
 
-                add_console_log(f"Analysis Complete for {token[:4]}...", "info")
-                add_console_log(f"{token} -> {action} | {confidence}%", "success")
+                # Detailed logging for frontend
+                add_console_log(f"Analysis Complete for {token}...", "info")
+
+                # Log decision with emoji based on action
+                if action == "BUY":
+                    add_console_log(f"📈 {token} → LONG | {confidence}% confidence", "success")
+                    # Extract short reasoning (first sentence)
+                    short_reason = reasoning.split('.')[0][:80] if reasoning else "Strong buy signal"
+                    add_console_log(f"   Reason: {short_reason}...", "info")
+                elif action == "SELL":
+                    add_console_log(f"📉 {token} → SHORT | {confidence}% confidence", "success")
+                    short_reason = reasoning.split('.')[0][:80] if reasoning else "Strong sell signal"
+                    add_console_log(f"   Reason: {short_reason}...", "info")
+                else:
+                    add_console_log(f"⏸️ {token} → HOLD | {confidence}% confidence", "info")
 
                 return response
 
@@ -3237,7 +3261,8 @@ Return ONLY valid JSON with the following structure:
 
             # STEP 2: COLLECT MARKET DATA
             tokens_to_trade = self.symbols
-            add_console_log(f"📊 Collecting market data for {len(tokens_to_trade)} tokens...", "info")
+            add_console_log(f"📡 Fetching market data from {EXCHANGE}...", "info")
+            add_console_log(f"Tokens: {', '.join(tokens_to_trade[:5])}{'...' if len(tokens_to_trade) > 5 else ''}", "info")
             cprint("📊 Collecting market data for analysis...", "white", "on_blue")
 
             market_data = collect_all_tokens(
@@ -3246,7 +3271,7 @@ Return ONLY valid JSON with the following structure:
                 timeframe=self.timeframe,
                 exchange=EXCHANGE,
             )
-            add_console_log(f"Market data collected for {len(market_data)} tokens", "info")
+            add_console_log(f"✅ Market data received: {len(market_data)} tokens from {EXCHANGE}", "success")
 
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
@@ -3307,6 +3332,12 @@ Return ONLY valid JSON with the following structure:
             cprint("\n📊 AI TRADING RECOMMENDATIONS:", "white", "on_blue")
             summary_df = self.recommendations_df[["token", "action", "confidence"]].copy()
             print(summary_df.to_string(index=False))
+
+            # Log signals summary to frontend
+            buy_count = len(self.recommendations_df[self.recommendations_df["action"] == "BUY"])
+            sell_count = len(self.recommendations_df[self.recommendations_df["action"] == "SELL"])
+            hold_count = len(self.recommendations_df[self.recommendations_df["action"] == "NOTHING"])
+            add_console_log(f"Signals: {buy_count} BUY, {sell_count} SELL, {hold_count} HOLD", "info")
 
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - skipping trade execution", "warning")
