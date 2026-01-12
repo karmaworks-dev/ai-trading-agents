@@ -240,9 +240,9 @@ function updatePositions(positions) {
         const markPrice = pos.mark_price || pos.entry_price;
         const dollarPnl = (markPrice - pos.entry_price) * pos.size;
         const isProfit = dollarPnl >= 0;
-        // Calculate percentage PnL: (dollar_pnl / notional_value) * 100
-        const notionalValue = Math.abs(pos.size) * pos.entry_price;
-        const pctPnl = notionalValue > 0 ? (dollarPnl / notionalValue) * 100 : 0;
+        // Use ROE (Return on Equity) from HyperLiquid - this is PnL as % of margin, not notional
+        // pnl_percent is already calculated correctly by the backend using returnOnEquity
+        const pctPnl = pos.pnl_percent || 0;
         return `
         <div class="position">
             <div class="position-row">
