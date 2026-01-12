@@ -235,6 +235,14 @@ function updatePositions(positions) {
     
     container.innerHTML = positions.map(pos => {
         const sideClass = pos.side.toLowerCase();
+        // Calculate actual dollar PnL from price difference and position size
+        // Formula: (mark - entry) * size works for both long (size>0) and short (size<0)
+        const markPrice = pos.mark_price || pos.entry_price;
+        const dollarPnl = (markPrice - pos.entry_price) * pos.size;
+        const isProfit = dollarPnl >= 0;
+        // Calculate percentage PnL: (dollar_pnl / notional_value) * 100
+        const notionalValue = Math.abs(pos.size) * pos.entry_price;
+        const pctPnl = notionalValue > 0 ? (dollarPnl / notionalValue) * 100 : 0;
         return `
         <div class="position">
             <div class="position-row">
@@ -256,14 +264,14 @@ function updatePositions(positions) {
                 </div>
                 <div class="position-item">
                     <span class="position-label">Mark Price</span>
-                    <span class="position-value">$${pos.mark_price ? pos.mark_price.toFixed(2) : pos.entry_price.toFixed(2)}</span>
+                    <span class="position-value">$${markPrice.toFixed(2)}</span>
                 </div>
                 <div class="position-item">
                     <span class="position-label">P&L</span>
-                    <span class="position-value pnl ${pos.pnl_percent >= 0 ? 'positive' : 'negative'}">
-                        ${pos.pnl_percent >= 0 ? '+' : '-'}$${Math.abs((pos.mark_price - pos.entry_price) * pos.size).toFixed(2)}
+                    <span class="position-value pnl ${isProfit ? 'positive' : 'negative'}">
+                        ${isProfit ? '+' : ''}$${dollarPnl.toFixed(2)}
                         <span style="font-size: 9px; opacity: 0.7; margin-left: 4px;">
-                            (${pos.pnl_percent >= 0 ? '+' : ''}${pos.pnl_percent.toFixed(2)}%)
+                            (${isProfit ? '+' : ''}${pctPnl.toFixed(2)}%)
                         </span>
                     </span>
                 </div>

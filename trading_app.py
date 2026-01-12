@@ -635,8 +635,17 @@ def get_account_data():
         else:
             total_equity = 10.0
         
-        # Calculate PnL (starting balance from config or default $10)
-        starting_balance = 10.0
+        # Calculate PnL from balance history (use first entry as starting balance)
+        starting_balance = total_equity  # Default to current (PnL = 0)
+        try:
+            if HISTORY_FILE.exists():
+                with open(HISTORY_FILE, 'r') as f:
+                    history = json.load(f)
+                    if history and len(history) > 0:
+                        # Use first recorded balance as starting point
+                        starting_balance = float(history[0].get("balance", total_equity))
+        except Exception:
+            pass
         pnl = total_equity - starting_balance
         
         # Save to history
