@@ -2744,18 +2744,20 @@ Return ONLY valid JSON with the following structure:
                                 result, actual_lev = entry_result if isinstance(entry_result, tuple) else (entry_result, LEVERAGE)
 
                                 if result:
+                                    # Recalculate actual notional based on actual leverage used
+                                    actual_notional = margin_usd * actual_lev
                                     cprint(f"   ✅ LONG position opened (netting against SHORT) @ {actual_lev}x leverage", "green")
-                                    add_console_log(f"✅ Opened LONG {symbol} ${notional:.2f} (netting)", "success")
-                                    
+                                    add_console_log(f"✅ Opened LONG {symbol} ${actual_notional:.2f} (netting)", "success")
+
                                     # Update tracker to reflect net position
                                     if POSITION_TRACKER_AVAILABLE:
                                         try:
-                                            record_position_entry(symbol=symbol, entry_price=0, size=notional, is_long=True)
+                                            record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=True)
                                         except Exception as e:
                                             cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
 
                                     try:
-                                        log_position_open(symbol, "LONG", notional)
+                                        log_position_open(symbol, "LONG", actual_notional)
                                     except Exception as e:
                                         cprint(f"   ⚠️ Position log error: {e}", "yellow")
 
@@ -2796,18 +2798,20 @@ Return ONLY valid JSON with the following structure:
 
                         # Verify trade executed successfully
                         if result:
+                            # Recalculate actual notional based on actual leverage used
+                            actual_notional = margin_usd * actual_lev
                             cprint(f"   ✅ LONG position opened @ {actual_lev}x leverage!", "green")
-                            add_console_log(f"✅ Opened LONG {symbol} ${notional:.2f}", "success")
+                            add_console_log(f"✅ Opened LONG {symbol} ${actual_notional:.2f}", "success")
 
                             # Record in tracker
                             if POSITION_TRACKER_AVAILABLE:
                                 try:
-                                    record_position_entry(symbol=symbol, entry_price=0, size=notional, is_long=True)
+                                    record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=True)
                                 except Exception as e:
                                     cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
 
                             try:
-                                log_position_open(symbol, "LONG", notional)
+                                log_position_open(symbol, "LONG", actual_notional)
                             except Exception as e:
                                 cprint(f"   ⚠️ Position log error: {e}", "yellow")
 
@@ -2841,18 +2845,20 @@ Return ONLY valid JSON with the following structure:
                                 result, actual_lev = short_result if isinstance(short_result, tuple) else (short_result, LEVERAGE)
 
                                 if result:
+                                    # Recalculate actual notional based on actual leverage used
+                                    actual_notional = margin_usd * actual_lev
                                     cprint(f"   ✅ SHORT position opened (netting against LONG) @ {actual_lev}x leverage", "green")
-                                    add_console_log(f"✅ Opened SHORT {symbol} ${notional:.2f} (netting)", "success")
-                                    
+                                    add_console_log(f"✅ Opened SHORT {symbol} ${actual_notional:.2f} (netting)", "success")
+
                                     # Update tracker to reflect net position
                                     if POSITION_TRACKER_AVAILABLE:
                                         try:
-                                            record_position_entry(symbol=symbol, entry_price=0, size=notional, is_long=False)
+                                            record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=False)
                                         except Exception as e:
                                             cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
 
                                     try:
-                                        log_position_open(symbol, "SHORT", notional)
+                                        log_position_open(symbol, "SHORT", actual_notional)
                                     except Exception as e:
                                         cprint(f"   ⚠️ Position log error: {e}", "yellow")
 
@@ -2900,18 +2906,20 @@ Return ONLY valid JSON with the following structure:
 
                         # Verify trade executed successfully
                         if result:
+                            # Recalculate actual notional based on actual leverage used
+                            actual_notional = margin_usd * actual_lev
                             cprint(f"   ✅ SHORT position opened @ {actual_lev}x leverage!", "green")
-                            add_console_log(f"✅ Opened SHORT {symbol} ${notional:.2f}", "success")
+                            add_console_log(f"✅ Opened SHORT {symbol} ${actual_notional:.2f}", "success")
 
                             # Record in tracker
                             if POSITION_TRACKER_AVAILABLE:
                                 try:
-                                    record_position_entry(symbol=symbol, entry_price=0, size=notional, is_long=False)
+                                    record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=False)
                                 except Exception as e:
                                     cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
 
                             try:
-                                log_position_open(symbol, "SHORT", notional)
+                                log_position_open(symbol, "SHORT", actual_notional)
                             except Exception as e:
                                 cprint(f"   ⚠️ Position log error: {e}", "yellow")
 
