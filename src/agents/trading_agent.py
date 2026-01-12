@@ -1432,8 +1432,16 @@ FULL DATASET:
 
         cprint("\n" + "=" * 60, "yellow")
         cprint("📊 AI ANALYZING OPEN POSITIONS", "white", "on_magenta", attrs=["bold"])
-        add_console_log("Analyzing Open Positions", "info")
         cprint("=" * 60, "yellow")
+
+        # Log each position being analyzed
+        for symbol, positions in positions_data.items():
+            for pos in positions:
+                side = "LONG" if pos["is_long"] else "SHORT"
+                entry = pos["entry_price"]
+                pnl = pos["pnl_percent"]
+                pnl_emoji = "🟢" if pnl >= 0 else "🔴"
+                add_console_log(f"   {pnl_emoji} {symbol} ({side}) | Entry: ${entry:.2f} | PnL: {pnl:+.2f}%", "info")
 
         # CRITICAL: Check TP/SL thresholds FIRST - force close regardless of AI analysis
         validated_decisions = {}
@@ -2306,7 +2314,30 @@ Return ONLY valid JSON with the following structure:
             for a in valid_actions:
                 cprint(f"   {a}", "white")
 
-            add_console_log(f"Final allocation: {len(valid_actions)} actions", "success")
+            # Log each allocation action with AI reasoning to frontend
+            add_console_log(f"🤖 AI Allocation Response:", "success")
+            for a in valid_actions:
+                action_type = a.get("action", "UNKNOWN")
+                symbol = a.get("symbol", "?")
+                margin = a.get("margin_usd", 0)
+                confidence = a.get("confidence", 0)
+                reason = a.get("reason", "")[:60]  # Truncate for display
+
+                if action_type in ["OPEN_LONG", "INCREASE"] and a.get("margin_usd"):
+                    add_console_log(f"   📈 {action_type} {symbol}: ${margin:.2f} margin ({confidence}%)", "info")
+                elif action_type == "OPEN_SHORT":
+                    add_console_log(f"   📉 {action_type} {symbol}: ${margin:.2f} margin ({confidence}%)", "info")
+                elif action_type == "CLOSE":
+                    add_console_log(f"   🔴 CLOSE {symbol}", "info")
+                elif action_type == "REDUCE":
+                    reduce_by = a.get("reduce_by_usd", 0)
+                    add_console_log(f"   🟡 REDUCE {symbol} by ${reduce_by:.2f}", "info")
+
+                # Log the reasoning (without timestamp for cleaner look)
+                if reason:
+                    add_console_log(f"      → {reason}...", "info")
+
+            add_console_log(f"✅ Allocation validated: {len(valid_actions)} actions approved", "success")
             return valid_actions
 
         except Exception as e:
@@ -3202,7 +3233,14 @@ Return ONLY valid JSON with the following structure:
             cprint(f"🔄 TRADING CYCLE START: {current_time}", "white", "on_green", attrs=["bold"])
             cprint(f"{'=' * 80}", "cyan")
 
-            add_console_log(f"TRADING CYCLE STARTED", "info")
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 1: INITIALIZATION
+            # ══════════════════════════════════════════════════════════════════
+            mode_name = "SWARM" if self.use_swarm_mode else "SINGLE"
+            add_console_log(f"══════ TRADING CYCLE STARTED ══════", "info")
+            add_console_log(f"Mode: {mode_name} | Exchange: {EXCHANGE}", "info")
+            add_console_log(f"Tokens: {', '.join(self.symbols[:5])}{'...' if len(self.symbols) > 5 else ''} ({len(self.symbols)} total)", "info")
+            add_console_log(f"Settings: Leverage {LEVERAGE}x | Cash Buffer {CASH_PERCENTAGE}%", "info")
 
             # Clean up old recently_closed entries
             self._cleanup_recently_closed()
@@ -3215,10 +3253,12 @@ Return ONLY valid JSON with the following structure:
 
             # Check for stop signal
             if self.should_stop():
-                add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
+                add_console_log("⏹️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 0: DISPLAY VOLUME INTELLIGENCE SUMMARY (if available)
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 1.5: VOLUME INTELLIGENCE (if available)
+            # ══════════════════════════════════════════════════════════════════
             if INTELLIGENCE_AVAILABLE:
                 volume_summary = get_volume_summary()
                 if volume_summary and "No volume" not in volume_summary:
@@ -3226,18 +3266,30 @@ Return ONLY valid JSON with the following structure:
                     cprint(volume_summary, "cyan")
                     add_console_log("📊 Volume intelligence loaded", "info")
 
-            # STEP 1: FETCH ALL OPEN POSITIONS
-            add_console_log("Fetching open positions...", "info")
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 2: DATA COLLECTION
+            # ══════════════════════════════════════════════════════════════════
+            add_console_log("────────────────────────────────────", "info")
+            add_console_log("📡 PHASE 2: DATA COLLECTION", "info")
+
+            # Fetch open positions
+            add_console_log(f"📡 API: Fetching positions from {EXCHANGE}...", "info")
             open_positions = self.fetch_all_open_positions()
-            add_console_log(f"Found {len(open_positions)} open position(s)", "info")
+            if open_positions:
+                pos_summary = ", ".join([f"{sym} ({pos.get('direction', 'UNK')})" for sym, pos in list(open_positions.items())[:3]])
+                if len(open_positions) > 3:
+                    pos_summary += f"... (+{len(open_positions) - 3} more)"
+                add_console_log(f"✅ Found {len(open_positions)} positions: {pos_summary}", "success")
+            else:
+                add_console_log(f"✅ No open positions found", "info")
 
             if self.should_stop():
-                add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
+                add_console_log("⏹️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 2: COLLECT MARKET DATA
+            # Collect market data
             tokens_to_trade = self.symbols
-            add_console_log(f"📊 Collecting market data for {len(tokens_to_trade)} tokens...", "info")
+            add_console_log(f"📡 API: Fetching OHLCV data for {len(tokens_to_trade)} tokens...", "info")
             cprint("📊 Collecting market data for analysis...", "white", "on_blue")
 
             market_data = collect_all_tokens(
@@ -3246,26 +3298,30 @@ Return ONLY valid JSON with the following structure:
                 timeframe=self.timeframe,
                 exchange=EXCHANGE,
             )
-            add_console_log(f"Market data collected for {len(market_data)} tokens", "info")
+            add_console_log(f"✅ Market data received ({self.timeframe} timeframe, {self.days_back} days)", "success")
 
             if self.should_stop():
-                add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
+                add_console_log("⏹️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 3: AI ANALYZES OPEN POSITIONS
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 3: POSITION ANALYSIS (Existing Positions)
+            # ══════════════════════════════════════════════════════════════════
             close_decisions = {}
             if open_positions:
+                add_console_log("────────────────────────────────────", "info")
+                add_console_log(f"🔍 PHASE 3: Analyzing {len(open_positions)} open positions...", "info")
                 close_decisions = self.analyze_open_positions_with_ai(open_positions, market_data)
                 if self.should_stop():
-                    add_console_log("ℹ️ Stop signal received - skipping position closes", "warning")
+                    add_console_log("⏹️ Stop signal received - skipping position closes", "warning")
                     return
                 self.execute_position_closes(close_decisions)
 
             if self.should_stop():
-                add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
+                add_console_log("⏹️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 4: REFETCH POSITIONS & MARKET DATA AFTER CLOSURES
+            # PHASE 3.5: REFETCH AFTER CLOSES
             time.sleep(2)
             open_positions = self.fetch_all_open_positions()
             cprint("📊 Refreshing market data after position updates...", "white", "on_blue")
@@ -3280,15 +3336,27 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("ℹ️ Stop signal received - aborting cycle", "warning")
                 return
 
-            # STEP 5: ANALYZE TOKENS FOR NEW ENTRIES
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 4: NEW ENTRY ANALYSIS (All Tokens)
+            # ══════════════════════════════════════════════════════════════════
+            add_console_log("────────────────────────────────────", "info")
+            add_console_log(f"🔍 PHASE 4: Analyzing {len(market_data)} tokens for entries...", "info")
             cprint("\n📈 Analyzing tokens for new entry opportunities...", "white", "on_blue")
+
             for token, data in market_data.items():
                 if self.should_stop():
-                    add_console_log(f"ℹ️ Stop signal received - stopping analysis at {token}", "warning")
+                    add_console_log(f"⏹️ Stop signal received - stopping at {token}", "warning")
                     return
 
+                # Get current price for context
+                try:
+                    current_price = n.get_current_price(token)
+                    price_str = f"@ ${current_price:,.2f}" if current_price > 1 else f"@ ${current_price:.6f}"
+                except:
+                    price_str = ""
+
                 cprint(f"\n📊 Analyzing {token}...", "white", "on_green")
-                add_console_log(f"📊 Analyzing {token}...", "info")
+                add_console_log(f"📊 Analyzing {token} {price_str}...", "info")
 
                 if strategy_signals and token in strategy_signals:
                     data["strategy_signals"] = strategy_signals[token]
@@ -3308,27 +3376,47 @@ Return ONLY valid JSON with the following structure:
             summary_df = self.recommendations_df[["token", "action", "confidence"]].copy()
             print(summary_df.to_string(index=False))
 
+            # Log signals summary to frontend
+            buy_count = len(self.recommendations_df[self.recommendations_df["action"] == "BUY"])
+            sell_count = len(self.recommendations_df[self.recommendations_df["action"] == "SELL"])
+            hold_count = len(self.recommendations_df[self.recommendations_df["action"] == "NOTHING"])
+            add_console_log("────────────────────────────────────", "info")
+            add_console_log(f"📋 SIGNAL SUMMARY: {buy_count} BUY, {sell_count} SELL, {hold_count} HOLD", "info")
+
             if self.should_stop():
                 add_console_log("ℹ️ Stop signal received - skipping trade execution", "warning")
                 return
 
-            # ================================================================
-            # 🚀 UNIFIED EXECUTION - AI-DRIVEN ALLOCATION
-            # Works the same for both swarm and single mode
-            # ================================================================
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 5: AI PORTFOLIO ALLOCATION
+            # ══════════════════════════════════════════════════════════════════
             try:
                 mode_name = "SWARM" if self.use_swarm_mode else "SINGLE"
                 cprint(f"\n{'=' * 80}", "yellow")
                 cprint(f"🚀 {mode_name} MODE — AI-Driven Allocation Pipeline", "white", "on_yellow", attrs=["bold"])
                 cprint(f"{'=' * 80}", "yellow")
-                add_console_log(f"{mode_name} mode — starting allocations", "info")
+
+                add_console_log("────────────────────────────────────", "info")
+                add_console_log(f"💰 PHASE 5: AI PORTFOLIO ALLOCATION", "info")
+
+                # Log account status
+                try:
+                    account_balance = get_account_balance(self.account)
+                    total_equity = n.get_account_value(self.account.address) if EXCHANGE == "HYPERLIQUID" else account_balance
+                    in_positions = total_equity - account_balance
+                    cash_buffer = total_equity * (CASH_PERCENTAGE / 100.0)
+                    allocatable = max(0, account_balance - cash_buffer)
+                    add_console_log(f"💰 Equity: ${total_equity:.2f} | Balance: ${account_balance:.2f} | In Positions: ${in_positions:.2f}", "info")
+                    add_console_log(f"   Cash Buffer ({CASH_PERCENTAGE}%): ${cash_buffer:.2f} | Allocatable: ${allocatable:.2f}", "info")
+                except Exception as e:
+                    add_console_log(f"⚠️ Could not fetch account status: {e}", "warning")
 
                 # Phase 1: Close contradictory positions (signals vs positions)
-                cprint("\n📌 PHASE 1: Exit Contradictory Positions", "yellow", attrs=["bold"])
+                cprint("\n📌 Exit Contradictory Positions", "yellow", attrs=["bold"])
                 self.handle_exits()
 
                 if self.should_stop():
-                    add_console_log("ℹ️ Stop signal received - skipping allocation", "warning")
+                    add_console_log("⏹️ Stop signal received - skipping allocation", "warning")
                     return
 
                 # Wait for exchange to process closes
@@ -3336,7 +3424,8 @@ Return ONLY valid JSON with the following structure:
                 time.sleep(3)
 
                 # Phase 2: AI-Driven Smart Allocation
-                cprint("\n📌 PHASE 2: AI Smart Allocation", "cyan", attrs=["bold"])
+                add_console_log("🤖 Requesting AI allocation...", "info")
+                cprint("\n📌 AI Smart Allocation", "cyan", attrs=["bold"])
                 
                 # === ALLOCATION PHASE (rebalance-first) ===
                 allocation_actions = self.allocate_portfolio()
@@ -3406,14 +3495,18 @@ Return ONLY valid JSON with the following structure:
                         else:
                             total_equity = get_account_balance(self.account)
 
+                    # ══════════════════════════════════════════════════════════════════
+                    # PHASE 6: TRADE EXECUTION
+                    # ══════════════════════════════════════════════════════════════════
                     # 3) Filter only OPEN/INCREASE actions from original allocation and execute them
                     open_actions = [a for a in allocation_actions if a.get("action") in ("OPEN_LONG", "OPEN_SHORT", "INCREASE")]
                     if open_actions:
-                        add_console_log(f"Executing {len(open_actions)} open actions", "info")
+                        add_console_log("────────────────────────────────────", "info")
+                        add_console_log(f"🚀 PHASE 6: Executing {len(open_actions)} allocation actions...", "info")
                         self.execute_allocations(open_actions)
 
                 if self.should_stop():
-                    add_console_log("ℹ️ Stop signal received - skipping execution", "warning")
+                    add_console_log("⏹️ Stop signal received - skipping execution", "warning")
                     return
 
                 # Execution complete (rebalance + open actions already executed above)
@@ -3428,9 +3521,11 @@ Return ONLY valid JSON with the following structure:
                 cprint(f"❌ Execution pipeline failed: {exec_err}", "red")
                 import traceback
                 traceback.print_exc()
-                add_console_log(f"Execution error: {exec_err}", "error")
+                add_console_log(f"❌ Execution error: {exec_err}", "error")
 
-            # STEP 8: FINAL PORTFOLIO REPORT
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 7: CYCLE COMPLETE
+            # ══════════════════════════════════════════════════════════════════
             self.show_final_portfolio_report()
 
             try:
@@ -3443,7 +3538,17 @@ Return ONLY valid JSON with the following structure:
 
             cprint(f"\n{'=' * 80}", "cyan")
             cprint("✅ TRADING CYCLE COMPLETE", "white", "on_green", attrs=["bold"])
-            add_console_log("✅ Trading cycle complete", "success")
+
+            # Log final summary
+            add_console_log("────────────────────────────────────", "info")
+            add_console_log("✅ TRADING CYCLE COMPLETE", "success")
+            try:
+                final_equity = n.get_account_value(self.account.address) if EXCHANGE == "HYPERLIQUID" else get_account_balance(self.account)
+                final_positions = self.fetch_all_open_positions()
+                add_console_log(f"📊 Final: {len(final_positions)} positions open | Equity: ${final_equity:.2f}", "info")
+            except:
+                pass
+
             cprint(f"{'=' * 80}\n", "cyan")
 
             try:
