@@ -148,12 +148,16 @@ class RiskManager:
         )
         
         # Check constraints
+        # Note: position_value is the leveraged notional, margin is position_value / leverage
+        leverage = risk_profile["leverage"]
+        margin = risk_profile["position_value"] / leverage if leverage > 0 else 0
         constraints = {
             "min_position_value": risk_profile["position_value"] >= self.risk_context.min_position_value,
-            "max_leverage": risk_profile["leverage"] <= self.max_leverage,
+            "max_leverage": leverage <= self.max_leverage,
             "confidence_threshold": confidence >= 0.5,  # Minimum confidence
             "cost_efficiency": risk_profile["risk_reward_ratio"] >= 1.0,  # Minimum R:R
-            "position_size": risk_profile["position_value"] <= account_balance * (max_position_pct / 100)
+            # Check that margin (not leveraged position) doesn't exceed max position percentage
+            "position_size": margin <= account_balance * (max_position_pct / 100)
         }
         
         # Determine overall validation
@@ -163,17 +167,23 @@ class RiskManager:
         recommendations = []
         if not constraints["min_position_value"]:
             recommendations.append("Position value too small")
+        if not constraints["max_leverage"]:
+            recommendations.append("Leverage exceeds maximum")
         if not constraints["confidence_threshold"]:
             recommendations.append("Confidence too low")
         if not constraints["cost_efficiency"]:
             recommendations.append("Risk-reward ratio too low")
         if not constraints["position_size"]:
             recommendations.append("Position size exceeds limits")
-        
+
+        # Create reason string from recommendations for easier logging
+        reason = "; ".join(recommendations) if recommendations else "All constraints passed"
+
         return {
             "valid": all_passed,
             "constraints": constraints,
             "recommendations": recommendations,
+            "reason": reason,
             "risk_profile": risk_profile,
             "action": "PROCEED" if all_passed else "REJECT"
         }
