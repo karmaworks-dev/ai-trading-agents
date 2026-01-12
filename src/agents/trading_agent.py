@@ -3276,7 +3276,13 @@ Return ONLY valid JSON with the following structure:
             add_console_log(f"📡 API: Fetching positions from {EXCHANGE}...", "info")
             open_positions = self.fetch_all_open_positions()
             if open_positions:
-                pos_summary = ", ".join([f"{sym} ({pos.get('direction', 'UNK')})" for sym, pos in list(open_positions.items())[:3]])
+                # open_positions is {symbol: [list of position dicts]}
+                pos_items = []
+                for sym, positions_list in list(open_positions.items())[:3]:
+                    if positions_list and len(positions_list) > 0:
+                        side = positions_list[0].get("side", "UNK")
+                        pos_items.append(f"{sym} ({side})")
+                pos_summary = ", ".join(pos_items)
                 if len(open_positions) > 3:
                     pos_summary += f"... (+{len(open_positions) - 3} more)"
                 add_console_log(f"✅ Found {len(open_positions)} positions: {pos_summary}", "success")
