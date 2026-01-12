@@ -1224,6 +1224,7 @@ def stream_positions():
                     yield f"data: {error_data}\n\n"
 
                 last_heartbeat = time.time()
+                last_full_refresh = time.time()
 
                 # Main streaming loop
                 while True:
@@ -1235,23 +1236,24 @@ def stream_positions():
                         except queue.Empty:
                             pass
 
-                        # Send heartbeat every 30 seconds to keep connection alive
                         current_time = time.time()
+
+                        # Send heartbeat every 30 seconds to keep connection alive
                         if current_time - last_heartbeat > 30:
                             yield f"data: {json.dumps({'heartbeat': True, 'timestamp': datetime.now().isoformat()})}\n\n"
                             last_heartbeat = current_time
 
-                        # Send full position refresh every 10 cycles (300 seconds)
-                        if current_time - last_heartbeat > 300:
+                        # Send full position refresh every 30 seconds for reliable updates
+                        # This ensures positions are always in sync even if WebSocket events are missed
+                        if current_time - last_full_refresh > 30:
                             try:
                                 positions = get_positions_data()
                                 positions_json = json.dumps(positions)
                                 yield f"data: {positions_json}\n\n"
-                                print(f"📡 Full position refresh sent: {len(positions)} positions")
                             except Exception as e:
                                 error_data = json.dumps({'error': f'Full refresh error: {str(e)}'})
                                 yield f"data: {error_data}\n\n"
-                            last_heartbeat = current_time
+                            last_full_refresh = current_time
 
                         # Fallback polling if WebSocket events not available
                         if not websocket_available:
