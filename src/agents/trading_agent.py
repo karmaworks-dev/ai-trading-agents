@@ -27,17 +27,8 @@ from dotenv import load_dotenv
 import re
 
 
-def extract_json_from_text(text):
-    """Safely extract JSON object from AI model responses containing text."""
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            print("⚠️ JSON extraction failed even after matching braces.")
-            return None
-    print("⚠️ No JSON object found in AI response.")
-    return None
+# extract_json_from_text - Now imported from src.agents.trading.market_analyzer
+# (defined after sys.path setup below)
 
 
 # ============================================================================
@@ -83,6 +74,22 @@ from src.agents.trading.position_manager import (
     evaluate_positions_for_tp_sl,
     extract_current_price,
     build_market_summary,
+)
+
+# Import market analyzer functions (extracted for maintainability)
+from src.agents.trading.market_analyzer import (
+    extract_json_from_text as _extract_json_from_text,
+    format_position_context,
+    format_performance_context,
+    format_strategy_context_text as _format_strategy_context_text,
+    format_legacy_strategy_signals,
+    parse_single_model_response,
+    extract_confidence_from_text,
+    apply_confidence_threshold,
+    build_recommendation,
+    build_error_recommendation,
+    validate_market_data,
+    get_token_from_market_data,
 )
 
 # Import shared logging utility (prevents circular import with trading_app)
@@ -391,6 +398,11 @@ from src.data.ohlcv_collector import collect_all_tokens
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
+def extract_json_from_text(text):
+    """Extract JSON from text. Wrapper for extracted function in market_analyzer module."""
+    return _extract_json_from_text(text)
+
 
 def get_account_balance(account=None):
     """Get account balance in USD based on exchange type"""
@@ -1241,27 +1253,8 @@ Return ONLY valid JSON with the following structure:
 
 
     def _format_strategy_context_text(self, strategy_context):
-        if not strategy_context:
-            return "No strategy intelligence available.", {}
-
-        lines = []
-
-        lines.append("STRATEGY INTELLIGENCE (JSON)")
-        lines.append(json.dumps(strategy_context, indent=2))
-
-        aggregate = strategy_context.get("aggregate", {})
-
-        lines.append("\nSTRATEGY SUMMARY")
-        lines.append(f"- Direction bias: {aggregate.get('direction_bias')}")
-        lines.append(f"- Confidence: {aggregate.get('confidence')}")
-        lines.append(
-            f"- Suggested allocation (%): "
-            f"{aggregate.get('suggested_allocation_pct')}"
-        )
-        lines.append(f"- Conflict level: {aggregate.get('conflict_level')}")
-        lines.append(f"- Timestamp: {strategy_context.get('timestamp')}")
-
-        return "\n".join(lines), strategy_context
+        """Format strategy context. Wrapper for extracted function in market_analyzer module."""
+        return _format_strategy_context_text(strategy_context)
    
 
    

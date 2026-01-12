@@ -33,6 +33,21 @@ from .position_manager import (
     build_market_summary,
 )
 
+from .market_analyzer import (
+    extract_json_from_text,
+    format_position_context,
+    format_performance_context,
+    format_strategy_context_text,
+    format_legacy_strategy_signals,
+    parse_single_model_response,
+    extract_confidence_from_text,
+    apply_confidence_threshold,
+    build_recommendation,
+    build_error_recommendation,
+    validate_market_data,
+    get_token_from_market_data,
+)
+
 __all__ = [
     # Prompts
     "TRADING_PROMPT",
@@ -56,4 +71,17 @@ __all__ = [
     "evaluate_positions_for_tp_sl",
     "extract_current_price",
     "build_market_summary",
+    # Market Analyzer
+    "extract_json_from_text",
+    "format_position_context",
+    "format_performance_context",
+    "format_strategy_context_text",
+    "format_legacy_strategy_signals",
+    "parse_single_model_response",
+    "extract_confidence_from_text",
+    "apply_confidence_threshold",
+    "build_recommendation",
+    "build_error_recommendation",
+    "validate_market_data",
+    "get_token_from_market_data",
 ]
