@@ -72,6 +72,19 @@ from src.agents.trading.ai_interface import (
     calculate_swarm_consensus as _calculate_swarm_consensus,
 )
 
+# Import position manager functions (extracted for maintainability)
+from src.agents.trading.position_manager import (
+    calculate_position_size as _calculate_position_size,
+    check_tp_sl_thresholds,
+    build_position_data,
+    format_position_for_display,
+    format_position_summary_for_ai,
+    build_close_decision,
+    evaluate_positions_for_tp_sl,
+    extract_current_price,
+    build_market_summary,
+)
+
 # Import shared logging utility (prevents circular import with trading_app)
 try:
     from src.utils.logging_utils import add_console_log, log_position_open
@@ -423,29 +436,8 @@ def get_account_balance(account=None):
 
 
 def calculate_position_size(account_balance):
-    """Calculate position size based on account balance and MAX_POSITION_PERCENTAGE"""
-    if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
-        margin_to_use = account_balance * (MAX_POSITION_PERCENTAGE / 100)
-        notional_position = margin_to_use * LEVERAGE
-
-        cprint(f"   📊 Position Calculation ({EXCHANGE}):", "yellow", attrs=['bold'])
-        cprint(f"   💵 Account Balance: ${account_balance:,.2f}", "white")
-        cprint(f"   📈 Max Position %: {MAX_POSITION_PERCENTAGE}%", "white")
-        cprint(f"   💰 Margin to Use: ${margin_to_use:,.2f}", "green", attrs=['bold'])
-        cprint(f"   ⚡ Leverage: {LEVERAGE}x", "white")
-        cprint(f"   💎 Notional Position: ${notional_position:,.2f}", "cyan", attrs=['bold'])
-
-        return notional_position
-    else:
-        # For Solana: No leverage, direct position size
-        position_size = account_balance * (MAX_POSITION_PERCENTAGE / 100)
-
-        cprint(f"   📊 Position Calculation (SOLANA):", "yellow", attrs=['bold'])
-        cprint(f"   💵 USDC Balance: ${account_balance:,.2f}", "white")
-        cprint(f"   📈 Max Position %: {MAX_POSITION_PERCENTAGE}%", "white")
-        cprint(f"   💎 Position Size: ${position_size:,.2f}", "cyan", attrs=['bold'])
-
-        return position_size
+    """Calculate position size. Wrapper for extracted function in position_manager module."""
+    return _calculate_position_size(account_balance, EXCHANGE, MAX_POSITION_PERCENTAGE, LEVERAGE)
 
 
 # ============================================================================
