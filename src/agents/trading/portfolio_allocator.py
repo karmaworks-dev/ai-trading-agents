@@ -209,21 +209,20 @@ def calculate_equal_distribution(
 
     usable_margin = available_balance * (max_position_pct / 100)
     cash_buffer = available_balance * (cash_buffer_pct / 100)
-    allocatable_margin = max(0, usable_margin - cash_buffer)  # Ensure we never go below zero
     min_margin = min_order_notional / leverage
 
-    margin_per_position = allocatable_margin / len(signals)
+    margin_per_position = (usable_margin - cash_buffer) / len(signals)
 
     if margin_per_position < min_margin:
         # Take only highest confidence signals
         sorted_signals = sorted(signals, key=lambda x: x.get("confidence", 0), reverse=True)
-        max_positions = int(allocatable_margin / min_margin)
+        max_positions = int((usable_margin - cash_buffer) / min_margin)
         filtered_signals = sorted_signals[:max(1, max_positions)]
 
         if not filtered_signals:
             return 0, []
 
-        margin_per_position = allocatable_margin / len(filtered_signals)
+        margin_per_position = (usable_margin - cash_buffer) / len(filtered_signals)
         return margin_per_position, filtered_signals
 
     return margin_per_position, signals
