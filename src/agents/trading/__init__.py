@@ -48,6 +48,23 @@ from .market_analyzer import (
     get_token_from_market_data,
 )
 
+from .portfolio_allocator import (
+    normalize_symbol,
+    filter_strategy_signals,
+    calculate_allocatable_balance,
+    calculate_equal_distribution,
+    validate_allocation_action,
+    validate_allocation_actions,
+    sort_allocation_actions,
+    plan_rebalance_closes,
+    build_fallback_allocation_actions,
+    check_position_alignment,
+    filter_signals_by_position_alignment,
+    SYMBOL_ALIASES,
+    VALID_ALLOCATION_ACTIONS,
+    ACTION_PRIORITY,
+)
+
 __all__ = [
     # Prompts
     "TRADING_PROMPT",
@@ -84,4 +101,19 @@ __all__ = [
     "build_error_recommendation",
     "validate_market_data",
     "get_token_from_market_data",
+    # Portfolio Allocator
+    "normalize_symbol",
+    "filter_strategy_signals",
+    "calculate_allocatable_balance",
+    "calculate_equal_distribution",
+    "validate_allocation_action",
+    "validate_allocation_actions",
+    "sort_allocation_actions",
+    "plan_rebalance_closes",
+    "build_fallback_allocation_actions",
+    "check_position_alignment",
+    "filter_signals_by_position_alignment",
+    "SYMBOL_ALIASES",
+    "VALID_ALLOCATION_ACTIONS",
+    "ACTION_PRIORITY",
 ]

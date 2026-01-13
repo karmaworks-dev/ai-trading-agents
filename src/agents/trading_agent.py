@@ -92,6 +92,20 @@ from src.agents.trading.market_analyzer import (
     get_token_from_market_data,
 )
 
+# Import portfolio allocator functions (extracted for maintainability)
+from src.agents.trading.portfolio_allocator import (
+    normalize_symbol as _normalize_symbol,
+    filter_strategy_signals,
+    calculate_allocatable_balance,
+    calculate_equal_distribution,
+    validate_allocation_actions,
+    sort_allocation_actions,
+    plan_rebalance_closes,
+    build_fallback_allocation_actions,
+    filter_signals_by_position_alignment,
+    SYMBOL_ALIASES,
+)
+
 # Import shared logging utility (prevents circular import with trading_app)
 try:
     from src.utils.logging_utils import add_console_log, log_position_open
@@ -1866,69 +1880,8 @@ Return ONLY valid JSON with the following structure:
         return actions_sorted
 
     def normalize_symbol(self, raw_symbol: str) -> str:
-        """
-        Normalize AI-returned symbols to match self.symbols.
-
-        Handles common AI hallucinations like:
-        - "BITCOIN" → "BTC"
-        - "btc" → "BTC"
-        - "ETH/USD" → "ETH"
-        - "BTC-PERP" → "BTC"
-
-        Returns the normalized symbol if found in self.symbols,
-        otherwise returns the original (will be rejected by validation).
-        """
-        if not raw_symbol:
-            return raw_symbol
-
-        # Common cryptocurrency name aliases
-        SYMBOL_ALIASES = {
-            "BITCOIN": "BTC",
-            "ETHEREUM": "ETH",
-            "SOLANA": "SOL",
-            "LITECOIN": "LTC",
-            "DOGECOIN": "DOGE",
-            "HYPERLIQUID": "HYPE",
-            "AVALANCHE": "AVAX",
-            "CHAINLINK": "LINK",
-            "POLYGON": "MATIC",
-            "ARBITRUM": "ARB",
-            "OPTIMISM": "OP",
-            "COSMOS": "ATOM",
-            "POLKADOT": "DOT",
-            "UNISWAP": "UNI",
-            "AAVE": "AAVE",
-            "CELESTIA": "TIA",
-            "INJECTIVE": "INJ",
-            "JUPITER": "JUP",
-            "PEPE": "PEPE",
-            "BONK": "BONK",
-            "SHIBA": "SHIB",
-            "SHIBA INU": "SHIB",
-        }
-
-        upper = raw_symbol.upper().strip()
-
-        # Check aliases first
-        if upper in SYMBOL_ALIASES:
-            normalized = SYMBOL_ALIASES[upper]
-            if normalized in self.symbols:
-                return normalized
-
-        # Strip common suffixes (e.g., BTC/USD, BTC-USD, BTCUSD, BTC-PERP)
-        for suffix in ["/USD", "-USD", "USD", "/USDT", "-USDT", "USDT", "-PERP", "/PERP", "PERP"]:
-            if upper.endswith(suffix):
-                stripped = upper[:-len(suffix)]
-                if stripped in self.symbols:
-                    return stripped
-                break
-
-        # Check if uppercase version is in symbols
-        if upper in self.symbols:
-            return upper
-
-        # Return original if no normalization worked
-        return raw_symbol
+        """Normalize symbol. Wrapper for extracted function in portfolio_allocator module."""
+        return _normalize_symbol(raw_symbol, self.symbols)
 
     def _fallback_equal_allocation(self, signals, available_balance, open_positions):
         """
