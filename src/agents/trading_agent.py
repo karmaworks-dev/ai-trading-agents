@@ -27,17 +27,8 @@ from dotenv import load_dotenv
 import re
 
 
-def extract_json_from_text(text):
-    """Safely extract JSON object from AI model responses containing text."""
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            print("⚠️ JSON extraction failed even after matching braces.")
-            return None
-    print("⚠️ No JSON object found in AI response.")
-    return None
+# extract_json_from_text - Now imported from src.agents.trading.market_analyzer
+# (defined after sys.path setup below)
 
 
 # ============================================================================
@@ -54,6 +45,82 @@ from src.models import model_factory
 from src.agents.swarm_agent import SwarmAgent
 from src.data.ohlcv_collector import collect_all_tokens
 from src.agents.strategy_agent import StrategyAgent
+
+# Import AI prompt templates (extracted for maintainability)
+from src.agents.trading.prompts import (
+    TRADING_PROMPT,
+    SWARM_TRADING_PROMPT,
+    SMART_ALLOCATION_PROMPT,
+    POSITION_ANALYSIS_PROMPT,
+)
+
+# Import AI interface functions (extracted for maintainability)
+from src.agents.trading.ai_interface import (
+    get_performance_metrics as _get_performance_metrics,
+    chat_with_ai as _chat_with_ai,
+    format_market_data_for_swarm as _format_market_data_for_swarm,
+    parse_vote_from_response as _parse_vote_from_response,
+    calculate_swarm_consensus as _calculate_swarm_consensus,
+)
+
+# Import position manager functions (extracted for maintainability)
+from src.agents.trading.position_manager import (
+    calculate_position_size as _calculate_position_size,
+    check_tp_sl_thresholds,
+    build_position_data,
+    format_position_for_display,
+    format_position_summary_for_ai,
+    build_close_decision,
+    evaluate_positions_for_tp_sl,
+    extract_current_price,
+    build_market_summary,
+)
+
+# Import market analyzer functions (extracted for maintainability)
+from src.agents.trading.market_analyzer import (
+    extract_json_from_text as _extract_json_from_text,
+    format_position_context,
+    format_performance_context,
+    format_strategy_context_text as _format_strategy_context_text,
+    format_legacy_strategy_signals,
+    parse_single_model_response,
+    extract_confidence_from_text,
+    apply_confidence_threshold,
+    build_recommendation,
+    build_error_recommendation,
+    validate_market_data,
+    get_token_from_market_data,
+)
+
+# Import portfolio allocator functions (extracted for maintainability)
+from src.agents.trading.portfolio_allocator import (
+    normalize_symbol as _normalize_symbol,
+    filter_strategy_signals,
+    calculate_allocatable_balance,
+    calculate_equal_distribution,
+    validate_allocation_actions,
+    sort_allocation_actions,
+    plan_rebalance_closes,
+    build_fallback_allocation_actions,
+    filter_signals_by_position_alignment,
+    SYMBOL_ALIASES,
+)
+
+# Import trade executor functions (extracted for maintainability)
+from src.agents.trading.trade_executor import (
+    calculate_notional,
+    check_min_notional,
+    validate_trade_action,
+    validate_position_for_action,
+    check_position_conflict,
+    build_execution_summary,
+    format_execution_summary,
+    get_position_direction,
+    calculate_current_notional,
+    should_close_for_reversal,
+    should_exit_position,
+    DEFAULT_MIN_NOTIONAL,
+)
 
 # Import shared logging utility (prevents circular import with trading_app)
 try:
@@ -352,223 +419,20 @@ else:
 from src.data.ohlcv_collector import collect_all_tokens
 
 # ============================================================================
-# PROMPTS
+# PROMPTS - Now imported from src.agents.trading.prompts
 # ============================================================================
-
-TRADING_PROMPT = """
-You are an ELITE crypto trading AI with a PERFORMANCE RECORD to maintain. Your goal is to maximize profitable trades.
-
-🎯 YOUR CURRENT PERFORMANCE:
-{performance_context}
-
-CORE OBJECTIVE: Maximize profitable trades. Every trade impacts your score.
-- WIN = +1 point | LOSS = -1 point
-- Take trades when you see good opportunities (50%+ confidence)
-- Be selective but not paralyzed - missing good trades also hurts performance
-- Strong signals (70%+ confidence) = larger conviction
-- Balance: Win more than you lose, but don't fear taking calculated risks
-- Your reputation depends on maintaining a strong win rate
-- Your ultimate goal is to get the highest scores in PnL percentage
-
-Analyze the provided market data, CURRENT POSITION, and STRATEGY CONTEXT signals to make a trading decision.
-
-{position_context}
-
-Market Data Criteria:
-1. Price action relative to MA20 and MA40
-2. RSI levels and trend
-3. Volume patterns
-4. Recent price movements
-
-{strategy_context}
-
-Respond in this exact format:
-1. First line must be one of: BUY, SELL, or NOTHING (in caps)
-2. Then explain your reasoning, always including:
-   - Technical analysis
-   - Strategy signals analysis (if available)
-   - Risk factors
-   - Market conditions
-   - Confidence level (as a percentage, e.g. 75%)
-
-Remember: 
-- Always prioritizes risk management! 🛡️
-- Never trade USDC or SOL directly
-- Consider both technical and strategy signals
-"""
-
-#ALLOCATION_PROMPT = """
-#You are our Portfolio Allocation Assistant 🕉️
-
-#Given the total portfolio size and trading recommendations, allocate capital efficiently.
-#Consider:
-#1. Position sizing based on confidence levels
-#2. Risk distribution
-#3. Keep cash buffer as specified
-#4. Maximum allocation per position
-
-#Format your response as a Python dictionary:
-#{
-#    "token_address": allocated_amount,  # In USD
-#    ...
-#    "USDC_ADDRESS": remaining_cash  # Always use USDC_ADDRESS for cash
-#}
-
-#Remember:
-#- Total allocations must not exceed total_size
-#- Higher confidence should get larger allocations
-#- Never allocate more than {MAX_POSITION_PERCENTAGE}% to a single position
-#- Keep at least {CASH_PERCENTAGE}% in USDC as safety buffer
-#- Only allocate to BUY recommendations
-#- Cash must be stored as USDC using USDC_ADDRESS: {USDC_ADDRESS}
-#- More trades doesn't equal better chances, select the trades likely to perform best
-#"""
-
-SWARM_TRADING_PROMPT = """You are an expert cryptocurrency trading AI with a PERFORMANCE SCORE.
-
-🎯 CURRENT PERFORMANCE:
-{performance_context}
-
-YOUR GOAL: Maximize winning trades. Only recommend trades with strong conviction.
-- Each correct prediction: +1 point
-- Each wrong prediction: -1 point
-- Better to say "Nothing" than make a losing trade
-
-CRITICAL RULES:
-1. Your response MUST be in this exact format: ACTION | CONFIDENCE%
-2. ACTION must be one of: Buy, Sell, or Nothing
-3. CONFIDENCE must be a number from 0-100 indicating how confident you are
-4. Do NOT provide any explanation, reasoning, or additional text
-5. Do NOT show your thinking process or internal reasoning
-
-Analyze the market data below and decide:
-
-- "Buy" = Strong bullish signals, recommend opening/holding position
-- "Sell" = Bearish signals or major weakness, recommend closing position entirely
-- "Nothing" = Unclear/neutral signals, recommend holding current state unchanged
-
-IMPORTANT: "Nothing" means maintain current position (if we have one, keep it; if we don't, stay out)
-
-RESPONSE FORMAT EXAMPLES:
-- Buy | 85%
-- Sell | 70%
-- Nothing | 45%
-
-RESPOND WITH ONLY: ACTION | CONFIDENCE%"""
-
-SMART_ALLOCATION_PROMPT = """
-You are an expert crypto portfolio allocation AI.
-
-YOUR TASK:
-Return a FINAL, EXECUTABLE allocation plan based on the signals and portfolio state.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RESPONSE FORMAT (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Return ONLY valid JSON in this EXACT structure:
-
-{{
-  "actions": [
-    {{
-      "symbol": "HYPE",
-      "action": "OPEN_LONG | OPEN_SHORT | REDUCE | CLOSE | INCREASE",
-      "margin_usd": 123.45,
-      "confidence": 65,
-      "reason": "Short explanation"
-    }}
-  ],
-  "cash_buffer_usd": 100.0,
-  "reasoning": "Overall allocation logic summary"
-}}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STRICT RULES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- ALWAYS return at least ONE action
-- NEVER return HOLD
-- BUY signal → OPEN_LONG
-- SELL signal → OPEN_SHORT (LONG_ONLY = False)
-- All values must be in USD
-- margin_usd must be >= minimum order
-- confidence must be 1–100
-- Do NOT include markdown
-- Do NOT include explanations outside JSON
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PORTFOLIO STATE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{portfolio_state}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AI TRADING SIGNALS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{signals}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ACCOUNT CONSTRAINTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Total Account Equity: ${total_equity:.2f}
-- Available Cash: ${available_balance:.2f}
-- Required Cash Buffer: ${required_buffer_usd:.2f} ({cash_buffer_pct}% of equity)
-- ALLOCATABLE FOR TRADING: ${allocatable_usd:.2f}
-- Leverage: {leverage}x
-- Max Position %: {max_position_pct}%
-- Minimum Order Size: ${min_order:.2f}
-- Minimum Hold Time: {cycle_minutes} minutes
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ALLOCATION RULES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Higher confidence → larger allocation
-2. Do not exceed max position %
-3. Respect cash buffer
-4. Prefer opening new positions over many small trades
-5. If no good trade exists, CLOSE weakest position instead
-6. Return ONLY executable actions
-
-⚠️ CRITICAL: Total margin_usd for OPEN/INCREASE actions must NOT exceed ${allocatable_usd:.2f}
-
-REMEMBER:
-This JSON will be executed directly by a trading engine.
-"""
-
-
-POSITION_ANALYSIS_PROMPT = """
-You are an expert crypto trading analyst. Your task is to analyze the user's open positions based on the provided position summaries and current market data.
-
-For EACH symbol, decide whether the user should **KEEP** the position open or **CLOSE** it.
-
-⚠️ CRITICAL: When suggesting CLOSE, you MUST provide a confidence level (0-100%) indicating how certain you are that the position is WRONG and should be closed.
-
-⚠️ CRITICAL OUTPUT RULES:
-- You MUST respond ONLY with a valid JSON object – no commentary, no Markdown, no code fences.
-- JSON must be well-formed and parseable by Python's json.loads().
-- The JSON must follow exactly this structure:
-
-{
-  "BTC": {
-    "action": "KEEP",
-    "reasoning": "Trend remains bullish; RSI under 60",
-    "confidence": 0
-  },
-  "ETH": {
-    "action": "CLOSE",
-    "reasoning": "Breakdown below MA40 with weak RSI",
-    "confidence": 85
-  }
-}
-
-- "confidence" is 0-100 (only used for CLOSE decisions, set to 0 for KEEP)
-- Confidence represents how certain you are that closing is the RIGHT decision
-
-Do not include ```json or any other formatting around the JSON.
-Respond ONLY with the raw JSON object.
-"""
+# AI prompt templates have been extracted to src/agents/trading/prompts.py
+# for better maintainability. They are imported at the top of this file.
 
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
+def extract_json_from_text(text):
+    """Extract JSON from text. Wrapper for extracted function in market_analyzer module."""
+    return _extract_json_from_text(text)
+
 
 def get_account_balance(account=None):
     """Get account balance in USD based on exchange type"""
@@ -614,29 +478,8 @@ def get_account_balance(account=None):
 
 
 def calculate_position_size(account_balance):
-    """Calculate position size based on account balance and MAX_POSITION_PERCENTAGE"""
-    if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
-        margin_to_use = account_balance * (MAX_POSITION_PERCENTAGE / 100)
-        notional_position = margin_to_use * LEVERAGE
-
-        cprint(f"   📊 Position Calculation ({EXCHANGE}):", "yellow", attrs=['bold'])
-        cprint(f"   💵 Account Balance: ${account_balance:,.2f}", "white")
-        cprint(f"   📈 Max Position %: {MAX_POSITION_PERCENTAGE}%", "white")
-        cprint(f"   💰 Margin to Use: ${margin_to_use:,.2f}", "green", attrs=['bold'])
-        cprint(f"   ⚡ Leverage: {LEVERAGE}x", "white")
-        cprint(f"   💎 Notional Position: ${notional_position:,.2f}", "cyan", attrs=['bold'])
-
-        return notional_position
-    else:
-        # For Solana: No leverage, direct position size
-        position_size = account_balance * (MAX_POSITION_PERCENTAGE / 100)
-
-        cprint(f"   📊 Position Calculation (SOLANA):", "yellow", attrs=['bold'])
-        cprint(f"   💵 USDC Balance: ${account_balance:,.2f}", "white")
-        cprint(f"   📈 Max Position %: {MAX_POSITION_PERCENTAGE}%", "white")
-        cprint(f"   💎 Position Size: ${position_size:,.2f}", "cyan", attrs=['bold'])
-
-        return position_size
+    """Calculate position size. Wrapper for extracted function in position_manager module."""
+    return _calculate_position_size(account_balance, EXCHANGE, MAX_POSITION_PERCENTAGE, LEVERAGE)
 
 
 # ============================================================================
@@ -849,72 +692,10 @@ class TradingAgent:
         add_console_log("Agent initialized!", "success")
 
     def _get_performance_metrics(self):
+        """Calculate recent trading performance for AI motivation.
+        Wrapper for extracted function in ai_interface module.
         """
-        Calculate recent trading performance for AI motivation.
-        Returns win rate, total PnL, and performance grade.
-        """
-        try:
-            from pathlib import Path
-            trades_file = Path(__file__).parent.parent / "data" / "trades.json"
-            
-            if not trades_file.exists():
-                return {
-                    'win_rate': 0,
-                    'total_pnl': 0,
-                    'winning_trades': 0,
-                    'total_trades': 0,
-                    'grade': 'STARTING'
-                }
-            
-            import json
-            with open(trades_file, 'r') as f:
-                trades = json.load(f)
-            
-            # Get last 20 trades
-            recent_trades = trades[-20:] if len(trades) > 20 else trades
-            
-            if not recent_trades:
-                return {
-                    'win_rate': 0,
-                    'total_pnl': 0,
-                    'winning_trades': 0,
-                    'total_trades': 0,
-                    'grade': 'STARTING'
-                }
-            
-            # Calculate metrics
-            winning_trades = len([t for t in recent_trades if t.get('pnl', 0) > 0])
-            total_trades = len(recent_trades)
-            win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
-            total_pnl = sum([t.get('pnl', 0) for t in recent_trades])
-            
-            # Assign performance grade
-            if win_rate >= 70:
-                grade = 'EXCELLENT ⭐⭐⭐'
-            elif win_rate >= 60:
-                grade = 'GREAT ⭐⭐'
-            elif win_rate >= 50:
-                grade = 'GOOD ⭐'
-            else:
-                grade = 'NEEDS IMPROVEMENT ⚠️'
-            
-            return {
-                'win_rate': round(win_rate, 1),
-                'total_pnl': round(total_pnl, 2),
-                'winning_trades': winning_trades,
-                'total_trades': total_trades,
-                'grade': grade
-            }
-        
-        except Exception as e:
-            cprint(f"⚠️ Error calculating performance: {e}", "yellow")
-            return {
-                'win_rate': 0,
-                'total_pnl': 0,
-                'winning_trades': 0,
-                'total_trades': 0,
-                'grade': 'UNKNOWN'
-            }
+        return _get_performance_metrics()
 
     def _build_swarm_models_config(self):
         """
@@ -953,304 +734,23 @@ class TradingAgent:
         return custom_models if custom_models else None
 
     def chat_with_ai(self, system_prompt, user_content):
-        """Send prompt to AI model via model factory"""
-        try:
-            response = self.model.generate_response(
-                system_prompt=system_prompt,
-                user_content=user_content,
-                temperature=self.ai_temperature,
-                max_tokens=self.ai_max_tokens
-            )
-
-            if hasattr(response, "content"):
-                return response.content
-            return str(response)
-
-        except Exception as e:
-            error_str = str(e).lower()
-            model_name = getattr(self.model, 'model_name', 'Unknown')
-            provider = getattr(self.model, 'provider', 'Unknown')
-
-            # Detect specific error types for helpful messages
-            if "rate_limit" in error_str or "rate limit" in error_str:
-                msg = f"Rate limit: {provider}/{model_name}"
-                add_console_log(msg, "error")
-            elif "invalid_api_key" in error_str or "authentication" in error_str or "401" in error_str:
-                msg = f"Invalid API key: {provider}"
-                add_console_log(msg, "error")
-            elif "insufficient" in error_str or "quota" in error_str or "billing" in error_str:
-                msg = f"Quota exceeded: {provider}"
-                add_console_log(msg, "error")
-            elif "timeout" in error_str or "timed out" in error_str:
-                msg = f"Timeout: {provider}/{model_name}"
-                add_console_log(msg, "error")
-            elif "connection" in error_str or "network" in error_str:
-                msg = f"Connection error: {provider}"
-                add_console_log(msg, "error")
-            else:
-                msg = f"Model failed: {provider}/{model_name}"
-                add_console_log(msg, "error")
-
-            cprint(f"❌ {msg} - {str(e)[:80]}", "red")
-            return None
+        """Send prompt to AI model. Wrapper for extracted function in ai_interface module."""
+        return _chat_with_ai(
+            self.model, system_prompt, user_content,
+            self.ai_temperature, self.ai_max_tokens
+        )
 
     def _format_market_data_for_swarm(self, token, market_data):
-        """Format market data into a clean, readable format for swarm analysis"""
-        try:
-            cprint(f"\n📊 MARKET DATA RECEIVED FOR {token[:8]}...", "cyan", attrs=["bold"])
-            add_console_log(f"📊 MARKET DATA RECEIVED FOR {token[:8]}...", "info")
-
-            if isinstance(market_data, pd.DataFrame):
-                cprint(f"✅ DataFrame received: {len(market_data)} bars", "green")
-                cprint(f"📅 Date range: {market_data.index[0]} to {market_data.index[-1]}", "yellow")
-                cprint(f"🕐 Timeframe: {self.timeframe}", "yellow")
-
-                cprint("\n📈 First 5 Bars (OHLCV):", "cyan")
-                print(market_data.head().to_string())
-
-                cprint("\n📉 Last 3 Bars (Most Recent):", "cyan")
-                print(market_data.tail(3).to_string())
-
-                formatted = f"""
-TOKEN: {token}
-TIMEFRAME: {self.timeframe} bars
-TOTAL BARS: {len(market_data)}
-DATE RANGE: {market_data.index[0]} to {market_data.index[-1]}
-
-RECENT PRICE ACTION (Last 10 bars):
-{market_data.tail(10).to_string()}
-
-FULL DATASET:
-{market_data.to_string()}
-"""
-            else:
-                cprint(f"⚠️ Market data is not a DataFrame: {type(market_data)}", "yellow")
-                formatted = f"TOKEN: {token}\nMARKET DATA:\n{str(market_data)}"
-
-            if isinstance(market_data, dict) and "strategy_signals" in market_data:
-                formatted += f"\n\nSTRATEGY SIGNALS:\n{json.dumps(market_data['strategy_signals'], indent=2)}"
-
-            cprint("\n✅ Market data formatted and ready for analysis!\n", "green")
-            return formatted
-
-        except Exception as e:
-            cprint(f"❌ Error formatting market data: {e}", "red")
-            return str(market_data)
+        """Format market data for swarm analysis. Wrapper for extracted function."""
+        return _format_market_data_for_swarm(token, market_data, self.timeframe)
 
     def _calculate_swarm_consensus(self, swarm_result):
-        """
-        Calculate consensus from individual swarm responses with confidence weighting.
-
-        Key features:
-        1. Extracts both action AND confidence from each model
-        2. Logs individual votes with confidence (e.g., "Model 1 - BUY | 85%")
-        3. Calculates weighted average confidence for the majority action
-        4. Shows "TIED" instead of "NOTHING" when there's an actual tie
-        5. Clear frontend logging: "Swarm -> BUY | 62% sure"
-        """
-        try:
-            # Track votes with confidence scores
-            votes = {"BUY": [], "SELL": [], "NOTHING": []}  # Lists of confidence scores
-            model_votes = []  # For detailed logging
-            model_index = 1
-
-            cprint("\n📊 Individual Model Votes:", "cyan", attrs=["bold"])
-
-            for provider, data in swarm_result["responses"].items():
-                if not data["success"]:
-                    cprint(f"   ⚠️ Model {model_index} ({provider}): Failed (skipping)", "yellow")
-                    model_votes.append(f"Model {model_index} ({provider}): FAILED")
-                    model_index += 1
-                    continue
-
-                response_text = data["response"].strip() if data["response"] else ""
-                response_upper = response_text.upper()
-
-                # Parse vote AND confidence with new format
-                action, confidence = self._parse_vote_from_response(response_upper)
-
-                # Store confidence score for this action
-                votes[action].append(confidence)
-
-                # Format vote display
-                vote_display = f"Model {model_index} - {action} | {confidence}%"
-                model_votes.append(f"Model {model_index} ({provider}): {action} | {confidence}%")
-
-                # Color-coded console output
-                if action == "BUY":
-                    cprint(f"   ✅ {vote_display}", "green")
-                elif action == "SELL":
-                    cprint(f"   🔴 {vote_display}", "red")
-                else:
-                    cprint(f"   ⏸️ {vote_display}", "cyan")
-
-                model_index += 1
-
-            # Count total valid votes
-            total_votes = sum(len(v) for v in votes.values())
-            if total_votes == 0:
-                cprint("❌ No valid responses from swarm - defaulting to NOTHING", "red")
-                add_console_log("Swarm -> NOTHING | 0% (no responses)", "warning")
-                return "NOTHING", 0, "No valid responses from swarm"
-
-            # Calculate vote counts and average confidence per action
-            vote_counts = {action: len(confs) for action, confs in votes.items()}
-            avg_confidences = {}
-            for action, confs in votes.items():
-                if confs:
-                    avg_confidences[action] = int(sum(confs) / len(confs))
-                else:
-                    avg_confidences[action] = 0
-
-            # Find majority action
-            majority_action = max(vote_counts, key=vote_counts.get)
-            majority_count = vote_counts[majority_action]
-
-            # Check for ties - look at top 2 vote counts
-            sorted_counts = sorted(vote_counts.values(), reverse=True)
-            has_tie = len(sorted_counts) >= 2 and sorted_counts[0] == sorted_counts[1] and sorted_counts[0] > 0
-
-            if has_tie:
-                # Find which actions are tied
-                tied_actions = [a for a, c in vote_counts.items() if c == majority_count]
-                tie_avg_confidence = int(sum(avg_confidences[a] for a in tied_actions) / len(tied_actions))
-
-                cprint(
-                    f"\n⚠️ TIE DETECTED: {', '.join(tied_actions)} each have {majority_count} votes",
-                    "yellow",
-                    attrs=["bold"]
-                )
-
-                # Log to frontend with TIED status
-                add_console_log(f"Swarm -> TIED | {tie_avg_confidence}% sure", "warning")
-
-                reasoning = f"🌊 Swarm Consensus: TIED ({total_votes} models voted)\n\n"
-                reasoning += "Vote Breakdown:\n"
-                for action in ["BUY", "SELL", "NOTHING"]:
-                    count = vote_counts[action]
-                    avg = avg_confidences[action]
-                    reasoning += f"   {action}: {count} votes (avg {avg}% confidence)\n"
-                reasoning += f"\n⚠️ TIE between: {', '.join(tied_actions)}\n"
-                reasoning += "   → Conservative approach: No action taken\n\n"
-                reasoning += "Individual Votes:\n"
-                reasoning += "\n".join(f"   {vote}" for vote in model_votes)
-
-                return "NOTHING", tie_avg_confidence, reasoning
-
-            # Calculate final confidence as weighted average of winning action's votes
-            final_confidence = avg_confidences[majority_action]
-            vote_percentage = int((majority_count / total_votes) * 100)
-
-            # Check minimum confidence threshold
-            if final_confidence < self.min_swarm_confidence and majority_action != "NOTHING":
-                cprint(
-                    f"\n⚠️ LOW CONFIDENCE: {final_confidence}% < {self.min_swarm_confidence}% threshold",
-                    "yellow",
-                    attrs=["bold"]
-                )
-                cprint(f"   → Downgrading {majority_action} to NOTHING", "yellow")
-
-                add_console_log(f"Swarm -> NOTHING | {final_confidence}% (low confidence)", "warning")
-
-                reasoning = f"🌊 Swarm Consensus: LOW CONFIDENCE ({total_votes} models voted)\n\n"
-                reasoning += "Vote Breakdown:\n"
-                for action in ["BUY", "SELL", "NOTHING"]:
-                    count = vote_counts[action]
-                    avg = avg_confidences[action]
-                    reasoning += f"   {action}: {count} votes (avg {avg}% confidence)\n"
-                reasoning += f"\n⚠️ Confidence {final_confidence}% below {self.min_swarm_confidence}% threshold\n"
-                reasoning += f"   Original: {majority_action} | Downgraded to: NOTHING\n\n"
-                reasoning += "Individual Votes:\n"
-                reasoning += "\n".join(f"   {vote}" for vote in model_votes)
-
-                return "NOTHING", final_confidence, reasoning
-
-            # Normal case: clear majority above threshold
-            action_emoji = "📈" if majority_action == "BUY" else "📉" if majority_action == "SELL" else "⏸️"
-
-            cprint(
-                f"\n🌊 Swarm Consensus: {majority_action} | {final_confidence}% sure ({majority_count}/{total_votes} votes)",
-                "cyan",
-                attrs=["bold"]
-            )
-
-            # Log to frontend with clear format
-            add_console_log(f"Swarm -> {majority_action} | {final_confidence}% sure", "trade")
-
-            reasoning = f"🌊 Swarm Consensus: {majority_action} ({total_votes} models voted)\n\n"
-            reasoning += "Vote Breakdown:\n"
-            for action in ["BUY", "SELL", "NOTHING"]:
-                count = vote_counts[action]
-                avg = avg_confidences[action]
-                reasoning += f"   {action}: {count} votes (avg {avg}% confidence)\n"
-            reasoning += f"\n{action_emoji} Final Decision: {majority_action} | {final_confidence}% confident\n"
-            reasoning += f"   ({majority_count}/{total_votes} models agreed = {vote_percentage}% consensus)\n\n"
-            reasoning += "Individual Votes:\n"
-            reasoning += "\n".join(f"   {vote}" for vote in model_votes)
-
-            return majority_action, final_confidence, reasoning
-
-        except Exception as e:
-            cprint(f"❌ Error calculating swarm consensus: {e}", "red")
-            add_console_log(f"Swarm -> ERROR | 0%", "error")
-            return "NOTHING", 0, f"Error calculating consensus: {str(e)}"
+        """Calculate swarm consensus. Wrapper for extracted function."""
+        return _calculate_swarm_consensus(swarm_result, self.min_swarm_confidence)
 
     def _parse_vote_from_response(self, response_upper):
-        """
-        Parse a vote from the model response with strict matching.
-        Now extracts both action AND confidence score.
-
-        Expected format: "BUY | 85%" or "SELL | 70%" or "NOTHING | 45%"
-        Falls back to action-only parsing if confidence not found.
-
-        Returns: Tuple of (action: str, confidence: int)
-            - action: "BUY", "SELL", or "NOTHING"
-            - confidence: 0-100 (defaults to 50 if not found)
-        """
-        # Clean the response (remove extra whitespace, newlines)
-        response_clean = response_upper.strip().split('\n')[0].strip()
-
-        # Default confidence if not found
-        confidence = 50
-
-        # Try to parse "ACTION | XX%" format
-        if "|" in response_clean:
-            parts = response_clean.split("|")
-            action_part = parts[0].strip()
-            confidence_part = parts[1].strip() if len(parts) > 1 else ""
-
-            # Extract confidence number
-            confidence_match = re.search(r'(\d+)', confidence_part)
-            if confidence_match:
-                confidence = min(100, max(0, int(confidence_match.group(1))))
-
-            # Parse action from the first part
-            response_clean = action_part
-
-        # Parse action with priority matching
-        action = "NOTHING"
-
-        # Priority 1: Exact match
-        if response_clean in ["BUY"]:
-            action = "BUY"
-        elif response_clean in ["SELL"]:
-            action = "SELL"
-        elif response_clean in ["DO NOTHING", "NOTHING", "HOLD", "WAIT"]:
-            action = "NOTHING"
-        # Priority 2: Starts with action word
-        elif response_clean.startswith("BUY"):
-            action = "BUY"
-        elif response_clean.startswith("SELL"):
-            action = "SELL"
-        elif response_clean.startswith("DO NOTHING") or response_clean.startswith("NOTHING"):
-            action = "NOTHING"
-        # Priority 3: Contains action word (fallback)
-        elif "SELL" in response_clean:
-            action = "SELL"
-        elif "BUY" in response_clean:
-            action = "BUY"
-
-        return action, confidence
+        """Parse vote from response. Wrapper for extracted function in ai_interface module."""
+        return _parse_vote_from_response(response_upper)
 
     def fetch_all_open_positions(self):
         """
@@ -1783,27 +1283,8 @@ Return ONLY valid JSON with the following structure:
 
 
     def _format_strategy_context_text(self, strategy_context):
-        if not strategy_context:
-            return "No strategy intelligence available.", {}
-
-        lines = []
-
-        lines.append("STRATEGY INTELLIGENCE (JSON)")
-        lines.append(json.dumps(strategy_context, indent=2))
-
-        aggregate = strategy_context.get("aggregate", {})
-
-        lines.append("\nSTRATEGY SUMMARY")
-        lines.append(f"- Direction bias: {aggregate.get('direction_bias')}")
-        lines.append(f"- Confidence: {aggregate.get('confidence')}")
-        lines.append(
-            f"- Suggested allocation (%): "
-            f"{aggregate.get('suggested_allocation_pct')}"
-        )
-        lines.append(f"- Conflict level: {aggregate.get('conflict_level')}")
-        lines.append(f"- Timestamp: {strategy_context.get('timestamp')}")
-
-        return "\n".join(lines), strategy_context
+        """Format strategy context. Wrapper for extracted function in market_analyzer module."""
+        return _format_strategy_context_text(strategy_context)
    
 
    
@@ -2415,69 +1896,8 @@ Return ONLY valid JSON with the following structure:
         return actions_sorted
 
     def normalize_symbol(self, raw_symbol: str) -> str:
-        """
-        Normalize AI-returned symbols to match self.symbols.
-
-        Handles common AI hallucinations like:
-        - "BITCOIN" → "BTC"
-        - "btc" → "BTC"
-        - "ETH/USD" → "ETH"
-        - "BTC-PERP" → "BTC"
-
-        Returns the normalized symbol if found in self.symbols,
-        otherwise returns the original (will be rejected by validation).
-        """
-        if not raw_symbol:
-            return raw_symbol
-
-        # Common cryptocurrency name aliases
-        SYMBOL_ALIASES = {
-            "BITCOIN": "BTC",
-            "ETHEREUM": "ETH",
-            "SOLANA": "SOL",
-            "LITECOIN": "LTC",
-            "DOGECOIN": "DOGE",
-            "HYPERLIQUID": "HYPE",
-            "AVALANCHE": "AVAX",
-            "CHAINLINK": "LINK",
-            "POLYGON": "MATIC",
-            "ARBITRUM": "ARB",
-            "OPTIMISM": "OP",
-            "COSMOS": "ATOM",
-            "POLKADOT": "DOT",
-            "UNISWAP": "UNI",
-            "AAVE": "AAVE",
-            "CELESTIA": "TIA",
-            "INJECTIVE": "INJ",
-            "JUPITER": "JUP",
-            "PEPE": "PEPE",
-            "BONK": "BONK",
-            "SHIBA": "SHIB",
-            "SHIBA INU": "SHIB",
-        }
-
-        upper = raw_symbol.upper().strip()
-
-        # Check aliases first
-        if upper in SYMBOL_ALIASES:
-            normalized = SYMBOL_ALIASES[upper]
-            if normalized in self.symbols:
-                return normalized
-
-        # Strip common suffixes (e.g., BTC/USD, BTC-USD, BTCUSD, BTC-PERP)
-        for suffix in ["/USD", "-USD", "USD", "/USDT", "-USDT", "USDT", "-PERP", "/PERP", "PERP"]:
-            if upper.endswith(suffix):
-                stripped = upper[:-len(suffix)]
-                if stripped in self.symbols:
-                    return stripped
-                break
-
-        # Check if uppercase version is in symbols
-        if upper in self.symbols:
-            return upper
-
-        # Return original if no normalization worked
-        return raw_symbol
+        """Normalize symbol. Wrapper for extracted function in portfolio_allocator module."""
+        return _normalize_symbol(raw_symbol, self.symbols)
 
     def _fallback_equal_allocation(self, signals, available_balance, open_positions):
         """
