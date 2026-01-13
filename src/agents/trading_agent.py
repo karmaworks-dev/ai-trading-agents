@@ -1955,22 +1955,23 @@ Return ONLY valid JSON with the following structure:
             cprint("   No new positions to open after filtering.", "cyan")
             return []
 
-        # Calculate margin per position
+        # Calculate margin per position with proper cash buffer enforcement
         usable_margin = available_balance * (MAX_POSITION_PERCENTAGE / 100)
         cash_buffer = available_balance * (CASH_PERCENTAGE / 100)
+        allocatable_margin = max(0, usable_margin - cash_buffer)  # Ensure we never go below zero
 
         # Prevent division by zero
         if len(new_signals) == 0:
             cprint("   No signals after filtering.", "cyan")
             return []
 
-        margin_per_position = (usable_margin - cash_buffer) / len(new_signals)
-        min_margin = 12 / LEVERAGE
+        margin_per_position = allocatable_margin / len(new_signals)
+        min_margin = min_order_notional / LEVERAGE
 
         if margin_per_position < min_margin:
             # Take only highest confidence signals
             new_signals.sort(key=lambda x: x["confidence"], reverse=True)
-            max_positions = int((usable_margin - cash_buffer) / min_margin)
+            max_positions = int(allocatable_margin / min_margin)
             new_signals = new_signals[:max(1, max_positions)]
 
             # Prevent division by zero after filtering
@@ -1978,7 +1979,7 @@ Return ONLY valid JSON with the following structure:
                 cprint("   Insufficient margin for any positions.", "yellow")
                 return []
 
-            margin_per_position = (usable_margin - cash_buffer) / len(new_signals)
+            margin_per_position = allocatable_margin / len(new_signals)
 
         actions = []
         for sig in new_signals:
