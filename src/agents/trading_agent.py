@@ -106,6 +106,22 @@ from src.agents.trading.portfolio_allocator import (
     SYMBOL_ALIASES,
 )
 
+# Import trade executor functions (extracted for maintainability)
+from src.agents.trading.trade_executor import (
+    calculate_notional,
+    check_min_notional,
+    validate_trade_action,
+    validate_position_for_action,
+    check_position_conflict,
+    build_execution_summary,
+    format_execution_summary,
+    get_position_direction,
+    calculate_current_notional,
+    should_close_for_reversal,
+    should_exit_position,
+    DEFAULT_MIN_NOTIONAL,
+)
+
 # Import shared logging utility (prevents circular import with trading_app)
 try:
     from src.utils.logging_utils import add_console_log, log_position_open

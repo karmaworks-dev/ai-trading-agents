@@ -65,6 +65,28 @@ from .portfolio_allocator import (
     ACTION_PRIORITY,
 )
 
+from .trade_executor import (
+    calculate_notional,
+    calculate_margin_from_notional,
+    check_min_notional,
+    validate_trade_action,
+    validate_position_for_action,
+    check_position_conflict,
+    format_trade_start_log,
+    format_trade_success_log,
+    format_trade_failure_log,
+    build_execution_summary,
+    format_execution_summary,
+    get_position_direction,
+    calculate_current_notional,
+    should_close_for_reversal,
+    should_exit_position,
+    categorize_exit_decision,
+    DEFAULT_MIN_NOTIONAL,
+    MARGIN_REQUIRED_ACTIONS,
+    POSITION_REDUCE_ACTIONS,
+)
+
 __all__ = [
     # Prompts
     "TRADING_PROMPT",
@@ -116,4 +138,24 @@ __all__ = [
     "SYMBOL_ALIASES",
     "VALID_ALLOCATION_ACTIONS",
     "ACTION_PRIORITY",
+    # Trade Executor
+    "calculate_notional",
+    "calculate_margin_from_notional",
+    "check_min_notional",
+    "validate_trade_action",
+    "validate_position_for_action",
+    "check_position_conflict",
+    "format_trade_start_log",
+    "format_trade_success_log",
+    "format_trade_failure_log",
+    "build_execution_summary",
+    "format_execution_summary",
+    "get_position_direction",
+    "calculate_current_notional",
+    "should_close_for_reversal",
+    "should_exit_position",
+    "categorize_exit_decision",
+    "DEFAULT_MIN_NOTIONAL",
+    "MARGIN_REQUIRED_ACTIONS",
+    "POSITION_REDUCE_ACTIONS",
 ]
