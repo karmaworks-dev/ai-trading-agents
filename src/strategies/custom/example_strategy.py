@@ -2,7 +2,7 @@ from src.strategies.base_strategy import BaseStrategy
 
 class ExampleStrategy(BaseStrategy):
     def __init__(self):
-        super().__init__("Moon Dev Example Strategy 🌙")
+        super().__init__("Karma Dev Example Strategy 🕉️")
     
     def generate_signals(self) -> dict:
         return {
@@ -10,7 +10,7 @@ class ExampleStrategy(BaseStrategy):
             'signal': 0.85,        # 0-1 strength
             'direction': 'BUY',    # BUY, SELL, or NEUTRAL
             'metadata': {
-                'reason': '🚀 Moon Dev says buy!',
+                'reason': '🕉️ Karma Dev says buy!',
                 'indicators': {
                     'rsi': 28,
                     'trend': 'bullish'

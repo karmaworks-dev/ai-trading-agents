@@ -32,7 +32,17 @@ STRATEGY_METADATA = {
         "risk_level": "medium",
         "recommended_timeframes": ["30m", "1h", "4h"],
         "module": "src.strategies.custom.karma_compounding_agr",
-        "class_name": "CompoundingAGRStrategy",
+        "class_name": "KarmaCompoundingStrategy",
+    },
+    "macd_money_map": {
+        "id": "macd_money_map",
+        "name": "MACD Money Map",
+        "description": "Complete implementation of the MACD Money Map trading framework. Includes trend following (zero line), divergence detection (momentum exhaustion), and mathematical risk management.",
+        "category": "momentum",
+        "risk_level": "medium",
+        "recommended_timeframes": ["15m", "1h", "4h"],
+        "module": "src.strategies.custom.macd_money_map",
+        "class_name": "MACDMoneyMapStrategy",
     },
 }
 
