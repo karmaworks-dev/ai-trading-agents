@@ -891,16 +891,23 @@ function populateTokenCategories() {
 // STRATEGY MANAGEMENT
 // ========================================
 
-// Render strategies in the settings modal
+// Render strategies in the settings page
 function renderStrategies(strategies) {
     const container = document.getElementById('strategies-list');
+    if (!container) return; // Guard for legacy tab reference
 
     if (!strategies || strategies.length === 0) {
         container.innerHTML = '<div class="loading-state">No strategies available</div>';
         return;
     }
 
-    container.innerHTML = strategies.map(strategy => {
+    // Sort strategies: enabled first, then by name
+    const sortedStrategies = [...strategies].sort((a, b) => {
+        if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    container.innerHTML = sortedStrategies.map(strategy => {
         const riskClass = `risk-${strategy.risk_level}`;
         const cardClass = strategy.enabled ? '' : 'disabled';
         const timeframes = strategy.recommended_timeframes.join(', ');
