@@ -23,6 +23,21 @@ STRATEGY_METADATA = {
         "recommended_timeframes": ["15m", "30m", "1h"],
         "module": "src.strategies.custom.quad_enhanced_strategy",
         "class_name": "QuadRotationStrategy",
+        "parameters": {
+            "min_stoch_agreement": {
+                "type": "number",
+                "label": "Min Stoch Agreement",
+                "min": 1,
+                "max": 4,
+                "step": 1,
+                "default": 3
+            },
+            "use_trend_shield": {
+                "type": "boolean",
+                "label": "Use Trend Shield",
+                "default": True
+            }
+        }
     },
     "compounding_agr": {
         "id": "compounding_agr",
@@ -43,6 +58,35 @@ STRATEGY_METADATA = {
         "recommended_timeframes": ["15m", "1h", "4h"],
         "module": "src.strategies.custom.macd_money_map",
         "class_name": "MACDMoneyMapStrategy",
+        "parameters": {
+            "trading_style": {
+                "type": "select",
+                "label": "Trading Style",
+                "options": ["scalping", "day_trading", "swing_trading"],
+                "default": "day_trading"
+            },
+            "use_mtf_confirmation": {
+                "type": "boolean",
+                "label": "Use MTF Confirmation",
+                "default": True
+            },
+            "mtf_min_confidence": {
+                "type": "number",
+                "label": "MTF Min Confidence",
+                "min": 0,
+                "max": 1,
+                "step": 0.1,
+                "default": 1.0
+            },
+            "risk_percent": {
+                "type": "number",
+                "label": "Risk % per Trade",
+                "min": 0.1,
+                "max": 5.0,
+                "step": 0.1,
+                "default": 1.0
+            }
+        }
     },
 }
 

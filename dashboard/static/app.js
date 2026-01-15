@@ -844,6 +844,33 @@ function renderStrategies(strategies) {
         const riskClass = `risk-${strategy.risk_level}`;
         const cardClass = strategy.enabled ? '' : 'disabled';
         const timeframes = strategy.recommended_timeframes.join(', ');
+        
+        // Generate parameter inputs if they exist
+        let paramsHtml = '';
+        if (strategy.parameters) {
+            paramsHtml = `
+                <div class="strategy-params">
+                    ${Object.entries(strategy.parameters).map(([key, config]) => {
+                        let input = '';
+                        if (config.type === 'select') {
+                            input = `<select class="strategy-param-input" data-strategy="${strategy.id}" data-param="${key}" onchange="updateStrategyParam('${strategy.id}', '${key}', this.value)">
+                                ${config.options.map(opt => `<option value="${opt}" ${opt === config.default ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>`;
+                        } else if (config.type === 'boolean') {
+                            input = `<input type="checkbox" class="strategy-param-input" data-strategy="${strategy.id}" data-param="${key}" ${config.default ? 'checked' : ''} onchange="updateStrategyParam('${strategy.id}', '${key}', this.checked)">`;
+                        } else if (config.type === 'number') {
+                            input = `<input type="number" class="strategy-param-input" data-strategy="${strategy.id}" data-param="${key}" min="${config.min}" max="${config.max}" step="${config.step}" value="${config.default}" onchange="updateStrategyParam('${strategy.id}', '${key}', this.value)">`;
+                        }
+                        return `
+                            <div class="strategy-param-row">
+                                <label>${config.label}</label>
+                                ${input}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
 
         return `
             <div class="strategy-card ${cardClass}" data-strategy-id="${strategy.id}">
@@ -860,6 +887,7 @@ function renderStrategies(strategies) {
                     </label>
                 </div>
                 <div class="strategy-description">${strategy.description}</div>
+                ${paramsHtml}
                 <div class="strategy-meta">
                     <span class="${riskClass}">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -878,6 +906,29 @@ function renderStrategies(strategies) {
             </div>
         `;
     }).join('');
+}
+
+// Update a strategy parameter
+async function updateStrategyParam(strategyId, paramKey, value) {
+    try {
+        const response = await fetch(`/api/strategies/${strategyId}/params`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [paramKey]: value })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log(`Updated ${strategyId} param ${paramKey} to ${value}`);
+            addConsoleMessage(`Updated ${strategyId} parameter: ${paramKey}`, 'info');
+        } else {
+            showValidationMessage(data.message || 'Failed to update parameter', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating strategy parameter:', error);
+        showValidationMessage('Failed to update parameter', 'error');
+    }
 }
 
 // Toggle a strategy on/off
