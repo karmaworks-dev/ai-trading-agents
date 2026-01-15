@@ -318,11 +318,18 @@
                         </div>
 
                         <div class="setting-row">
-                            <div class="setting-group">
+                            <div class="setting-group half">
                                 <label for="cash-buffer-pct">Cash Buffer (%)</label>
                                 <div class="input-with-hint">
                                     <input type="number" id="cash-buffer-pct" class="setting-input" min="0" max="50" value="10" />
                                     <span class="input-hint">Keep X% in reserve (5-20% recommended)</span>
+                                </div>
+                            </div>
+                            <div class="setting-group half">
+                                <label for="starting-balance">Starting Balance ($)</label>
+                                <div class="input-with-hint">
+                                    <input type="number" id="starting-balance" class="setting-input" min="1" step="1" value="10" />
+                                    <span class="input-hint">Used for PnL % calculation</span>
                                 </div>
                             </div>
                         </div>

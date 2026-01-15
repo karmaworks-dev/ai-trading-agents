@@ -144,11 +144,14 @@ function updatePnL(pnl) {
     const pnlEl = document.getElementById('pnl');
     const pnlPctEl = document.getElementById('pnl-pct');
     
+    // Get starting balance from UI input (which is synced with settings)
+    const startingBalance = parseFloat(document.getElementById('starting-balance')?.value || 10);
+    
     const pnlClass = pnl >= 0 ? 'positive' : 'negative';
     pnlEl.className = `value pnl ${pnlClass}`;
     pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
     
-    const pnlPct = ((pnl / 10) * 100).toFixed(2); // Assuming $10 starting balance
+    const pnlPct = ((pnl / startingBalance) * 100).toFixed(2);
     pnlPctEl.className = `sublabel ${pnlClass}`;
     pnlPctEl.textContent = `${pnl >= 0 ? '+' : ''}${pnlPct}%`;
 }
@@ -773,6 +776,7 @@ function applySettings(settings) {
     document.getElementById('max-position-pct').value = settings.max_position_pct || 90;
     document.getElementById('leverage').value = settings.leverage || 20;
     document.getElementById('cash-buffer-pct').value = settings.cash_buffer_pct || 10;
+    document.getElementById('starting-balance').value = settings.starting_balance || 10;
     
     // Position management
     document.getElementById('min-age-hours').value = settings.min_age_hours || 0.1;
