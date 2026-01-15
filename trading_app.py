@@ -1170,9 +1170,14 @@ def get_data():
         account_data = get_account_data()
         positions = get_positions_data()
 
+        # Include starting balance from settings for PnL calculation in frontend
+        user_settings = load_settings()
+        starting_balance = float(user_settings.get('starting_balance', 10.0))
+
         response = {
             **account_data,
             "positions": positions,
+            "starting_balance": starting_balance,
             "timestamp": datetime.now().isoformat()
         }
         return jsonify(response)

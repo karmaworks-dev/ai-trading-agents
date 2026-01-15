@@ -108,7 +108,7 @@ async function updateDashboard() {
         
         // Update all metrics
         updateBalance(data.account_balance, data.total_equity);
-        updatePnL(data.pnl);
+        updatePnL(data.pnl, data.starting_balance);
         updateStatus(data.status, data.agent_running);
         updateExchange(data.exchange);
         updateTimestamp();
@@ -140,12 +140,15 @@ function updateBalance(available, equity) {
 }
 
 // Update P&L
-function updatePnL(pnl) {
+function updatePnL(pnl, startingBalance = null) {
     const pnlEl = document.getElementById('pnl');
     const pnlPctEl = document.getElementById('pnl-pct');
     
-    // Get starting balance from UI input (which is synced with settings)
-    const startingBalance = parseFloat(document.getElementById('starting-balance')?.value || 10);
+    // If startingBalance not provided by API, try to get from UI input, fallback to 10
+    if (startingBalance === null || isNaN(startingBalance)) {
+        const input = document.getElementById('starting-balance');
+        startingBalance = (input && input.value) ? parseFloat(input.value) : 10;
+    }
     
     const pnlClass = pnl >= 0 ? 'positive' : 'negative';
     pnlEl.className = `value pnl ${pnlClass}`;
@@ -1666,7 +1669,13 @@ function loadAccountProfile() {
                 const totalPnl = currentBalance - startBalance;
 
                 const pnlEl = document.getElementById('account-total-pnl');
-                pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
+                
+                // Get current starting balance for the profile view too
+                const startingBalanceInput = document.getElementById('starting-balance');
+                const startingBalance = (startingBalanceInput && startingBalanceInput.value) ? parseFloat(startingBalanceInput.value) : 10;
+                const pnlPct = ((totalPnl / startingBalance) * 100).toFixed(2);
+                
+                pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)} (${totalPnl >= 0 ? '+' : ''}${pnlPct}%)`;
                 pnlEl.className = `stat-value pnl ${totalPnl >= 0 ? 'positive' : 'negative'}`;
             }
         })
