@@ -1594,7 +1594,7 @@ Return ONLY valid JSON with the following structure:
                 signals.append({
                     "symbol": token,
                     "action": action,
-                    "confidence": int(row["confidence"]),
+                    "confidence": int(row.get("confidence", 50)),
                 })
 
             if removed:
