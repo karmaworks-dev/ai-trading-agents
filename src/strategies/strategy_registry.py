@@ -48,6 +48,40 @@ STRATEGY_METADATA = {
         "recommended_timeframes": ["30m", "1h", "4h"],
         "module": "src.strategies.custom.karma_compounding_agr",
         "class_name": "KarmaCompoundingStrategy",
+        "parameters": {
+            "daily_target_percent": {
+                "type": "number",
+                "label": "Daily Target %",
+                "min": 0.1,
+                "max": 5.0,
+                "step": 0.05,
+                "default": 0.75
+            },
+            "min_confidence": {
+                "type": "number",
+                "label": "Min Confidence %",
+                "min": 50,
+                "max": 95,
+                "step": 5,
+                "default": 70
+            },
+            "max_leverage": {
+                "type": "number",
+                "label": "Max Leverage",
+                "min": 1,
+                "max": 50,
+                "step": 1,
+                "default": 25
+            },
+            "growth_target": {
+                "type": "number",
+                "label": "Growth Target (x)",
+                "min": 1.1,
+                "max": 100.0,
+                "step": 0.5,
+                "default": 10.0
+            }
+        }
     },
     "macd_money_map": {
         "id": "macd_money_map",
@@ -171,7 +205,25 @@ def get_enabled_strategies(settings: Dict) -> List:
         strategy_class = load_strategy_class(strategy_id)
         if strategy_class:
             try:
-                strategy_instance = strategy_class()
+                # Load strategy-specific parameters from settings
+                strategy_params = settings.get("strategy_params", {}).get(strategy_id, {})
+                
+                # Instantiate with parameters if the class supports it, else default
+                try:
+                    # Check if constructor accepts parameters
+                    sig = inspect.signature(strategy_class.__init__)
+                    if 'params' in sig.parameters:
+                        strategy_instance = strategy_class(params=strategy_params)
+                    else:
+                        strategy_instance = strategy_class()
+                        # Manually set attributes if they exist
+                        for key, value in strategy_params.items():
+                            if hasattr(strategy_instance, key):
+                                setattr(strategy_instance, key, value)
+                except Exception as e:
+                    print(f"⚠️ Parameter injection failed for {strategy_id}, using default: {e}")
+                    strategy_instance = strategy_class()
+
                 enabled_strategies.append(strategy_instance)
                 print(f"✅ Loaded strategy: {strategy_id}")
             except Exception as e:

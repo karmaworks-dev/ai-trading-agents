@@ -845,32 +845,8 @@ function renderStrategies(strategies) {
         const cardClass = strategy.enabled ? '' : 'disabled';
         const timeframes = strategy.recommended_timeframes.join(', ');
         
-        // Generate parameter inputs if they exist
-        let paramsHtml = '';
-        if (strategy.parameters) {
-            paramsHtml = `
-                <div class="strategy-params">
-                    ${Object.entries(strategy.parameters).map(([key, config]) => {
-                        let input = '';
-                        if (config.type === 'select') {
-                            input = `<select class="strategy-param-input" data-strategy="${strategy.id}" data-param="${key}" onchange="updateStrategyParam('${strategy.id}', '${key}', this.value)">
-                                ${config.options.map(opt => `<option value="${opt}" ${opt === config.default ? 'selected' : ''}>${opt}</option>`).join('')}
-                            </select>`;
-                        } else if (config.type === 'boolean') {
-                            input = `<input type="checkbox" class="strategy-param-input" data-strategy="${strategy.id}" data-param="${key}" ${config.default ? 'checked' : ''} onchange="updateStrategyParam('${strategy.id}', '${key}', this.checked)">`;
-                        } else if (config.type === 'number') {
-                            input = `<input type="number" class="strategy-param-input" data-strategy="${strategy.id}" data-param="${key}" min="${config.min}" max="${config.max}" step="${config.step}" value="${config.default}" onchange="updateStrategyParam('${strategy.id}', '${key}', this.value)">`;
-                        }
-                        return `
-                            <div class="strategy-param-row">
-                                <label>${config.label}</label>
-                                ${input}
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-        }
+        // Check if strategy has parameters to show "Edit" button
+        const hasParams = strategy.parameters && Object.keys(strategy.parameters).length > 0;
 
         return `
             <div class="strategy-card ${cardClass}" data-strategy-id="${strategy.id}">
@@ -879,15 +855,21 @@ function renderStrategies(strategies) {
                         <div class="strategy-name">${strategy.name}</div>
                         <div class="strategy-category">${strategy.category}</div>
                     </div>
-                    <label class="strategy-toggle">
-                        <input type="checkbox"
-                               ${strategy.enabled ? 'checked' : ''}
-                               onchange="toggleStrategy('${strategy.id}', this.checked)">
-                        <span class="toggle-slider"></span>
-                    </label>
+                    <div class="strategy-actions">
+                        ${hasParams ? `
+                            <button class="btn-small btn-edit-params" onclick="openStrategyParams('${strategy.id}', '${strategy.name}')" title="Edit Parameters">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            </button>
+                        ` : ''}
+                        <label class="strategy-toggle">
+                            <input type="checkbox"
+                                   ${strategy.enabled ? 'checked' : ''}
+                                   onchange="toggleStrategy('${strategy.id}', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
                 <div class="strategy-description">${strategy.description}</div>
-                ${paramsHtml}
                 <div class="strategy-meta">
                     <span class="${riskClass}">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -908,26 +890,131 @@ function renderStrategies(strategies) {
     }).join('');
 }
 
-// Update a strategy parameter
-async function updateStrategyParam(strategyId, paramKey, value) {
+let activeStrategyId = null;
+
+async function openStrategyParams(strategyId, strategyName) {
+    activeStrategyId = strategyId;
+    document.getElementById('strategy-params-title').textContent = `${strategyName} Parameters`;
+    const container = document.getElementById('strategy-params-container');
+    container.innerHTML = '<div class="loading-state">Loading parameters...</div>';
+    document.getElementById('strategy-params-status').textContent = '';
+    
+    document.getElementById('strategy-params-modal').classList.add('show');
+
     try {
-        const response = await fetch(`/api/strategies/${strategyId}/params`, {
+        const response = await fetch(`/api/strategies/${strategyId}/parameters`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderStrategyParams(data.parameters);
+        } else {
+            container.innerHTML = `<div class="error-message">${data.message}</div>`;
+        }
+    } catch (error) {
+        console.error('Error loading strategy parameters:', error);
+        container.innerHTML = '<div class="error-message">Failed to load parameters</div>';
+    }
+}
+
+function closeStrategyParams(event) {
+    if (!event || event.target.id === 'strategy-params-modal' || event.target.classList.contains('modal-close')) {
+        document.getElementById('strategy-params-modal').classList.remove('show');
+        activeStrategyId = null;
+    }
+}
+
+function renderStrategyParams(parameters) {
+    const container = document.getElementById('strategy-params-container');
+    
+    if (Object.keys(parameters).length === 0) {
+        container.innerHTML = '<div class="info-box">No adjustable parameters for this strategy.</div>';
+        return;
+    }
+
+    container.innerHTML = Object.entries(parameters).map(([key, config]) => {
+        let inputHtml = '';
+        const id = `param-${key}`;
+
+        if (config.type === 'number') {
+            inputHtml = `
+                <div class="input-with-hint">
+                    <input type="number" id="${id}" class="setting-input"
+                           min="${config.min}" max="${config.max}" step="${config.step}"
+                           value="${config.value}" />
+                    <span class="input-hint">Range: ${config.min} to ${config.max}</span>
+                </div>
+            `;
+        } else if (config.type === 'boolean') {
+            inputHtml = `
+                <label class="toggle-switch">
+                    <input type="checkbox" id="${id}" ${config.value ? 'checked' : ''} />
+                    <span class="toggle-slider"></span>
+                </label>
+            `;
+        } else if (config.type === 'select') {
+            inputHtml = `
+                <select id="${id}" class="setting-input">
+                    ${config.options.map(opt => `
+                        <option value="${opt}" ${opt === config.value ? 'selected' : ''}>${opt}</option>
+                    `).join('')}
+                </select>
+            `;
+        }
+
+        return `
+            <div class="setting-group" data-param-key="${key}">
+                <label for="${id}">${config.label}</label>
+                ${inputHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+async function saveStrategyParameters() {
+    if (!activeStrategyId) return;
+
+    const container = document.getElementById('strategy-params-container');
+    const statusEl = document.getElementById('strategy-params-status');
+    const params = {};
+
+    container.querySelectorAll('.setting-group').forEach(group => {
+        const key = group.dataset.paramKey;
+        const input = group.querySelector('input, select');
+        
+        if (input.type === 'checkbox') {
+            params[key] = input.checked;
+        } else if (input.type === 'number') {
+            params[key] = parseFloat(input.value);
+        } else {
+            params[key] = input.value;
+        }
+    });
+
+    try {
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'validation-message info';
+
+        const response = await fetch(`/api/strategies/${activeStrategyId}/parameters`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [paramKey]: value })
+            body: JSON.stringify(params)
         });
 
         const data = await response.json();
 
         if (data.success) {
-            console.log(`Updated ${strategyId} param ${paramKey} to ${value}`);
-            addConsoleMessage(`Updated ${strategyId} parameter: ${paramKey}`, 'info');
+            statusEl.textContent = 'Parameters saved successfully!';
+            statusEl.className = 'validation-message success';
+            addConsoleMessage(`Updated ${activeStrategyId} parameters`, 'success');
+            setTimeout(() => closeStrategyParams(), 1500);
         } else {
-            showValidationMessage(data.message || 'Failed to update parameter', 'error');
+            statusEl.textContent = data.message || 'Failed to save parameters';
+            statusEl.className = 'validation-message error';
         }
     } catch (error) {
-        console.error('Error updating strategy parameter:', error);
-        showValidationMessage('Failed to update parameter', 'error');
+        console.error('Error saving strategy parameters:', error);
+        statusEl.textContent = 'Error saving parameters';
+        statusEl.className = 'validation-message error';
     }
 }
 

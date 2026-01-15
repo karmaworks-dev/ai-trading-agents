@@ -397,7 +397,63 @@ class AdaptiveEquityTracker:
         print(f"{'='*60}\n")
 
 
-class KarmaCompoundingStrategy:
+class CompoundingAGRStrategy:
+    """
+    🕉️ Karma's Fast Compounding Strategy with Adaptive Equity Tracking
+    
+    Intelligent position sizing that adapts to performance and market conditions.
+    Works alongside signal generation strategies to optimize trade sizing.
+    """
+    
+    def __init__(self, data_dir=None, params=None):
+        """Initialize Karma Compounding Strategy"""
+        self.name = "Karma Fast Compounding (AGR)"
+        params = params or {}
+        
+        # Realistic parameters
+        self.daily_target_percent = float(params.get('daily_target_percent', 0.75))
+        self.min_expected_move = 5.0
+        self.min_confidence = int(params.get('min_confidence', 70))
+        
+        # Risk parameters
+        self.base_leverage = DEFAULT_LEVERAGE
+        self.max_leverage = int(params.get('max_leverage', 25))
+        self.min_leverage = 10
+        self.stop_loss_pct = STOP_LOSS_PERCENTAGE
+        
+        # Conservative multipliers
+        self.peak_protect_multiplier = 0.60
+        self.aggressive_multiplier = 1.15
+        self.drawdown_threshold = 0.10
+        
+        # Maximum combined multiplier
+        self.max_combined_multiplier = 1.5
+        
+        # Initialize adaptive equity tracker
+        self.equity_tracker = AdaptiveEquityTracker(
+            lookback_trades=21,
+            warmup_trades=15,
+            data_dir=data_dir
+        )
+        
+        # Hyper-growth settings
+        self.growth_target = float(params.get('growth_target', 10.0))
+        
+        # Daily tracking
+        self.daily_profit = 0.0
+        self.daily_trades = 0
+        self.last_reset_date = datetime.now().date()
+        
+        # Load state
+        self._load_state()
+        
+        print(f"🕉️ {self.name} initialized")
+        print(f"   Daily Target: {self.daily_target_percent}%")
+        print(f"   Max Combined Multiplier: {self.max_combined_multiplier}x")
+        print(f"   Growth Target: {self.growth_target}x")
+
+
+class KarmaCompoundingStrategy(CompoundingAGRStrategy):
     """
     🕉️ Karma's Fast Compounding Strategy with Adaptive Equity Tracking
     
@@ -691,7 +747,7 @@ class KarmaCompoundingStrategy:
 
 
 # Create singleton instance
-strategy = KarmaCompoundingStrategy()
+strategy = CompoundingAGRStrategy()
 
 
 # ============================================================================
@@ -708,7 +764,7 @@ if __name__ == "__main__":
     
     # Use temp directory for testing
     with tempfile.TemporaryDirectory() as tmp_dir:
-        strat = KarmaCompoundingStrategy(data_dir=tmp_dir)
+        strat = CompoundingAGRStrategy(data_dir=tmp_dir)
         
         # Test 1: Verify multiplier range
         print("\n🧪 Test 1: Confidence Multiplier Range")

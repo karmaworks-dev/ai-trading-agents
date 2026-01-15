@@ -1830,6 +1830,73 @@ def toggle_strategy(strategy_id):
         }), 500
 
 
+@app.route('/api/strategies/<strategy_id>/parameters', methods=['GET', 'POST'])
+@login_required
+def strategy_parameters(strategy_id):
+    """Get or update parameters for a specific strategy"""
+    try:
+        from src.strategies.strategy_registry import get_strategy_metadata
+        
+        metadata = get_strategy_metadata(strategy_id)
+        if not metadata:
+            return jsonify({'success': False, 'message': 'Strategy not found'}), 404
+            
+        user_settings = load_settings()
+        
+        # Initialize strategy_params if not present
+        if 'strategy_params' not in user_settings:
+            user_settings['strategy_params'] = {}
+            
+        if request.method == 'GET':
+            # Get current values or defaults
+            params_config = metadata.get('parameters', {})
+            current_values = user_settings['strategy_params'].get(strategy_id, {})
+            
+            # Merge defaults with saved values
+            result = {}
+            for key, config in params_config.items():
+                result[key] = {
+                    **config,
+                    'value': current_values.get(key, config.get('default'))
+                }
+                
+            return jsonify({
+                'success': True,
+                'strategy_id': strategy_id,
+                'parameters': result
+            })
+        else:
+            # Update parameters
+            new_values = request.get_json()
+            if not isinstance(new_values, dict):
+                return jsonify({'success': False, 'message': 'Invalid data format'}), 400
+                
+            # Basic validation against metadata
+            params_config = metadata.get('parameters', {})
+            validated_values = {}
+            
+            for key, value in new_values.items():
+                if key in params_config:
+                    # Type conversion/validation could be added here
+                    validated_values[key] = value
+            
+            user_settings['strategy_params'][strategy_id] = validated_values
+            
+            if save_settings(user_settings):
+                add_console_log(f"Parameters updated for strategy '{strategy_id}'", "info")
+                return jsonify({
+                    'success': True,
+                    'message': f'Parameters for {strategy_id} saved',
+                    'values': validated_values
+                })
+            else:
+                return jsonify({'success': False, 'message': 'Failed to save settings'}), 500
+                
+    except Exception as e:
+        print(f"❌ Error in strategy_parameters: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/ai-models', methods=['GET'])
 @login_required
 def get_ai_models():

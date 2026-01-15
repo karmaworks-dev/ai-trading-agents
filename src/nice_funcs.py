@@ -63,7 +63,7 @@ def get_ai_response(prompt, system_message=None):
 # Get API keys from environment
 BIRDEYE_API_KEY = os.getenv("BIRDEYE_API_KEY")
 if not BIRDEYE_API_KEY:
-    raise ValueError("🚨 BIRDEYE_API_KEY not found in environment variables!")
+    print("⚠️ Warning: BIRDEYE_API_KEY not found in environment variables! Some Solana-specific functions may fail.")
 
 sample_address = "2yXTyarttn2pTZ6cwt4DqmrRuBw1G7pmFv9oT6MStdKP"
 
