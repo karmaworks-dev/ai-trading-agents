@@ -2358,56 +2358,84 @@ animation-duration: 3.8s;
 }
 
 .settings-page-header h1 {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(to right, #fff, #888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .settings-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 24px;
-    padding: 24px 40px;
-    max-width: 1800px;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 32px;
+    padding: 40px;
+    max-width: 1920px;
     margin: 0 auto;
     width: 100%;
 }
 
 .strategies-list-scroll {
-    max-height: 500px;
+    max-height: 600px;
     overflow-y: auto;
-    padding-right: 8px;
+    padding-right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-/* Specific module tweaks */
-.module-risk .card-header h2 { color: var(--accent-red); }
-.module-strategies .card-header h2 { color: var(--accent-yellow); }
-
+/* Glassmorphism & High-end Card Styling */
 .settings-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
     display: flex;
     flex-direction: column;
     height: fit-content;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.settings-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 .settings-card .card-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
 }
 
 .settings-card .card-header h2 {
-    font-size: 16px;
-    letter-spacing: 1px;
-    color: var(--accent-blue);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 .settings-card .card-body {
-    padding: 24px;
+    padding: 32px;
 }
+
+/* Module Specific Accents */
+.module-signal .card-header h2 { color: var(--accent-blue); }
+.module-modus .card-header h2 { color: var(--accent-green); }
+.module-assets .card-header h2 { color: #a855f7; } /* Purple accent */
+.module-risk .card-header h2 { color: var(--accent-red); }
+.module-strategies .card-header h2 { color: var(--accent-yellow); }
+
+.module-signal { border-top: 4px solid var(--accent-blue); }
+.module-modus { border-top: 4px solid var(--accent-green); }
+.module-assets { border-top: 4px solid #a855f7; }
+.module-risk { border-top: 4px solid var(--accent-red); }
+.module-strategies { border-top: 4px solid var(--accent-yellow); }
 
 /* Signal Module Styles */
 .exchange-list {
@@ -2465,27 +2493,34 @@ animation-duration: 3.8s;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    background: var(--bg-tertiary);
-    padding: 4px;
-    border-radius: 10px;
-    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .mode-btn {
-    padding: 10px;
+    padding: 12px;
     border: none;
     background: transparent;
     color: var(--text-muted);
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: 10px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
 }
 
 .mode-btn.active {
     background: var(--accent-blue);
     color: white;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
 .model-select-grid {
@@ -2524,6 +2559,10 @@ animation-duration: 3.8s;
 .asset-tab.active {
     color: var(--text-primary);
     border-bottom-color: var(--accent-green);
+}
+
+.asset-tab:hover:not(.active) {
+    color: var(--text-secondary);
 }
 
 .asset-list-scroll {
