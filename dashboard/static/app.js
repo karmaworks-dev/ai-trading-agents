@@ -643,27 +643,75 @@ let availableProviders = [];
 let availableModels = {};
 let swarmModels = [];
 
-function openSettings() {
-    document.getElementById('settings-modal').classList.add('show');
+// Open the settings page
+async function openSettings() {
     loadSettings();
-}
-
-function closeSettings(event) {
-    if (!event || event.target.id === 'settings-modal' || event.target.classList.contains('modal-close')) {
-        document.getElementById('settings-modal').classList.remove('show');
+    document.getElementById('settings-page').classList.add('show');
+    
+    // Also load wallet address for display
+    try {
+        const accResponse = await fetch('/api/data');
+        const accData = await accResponse.json();
+        
+        const walletEl = document.getElementById('eth-wallet-address');
+        if (accData.account_address || accData.address) {
+            const addr = accData.account_address || accData.address;
+            walletEl.textContent = `${addr.substring(0, 5)}....${addr.substring(addr.length - 4)}`;
+        } else {
+            walletEl.textContent = 'BYOK - Not Set';
+        }
+    } catch (e) {
+        console.error("Error loading wallet info:", e);
     }
 }
 
-// Tab switching
-function switchSettingsTab(tabName) {
-    // Update tab buttons
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.tab === tabName);
+// Close the settings page
+function closeSettings() {
+    document.getElementById('settings-page').classList.remove('show');
+}
+
+// Set Swarm Mode UI
+function setSwarmMode(mode) {
+    const singleBtn = document.getElementById('mode-single-btn');
+    const swarmBtn = document.getElementById('mode-swarm-btn');
+    const singleCfg = document.getElementById('modus-single-config');
+    const swarmCfg = document.getElementById('modus-swarm-config');
+    const modeValue = document.getElementById('swarm-mode-value');
+    
+    // Update Hidden inputs for compatibility
+    const legacySingle = document.getElementById('swarm-mode-single');
+    const legacySwarm = document.getElementById('swarm-mode-swarm');
+
+    if (mode === 'single') {
+        if (singleBtn) singleBtn.classList.add('active');
+        if (swarmBtn) swarmBtn.classList.remove('active');
+        if (singleCfg) singleCfg.style.display = 'block';
+        if (swarmCfg) swarmCfg.style.display = 'none';
+        if (modeValue) modeValue.value = 'single';
+        if (legacySingle) legacySingle.checked = true;
+    } else {
+        if (swarmBtn) swarmBtn.classList.add('active');
+        if (singleBtn) singleBtn.classList.remove('active');
+        if (swarmCfg) swarmCfg.style.display = 'block';
+        if (singleCfg) singleCfg.style.display = 'none';
+        if (modeValue) modeValue.value = 'swarm';
+        if (legacySwarm) legacySwarm.checked = true;
+    }
+}
+
+// Asset Tab Switching
+function switchAssetTab(category) {
+    // Tabs
+    document.querySelectorAll('.asset-tab').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.toLowerCase().includes(category)) btn.classList.add('active');
     });
 
-    // Update tab content
-    document.querySelectorAll('.settings-tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `tab-${tabName}`);
+    // Content
+    const grids = ['crypto-tokens', 'altcoins-tokens', 'memecoins-tokens'];
+    grids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = id.startsWith(category) ? 'grid' : 'none';
     });
 }
 
@@ -815,6 +863,11 @@ function applySettings(settings) {
 
     // Swarm models - Start empty, user must add their own
     swarmModels = settings.swarm_models || [];
+    
+    // UI Improvement: Sync the mode toggle button state
+    setSwarmMode(settings.swarm_mode || 'single');
+
+    // Ensure no legacy default models are pre-populated if empty
     renderSwarmModels();
 }
 
@@ -1193,6 +1246,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // Render swarm models
 function renderSwarmModels() {
     const container = document.getElementById('swarm-models-list');
+    if (!container) return;
+
+    if (swarmModels.length === 0) {
+        container.innerHTML = '<div class="empty-state">No swarm models configured. Add one below.</div>';
+        return;
+    }
 
     container.innerHTML = swarmModels.map((model, index) => `
         <div class="swarm-model-card" data-index="${index}">
@@ -1270,9 +1329,10 @@ function updateSwarmSliderValue(index) {
 function addSwarmModel() {
     if (swarmModels.length >= 6) return;
 
+    // Use default values but let user select the model
     swarmModels.push({
         provider: 'openrouter',
-        model: 'nex-agi/deepseek-v3.1-nex-n1:free',
+        model: '', // Empty default
         temperature: 0.3,
         max_tokens: 2000
     });

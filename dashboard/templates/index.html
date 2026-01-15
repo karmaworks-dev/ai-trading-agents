@@ -137,115 +137,191 @@
         </footer>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal" onclick="closeSettings(event)">
-        <div class="modal-content settings-modal-wide" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h2>Settings</h2>
-                <button class="modal-close" onclick="closeSettings()">&times;</button>
+    <!-- Settings Page (Full Screen Overlay) -->
+    <div id="settings-page" class="settings-page">
+        <div class="settings-page-header">
+            <div class="header-left">
+                <button class="btn-icon" onclick="closeSettings()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h1>Settings</h1>
             </div>
-
-            <!-- Tab Navigation -->
-            <div class="settings-tabs">
-                <button class="settings-tab active" data-tab="chart" onclick="switchSettingsTab('chart')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
-                    CHART
-                </button>
-                <button class="settings-tab" data-tab="mode" onclick="switchSettingsTab('mode')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6"></path></svg>
-                    MODE
-                </button>
-                <button class="settings-tab" data-tab="risk" onclick="switchSettingsTab('risk')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    RISK
-                </button>
-                <button class="settings-tab" data-tab="token" onclick="switchSettingsTab('token')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v12m-6-6h12"></path></svg>
-                    TOKEN
-                </button>
-                <button class="settings-tab" data-tab="models" onclick="switchSettingsTab('models')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-                    MODELS
-                </button>
-                <button class="settings-tab" data-tab="strategies" onclick="switchSettingsTab('strategies')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-                    STRATEGIES
-                </button>
+            <div class="header-right">
+                <div class="validation-message" id="settings-validation"></div>
+                <button class="btn btn-run" onclick="saveSettings()">Save Configuration</button>
             </div>
+        </div>
 
-            <div class="modal-body">
-                <!-- CHART Tab Content -->
-                <div id="tab-chart" class="settings-tab-content active">
+        <div class="settings-grid">
+            <!-- 1st Card: SIGNAL -->
+            <div class="settings-card module-signal">
+                <div class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
+                    <h2>SIGNAL</h2>
+                </div>
+                <div class="card-body">
+                    <div class="setting-group">
+                        <label>Timeframe</label>
+                        <select id="timeframe-select" class="setting-input">
+                            <option value="1m">1 minute</option>
+                            <option value="5m">5 minutes</option>
+                            <option value="15m">15 minutes</option>
+                            <option value="30m" selected>30 minutes</option>
+                            <option value="1h">1 hour</option>
+                            <option value="4h">4 hours</option>
+                            <option value="1d">1 day</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Scope (Days Back)</label>
+                        <select id="days-back-select" class="setting-input">
+                            <option value="1">1 day</option>
+                            <option value="2" selected>2 days</option>
+                            <option value="3">3 days</option>
+                            <option value="5">5 days</option>
+                            <option value="7">7 days</option>
+                            <option value="14">14 days</option>
+                            <option value="30">30 days</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Cycle Time (minutes)</label>
+                        <input type="number" id="cycle-time-input" class="setting-input" min="1" max="1440" value="30" />
+                    </div>
+
                     <div class="setting-section">
-                        <h3 class="section-title">Chart Configuration</h3>
-                        <div class="setting-row">
-                            <div class="setting-group half">
-                                <label for="timeframe-select">Timeframe</label>
-                                <select id="timeframe-select" class="setting-input">
-                                    <option value="1m">1 minute</option>
-                                    <option value="5m">5 minutes</option>
-                                    <option value="15m">15 minutes</option>
-                                    <option value="30m" selected>30 minutes</option>
-                                    <option value="1h">1 hour</option>
-                                    <option value="4h">4 hours</option>
-                                    <option value="1d">1 day</option>
-                                </select>
-                            </div>
-                            <div class="setting-group half">
-                                <label for="days-back-select">Days Back</label>
-                                <select id="days-back-select" class="setting-input">
-                                    <option value="1">1 day</option>
-                                    <option value="2" selected>2 days</option>
-                                    <option value="3">3 days</option>
-                                    <option value="5">5 days</option>
-                                    <option value="7">7 days</option>
-                                    <option value="14">14 days</option>
-                                    <option value="30">30 days</option>
-                                </select>
-                            </div>
+                        <label>Exchange Select</label>
+                        <div class="exchange-list">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="ex-hyperliquid" checked disabled>
+                                <span class="checkmark"></span>
+                                Hyperliquid
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="ex-aster" disabled>
+                                <span class="checkmark"></span>
+                                Aster <span class="coming-soon">coming soon</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="ex-lighter" disabled>
+                                <span class="checkmark"></span>
+                                Lighter <span class="coming-soon">coming soon</span>
+                            </label>
                         </div>
+                    </div>
+
+                    <div class="account-info-section">
+                        <label>Account Info</label>
+                        <div class="wallet-display">
+                            <span class="label">ETH Wallet:</span>
+                            <span id="eth-wallet-address" class="value">Loading...</span>
+                        </div>
+                        <p class="byok-info">
+                            BYOK *set in <a href="#" onclick="openAccountModal('secrets'); return false;">Account -> Secrets</a>*
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2nd Card: MODUS -->
+            <div class="settings-card module-modus">
+                <div class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6"></path></svg>
+                    <h2>MODUS</h2>
+                </div>
+                <div class="card-body">
+                    <div class="setting-section">
+                        <label>Agent Mode</label>
+                        <div class="mode-toggle-group">
+                            <button id="mode-single-btn" class="mode-btn active" onclick="setSwarmMode('single')">Single Agent</button>
+                            <button id="mode-swarm-btn" class="mode-btn" onclick="setSwarmMode('swarm')">Swarm Mode</button>
+                            <input type="hidden" id="swarm-mode-value" value="single">
+                        </div>
+                    </div>
+
+                    <div id="modus-single-config" class="modus-config">
+                        <label>Primary Model</label>
+                        <div class="model-select-grid">
+                            <select id="main-provider-select" class="setting-input" onchange="updateMainModelOptions()">
+                                <!-- Populated by JS -->
+                            </select>
+                            <select id="main-model-select" class="setting-input">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="modus-swarm-config" class="modus-config" style="display: none;">
+                        <div class="section-header">
+                            <label>Swarm Models</label>
+                            <button class="btn-small" onclick="addSwarmModel()">+ Add</button>
+                        </div>
+                        <div id="swarm-models-list" class="swarm-list-v2">
+                            <!-- Swarm models populated by JS - NO DEFAULTS -->
+                        </div>
+                    </div>
+
+                    <div class="advanced-model-settings">
                         <div class="setting-group">
-                            <label for="cycle-time-input">Cycle Time (minutes)</label>
-                            <div class="input-with-hint">
-                                <input type="number" id="cycle-time-input" class="setting-input" min="1" max="1440" value="30" />
-                                <span class="input-hint">How often the agent runs (1-1440 min)</span>
-                            </div>
+                            <label>Temperature: <span id="main-temp-value">0.3</span></label>
+                            <input type="range" id="main-temperature" class="setting-slider" min="0" max="100" value="30" oninput="updateSliderValue('main-temperature', 'main-temp-value')" />
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- MODE Tab Content -->
-                <div id="tab-mode" class="settings-tab-content">
-                    <div class="setting-section">
-                        <h3 class="section-title">Agent Mode</h3>
-                        <div class="mode-selector">
-                            <label class="mode-option">
-                                <input type="radio" name="swarm-mode" value="single" checked />
-                                <div class="mode-card">
-                                    <div class="mode-icon">
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21v-2a4.5 4.5 0 0 1 9 0v2"></path></svg>
-                                    </div>
-                                    <div class="mode-info">
-                                        <span class="mode-name">Fast (Single Agent)</span>
-                                        <span class="mode-desc">One AI model analyzes all tokens quickly</span>
-                                    </div>
-                                </div>
-                            </label>
-                            <label class="mode-option">
-                                <input type="radio" name="swarm-mode" value="swarm" />
-                                <div class="mode-card">
-                                    <div class="mode-icon">
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"></circle><circle cx="15" cy="7" r="3"></circle><circle cx="6" cy="17" r="3"></circle><circle cx="12" cy="17" r="3"></circle><circle cx="18" cy="17" r="3"></circle></svg>
-                                    </div>
-                                    <div class="mode-info">
-                                        <span class="mode-name">Swarm (Multi-Agent)</span>
-                                        <span class="mode-desc">Multiple AI models analyze and reach consensus</span>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
+            <!-- 3rd Card: ASSETS -->
+            <div class="settings-card module-assets">
+                <div class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v12m-6-6h12"></path></svg>
+                    <h2>ASSETS</h2>
+                </div>
+                <div class="card-body">
+                    <div class="asset-tabs">
+                        <button class="asset-tab active" onclick="switchAssetTab('crypto')">Crypto</button>
+                        <button class="asset-tab" onclick="switchAssetTab('altcoins')">Altcoins</button>
+                        <button class="asset-tab" onclick="switchAssetTab('memecoins')">Memecoins</button>
+                    </div>
+
+                    <div id="asset-list-container" class="asset-list-scroll">
+                        <div id="crypto-tokens" class="asset-grid"></div>
+                        <div id="altcoins-tokens" class="asset-grid" style="display: none;"></div>
+                        <div id="memecoins-tokens" class="asset-grid" style="display: none;"></div>
+                    </div>
+
+                    <div class="selected-assets-summary">
+                        <label>Selected Assets</label>
+                        <div id="selected-tokens-list" class="selected-chips"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Hidden Legacy Inputs (to maintain app.js compatibility) -->
+        <div style="display: none;">
+            <input type="radio" name="swarm-mode" id="swarm-mode-single" value="single" checked>
+            <input type="radio" name="swarm-mode" id="swarm-mode-swarm" value="swarm">
+            <input type="number" id="min-single-confidence" value="60">
+            <input type="number" id="min-swarm-confidence" value="65">
+            <input type="number" id="stop-loss-pct" value="2.0">
+            <input type="number" id="take-profit-pct" value="5.0">
+            <input type="number" id="max-position-pct" value="90">
+            <input type="number" id="leverage" value="20">
+            <input type="number" id="cash-buffer-pct" value="10">
+            <input type="number" id="starting-balance" value="10">
+            <input type="number" id="min-age-hours" value="0.1">
+            <input type="number" id="min-close-confidence" value="70">
+            <input type="text" id="main-model-input">
+            <input type="number" id="main-max-tokens" value="2000">
+            <div id="tab-strategies">
+                <div id="strategies-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RISK Tab Content (Hidden legacy or kept for now?) -->
+    <!-- Keeping the Modal structure for other potential small modals, but removing settings-modal content -->
+    <div id="settings-modal" class="modal" style="display:none"></div>
 
                 <!-- RISK Tab Content -->
                 <div id="tab-risk" class="settings-tab-content">
