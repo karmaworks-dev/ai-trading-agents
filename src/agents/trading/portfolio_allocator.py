@@ -534,3 +534,187 @@ def filter_signals_by_position_alignment(
         filtered.append(sig)
 
     return filtered
+
+
+# =============================================================================
+# OPEN POSITIONS COLLECTION
+# =============================================================================
+
+def collect_open_positions(
+    symbols: List[str],
+    get_position_fn,
+    account,
+    leverage: float
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Collect current open positions for all symbols.
+
+    Args:
+        symbols: List of symbols to check
+        get_position_fn: Function to get position (e.g., n.get_position)
+        account: Account object
+        leverage: Trading leverage
+
+    Returns:
+        Dict mapping symbol to position info (direction, margin_usd, pnl_percent)
+    """
+    open_positions = {}
+
+    for sym in symbols:
+        try:
+            pos_data = get_position_fn(sym, account)
+            _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
+
+            if im_in_pos and pos_size != 0:
+                notional = abs(float(pos_size) * float(entry_px))
+                margin = notional / leverage
+                open_positions[sym] = {
+                    "direction": "LONG" if is_long else "SHORT",
+                    "margin_usd": round(margin, 2),
+                    "pnl_percent": round(float(pnl_pct), 2),
+                }
+        except Exception:
+            continue
+
+    return open_positions
+
+
+# =============================================================================
+# AI ALLOCATION ACTION VALIDATION
+# =============================================================================
+
+def validate_single_allocation_action(
+    action: Dict[str, Any],
+    symbols: List[str],
+    normalize_symbol_fn,
+    risk_manager=None,
+    total_equity: float = 0,
+    get_price_fn=None
+) -> Tuple[bool, Dict[str, Any], Optional[str]]:
+    """
+    Validate a single AI allocation action.
+
+    Args:
+        action: Action dict from AI
+        symbols: List of valid symbols
+        normalize_symbol_fn: Function to normalize symbol names
+        risk_manager: Optional risk manager for additional validation
+        total_equity: Total account equity (for risk validation)
+        get_price_fn: Function to get current price (for risk validation)
+
+    Returns:
+        Tuple of (is_valid, normalized_action, rejection_reason)
+    """
+    if not isinstance(action, dict):
+        return False, action, "not a dict"
+
+    raw_sym = action.get("symbol", "")
+    act = action.get("action")
+
+    # Normalize symbol
+    sym = normalize_symbol_fn(raw_sym)
+    action["symbol"] = sym
+
+    if sym not in symbols:
+        reason = f"{raw_sym}: unknown symbol" + (f" (normalized: {sym})" if sym != raw_sym else "")
+        return False, action, reason
+
+    if act not in VALID_ALLOCATION_ACTIONS:
+        return False, action, f"{sym}: invalid action {act}"
+
+    # Size validation for opening actions
+    if act in ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]:
+        if action.get("margin_usd", 0) <= 0:
+            return False, action, f"{sym}: margin_usd <= 0"
+
+    if act == "REDUCE":
+        if action.get("reduce_by_usd", 0) <= 0:
+            return False, action, f"{sym}: reduce_by_usd <= 0"
+
+    # Risk validation if manager available
+    if risk_manager:
+        try:
+            conf = action.get("confidence", 50) / 100.0
+            # Get entry price
+            try:
+                entry_price = get_price_fn(sym) if get_price_fn else 100.0
+            except Exception:
+                entry_price = 100.0
+
+            verdict = risk_manager.validate_trade_decision(
+                symbol=sym,
+                action=act,
+                confidence=conf,
+                entry_price=entry_price,
+                account_balance=total_equity,
+            )
+            if not verdict.get("valid", False):
+                reason = verdict.get("reason", verdict.get("message", "unknown"))
+                return False, action, f"{sym}: risk rejected ({reason})"
+        except Exception as e:
+            return False, action, f"{sym}: risk error {e}"
+
+    return True, action, None
+
+
+def validate_ai_allocation_actions(
+    actions: List[Any],
+    symbols: List[str],
+    normalize_symbol_fn,
+    risk_manager=None,
+    total_equity: float = 0,
+    get_price_fn=None
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """
+    Validate all AI allocation actions.
+
+    Args:
+        actions: List of actions from AI response
+        symbols: List of valid symbols
+        normalize_symbol_fn: Function to normalize symbol names
+        risk_manager: Optional risk manager
+        total_equity: Total account equity
+        get_price_fn: Function to get current price
+
+    Returns:
+        Tuple of (valid_actions, rejected_counts_by_reason)
+    """
+    valid_actions = []
+    rejected = {}
+
+    for action in actions:
+        is_valid, normalized_action, reason = validate_single_allocation_action(
+            action, symbols, normalize_symbol_fn, risk_manager, total_equity, get_price_fn
+        )
+
+        if is_valid:
+            valid_actions.append(normalized_action)
+        else:
+            rejected[reason] = rejected.get(reason, 0) + 1
+            cprint(f"   {reason}", "yellow")
+
+    return valid_actions, rejected
+
+
+def log_allocation_rejections(
+    valid_count: int,
+    rejected: Dict[str, int]
+) -> None:
+    """
+    Log allocation rejections with summary.
+
+    Args:
+        valid_count: Number of valid actions
+        rejected: Dict mapping reason to count
+    """
+    total_rejected = sum(rejected.values())
+
+    if rejected:
+        cprint(f"\nAI Actions: {valid_count} valid, {total_rejected} rejected", "yellow")
+        for reason, count in rejected.items():
+            cprint(f"   - {reason} (x{count})", "white")
+
+        if valid_count > 0:
+            add_console_log(f"AI allocation: {valid_count} valid, {total_rejected} rejected", "info")
+        else:
+            add_console_log(f"AI allocation: {total_rejected} action(s) rejected", "warning")

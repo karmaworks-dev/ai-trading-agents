@@ -113,6 +113,10 @@ from src.agents.trading.portfolio_allocator import (
     plan_rebalance_closes,
     build_fallback_allocation_actions,
     filter_signals_by_position_alignment,
+    # Phase 4 helpers
+    collect_open_positions as _collect_open_positions,
+    validate_ai_allocation_actions,
+    log_allocation_rejections,
     SYMBOL_ALIASES,
 )
 
@@ -1132,26 +1136,11 @@ class TradingAgent:
             cprint("=" * 70, "cyan")
 
             # ==========================================================
-            # STEP 1 — COLLECT OPEN POSITIONS
+            # STEP 1 — COLLECT OPEN POSITIONS (using helper)
             # ==========================================================
-            open_positions = {}
-            for sym in self.symbols:
-                try:
-                    pos_data = n.get_position(sym, self.account) if EXCHANGE != "HYPERLIQUID" \
-                        else n.get_position(sym, self.account)
-
-                    _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
-                    if im_in_pos and pos_size != 0:
-                        notional = abs(float(pos_size) * float(entry_px))
-                        margin = notional / LEVERAGE
-                        open_positions[sym] = {
-                            "direction": "LONG" if is_long else "SHORT",
-                            "margin_usd": round(margin, 2),
-                            "pnl_percent": round(float(pnl_pct), 2),
-                        }
-                except Exception:
-                    continue
-
+            open_positions = _collect_open_positions(
+                self.symbols, n.get_position, self.account, LEVERAGE
+            )
             cprint(f"📊 Open positions: {open_positions}", "cyan")
 
             # ==========================================================
@@ -1249,92 +1238,21 @@ class TradingAgent:
                 return self._fallback_equal_allocation(signals, allocatable_usd, open_positions)
 
             # ==========================================================
-            # STEP 6 — VALIDATE ACTIONS (WITH SYMBOL NORMALIZATION)
+            # STEP 6 — VALIDATE ACTIONS (using helper)
             # ==========================================================
-            valid_actions = []
-            rejected = {}
-
-            def reject(reason):
-                rejected[reason] = rejected.get(reason, 0) + 1
-
-            for a in actions:
-                if not isinstance(a, dict):
-                    reject("not a dict")
-                    continue
-
-                raw_sym = a.get("symbol", "")
-                act = a.get("action")
-
-                # Normalize symbol (handles AI hallucinations like "BITCOIN" → "BTC")
-                sym = self.normalize_symbol(raw_sym)
-                a["symbol"] = sym  # Update action with normalized symbol
-
-                if sym not in self.symbols:
-                    reject(f"{raw_sym}: unknown symbol" + (f" (normalized: {sym})" if sym != raw_sym else ""))
-                    continue
-
-                if act not in ["OPEN_LONG", "OPEN_SHORT", "INCREASE", "REDUCE", "CLOSE"]:
-                    reject(f"{sym}: invalid action {act}")
-                    continue
-
-                # Size validation
-                if act in ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]:
-                    if a.get("margin_usd", 0) <= 0:
-                        reject(f"{sym}: margin_usd <= 0")
-                        continue
-
-                if act == "REDUCE":
-                    if a.get("reduce_by_usd", 0) <= 0:
-                        reject(f"{sym}: reduce_by_usd <= 0")
-                        continue
-
-                # Risk validation
-                if RISK_MANAGER_AVAILABLE and self.risk_manager:
-                    try:
-                        conf = a.get("confidence", 50) / 100.0
-                        # Get actual entry price instead of hardcoded value
-                        try:
-                            entry_price = n.get_current_price(sym)
-                        except Exception:
-                            entry_price = 100.0  # Fallback if price fetch fails
-
-                        verdict = self.risk_manager.validate_trade_decision(
-                            symbol=sym,
-                            action=act,
-                            confidence=conf,
-                            entry_price=entry_price,
-                            account_balance=total_equity,
-                        )
-                        if not verdict["valid"]:
-                            # Get detailed rejection reason
-                            reason = verdict.get("reason", verdict.get("message", "unknown"))
-                            cprint(f"   ⚠️ Risk rejected {sym}: {reason}", "yellow")
-                            reject(f"{sym}: risk rejected ({reason})")
-                            continue
-                    except Exception as e:
-                        reject(f"{sym}: risk error {e}")
-                        continue
-
-                valid_actions.append(a)
+            valid_actions, rejected = validate_ai_allocation_actions(
+                actions=actions,
+                symbols=self.symbols,
+                normalize_symbol_fn=self.normalize_symbol,
+                risk_manager=self.risk_manager if RISK_MANAGER_AVAILABLE else None,
+                total_equity=total_equity,
+                get_price_fn=n.get_current_price if hasattr(n, 'get_current_price') else None
+            )
 
             # ==========================================================
             # STEP 7 — LOG REJECTIONS & HANDLE PARTIAL FAILURES
             # ==========================================================
-            total_rejected = sum(rejected.values())
-            valid_count = len(valid_actions)
-
-            if rejected:
-                # Better logging: show valid vs rejected counts
-                cprint(f"\n⚠️ AI Actions: {valid_count} valid, {total_rejected} rejected", "yellow")
-                for reason, count in rejected.items():
-                    cprint(f"   • {reason} (×{count})", "white")
-
-                if valid_count > 0:
-                    # Some actions are valid - proceed with those
-                    add_console_log(f"AI allocation: {valid_count} valid, {total_rejected} rejected", "info")
-                else:
-                    # All rejected - will try partial recovery below
-                    add_console_log(f"AI allocation: {total_rejected} action(s) rejected", "warning")
+            log_allocation_rejections(len(valid_actions), rejected)
 
             if not valid_actions:
                 # Partial Recovery: Check if we have valid signals that AI didn't properly handle
