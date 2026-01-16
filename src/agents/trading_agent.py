@@ -1583,7 +1583,11 @@ Return ONLY valid JSON with the following structure:
             # STEP 2 — FILTER STRATEGY SIGNALS (using portfolio_allocator helper)
             # ==========================================================
             recommendations = [
-                {"token": row["token"], "action": row["action"], "confidence": row["confidence"]}
+                {
+                    "token": row.get("token", row.get("symbol", "")),
+                    "action": row.get("action", "NOTHING"),
+                    "confidence": row.get("confidence", 50)
+                }
                 for _, row in self.recommendations_df.iterrows()
             ]
             signals, removed = filter_strategy_signals(
@@ -1903,7 +1907,7 @@ Return ONLY valid JSON with the following structure:
         # Minimum order notional (matching exchange requirements)
         min_order_notional = 12.0
 
-        actionable_signals = [s for s in signals if s["action"] in ["BUY", "SELL"]]
+        actionable_signals = [s for s in signals if s.get("action", "") in ["BUY", "SELL"]]
         if not actionable_signals:
             return []
 
@@ -1914,21 +1918,24 @@ Return ONLY valid JSON with the following structure:
 
         actions = []
         for sig in actionable_signals:
-            sym = sig["symbol"]
-            action_type = "OPEN_LONG" if sig["action"] == "BUY" else "OPEN_SHORT"
+            sym = sig.get("symbol", "")
+            sig_action = sig.get("action", "NOTHING")
+            action_type = "OPEN_LONG" if sig_action == "BUY" else "OPEN_SHORT"
 
             if sym in open_positions:
                 pos = open_positions[sym]
                 # If signal aligns with existing position, create an INCREASE action
-                if (sig["action"] == "BUY" and pos["direction"] == "LONG") or \
-                   (sig["action"] == "SELL" and pos["direction"] == "SHORT"):
+                if (sig_action == "BUY" and pos.get("direction") == "LONG") or \
+                   (sig_action == "SELL" and pos.get("direction") == "SHORT"):
                     action_type = "INCREASE"
 
+            sig_confidence = sig.get("confidence", 50)
             actions.append({
-                "symbol": sig["symbol"],
+                "symbol": sig.get("symbol", ""),
                 "action": action_type,
                 "margin_usd": 0,  # Placeholder, will be calculated next
-                "reason": f"Fallback: {sig['action']} signal ({sig['confidence']}% confidence)"
+                "confidence": sig_confidence,  # Include for sorting
+                "reason": f"Fallback: {sig.get('action', 'UNKNOWN')} signal ({sig_confidence}% confidence)"
             })
 
         if not actions:
@@ -1949,7 +1956,7 @@ Return ONLY valid JSON with the following structure:
 
         if margin_per_position < min_margin:
             # Take only highest confidence signals
-            actions.sort(key=lambda x: x["confidence"], reverse=True)
+            actions.sort(key=lambda x: x.get("confidence", 0), reverse=True)
             max_positions = int(allocatable_margin / min_margin)
             actions = actions[:max(1, max_positions)]
 
