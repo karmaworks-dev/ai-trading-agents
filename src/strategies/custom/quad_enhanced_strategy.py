@@ -70,16 +70,21 @@ class QuadRotationStrategy(BaseStrategy):
         # Calculate %K
         low_min = data['low'].rolling(window=k_period).min()
         high_max = data['high'].rolling(window=k_period).max()
-        
-        stoch_k = 100 * (data['close'] - low_min) / (high_max - low_min)
-        
+
+        # Guard against division by zero (flat market scenario)
+        denominator = high_max - low_min
+        denominator = denominator.replace(0, float('nan'))  # Replace 0 with NaN to avoid div/0
+
+        stoch_k = 100 * (data['close'] - low_min) / denominator
+        stoch_k = stoch_k.fillna(50)  # Default to 50 (neutral) for flat periods
+
         # Apply smoothing
         if smooth > 1:
             stoch_k = stoch_k.rolling(window=smooth).mean()
-        
+
         # Calculate %D (moving average of %K)
         stoch_d = stoch_k.rolling(window=d_period).mean()
-        
+
         return stoch_k, stoch_d
     
     def calculate_weighted_average(self, stoch_values: dict) -> pd.Series:

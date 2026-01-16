@@ -2344,7 +2344,8 @@ Return ONLY valid JSON with the following structure:
 
             cprint(f"\n{'=' * 60}", "cyan")
             cprint(f"🎯 Token: {token_short}", "cyan", attrs=["bold"])
-            cprint(f"📊 Signal: {action} ({row['confidence']}% confidence)", "yellow", attrs=["bold"])
+            confidence = row.get('confidence', 50)  # Default 50% if missing
+            cprint(f"📊 Signal: {action} ({confidence}% confidence)", "yellow", attrs=["bold"])
 
             if im_in_pos and pos_size != 0:
                 # ============= CASE: HAVE POSITION =============
@@ -2419,7 +2420,7 @@ Return ONLY valid JSON with the following structure:
                                 remove_position(token)
 
                             cprint("✅ Position closed successfully!", "white", "on_green")
-                            add_console_log(f"✅ Closed {token} {position_dir} | Signal: {action} ({row['confidence']}%)", "success")
+                            add_console_log(f"✅ Closed {token} {position_dir} | Signal: {action} ({confidence}%)", "success")
                             positions_closed += 1
                         else:
                             cprint("⚠️ Position close may have failed - will retry next cycle", "yellow")
@@ -2694,7 +2695,8 @@ Return ONLY valid JSON with the following structure:
                 try:
                     current_price = n.get_current_price(token)
                     price_str = f"@ ${current_price:,.2f}" if current_price > 1 else f"@ ${current_price:.6f}"
-                except:
+                except Exception as e:
+                    # Price fetch failed - log but continue (non-critical)
                     price_str = ""
 
                 cprint(f"\n📊 Analyzing {token}...", "white", "on_green")
@@ -2884,8 +2886,9 @@ Return ONLY valid JSON with the following structure:
                 final_equity = n.get_account_value(self.account.address) if EXCHANGE == "HYPERLIQUID" else get_account_balance(self.account)
                 final_positions = self.fetch_all_open_positions()
                 add_console_log(f"📊 Final: {len(final_positions)} positions open | Equity: ${final_equity:.2f}", "info")
-            except:
-                pass
+            except Exception as e:
+                # Non-critical: just skip final summary if fetch fails
+                cprint(f"⚠️ Could not fetch final status: {e}", "yellow")
 
             cprint(f"{'' * 80}\n", "cyan")
 

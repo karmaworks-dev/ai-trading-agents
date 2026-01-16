@@ -321,10 +321,12 @@ def get_position(symbol_or_address, account=None):
         positions = []
         active_coins_debug = []
 
-        for position in user_state["assetPositions"]:
-            raw_pos = position["position"]
-            coin = raw_pos["coin"]
-            sz = float(raw_pos["szi"])
+        # Use .get() to safely access assetPositions
+        asset_positions = user_state.get("assetPositions", [])
+        for position in asset_positions:
+            raw_pos = position.get("position", {})
+            coin = raw_pos.get("coin", "")
+            sz = float(raw_pos.get("szi", 0))
             
             if sz != 0:
                 active_coins_debug.append(coin)
@@ -332,8 +334,8 @@ def get_position(symbol_or_address, account=None):
             if coin == symbol and sz != 0:
                 positions.append(raw_pos)
                 pos_size = sz
-                entry_px = float(raw_pos["entryPx"])
-                pnl_perc = float(raw_pos["returnOnEquity"]) * 100
+                entry_px = float(raw_pos.get("entryPx", 0))
+                pnl_perc = float(raw_pos.get("returnOnEquity", 0)) * 100
                 print(f'{colored(f"{coin} position:", "green")} Size: {pos_size} | Entry: ${entry_px} | PnL: {pnl_perc:.2f}%')
 
         im_in_pos = len(positions) > 0
@@ -576,8 +578,9 @@ def get_account_value(address):
             address_str = address
         
         user_state = info.user_state(address_str)
-        account_value = float(user_state["marginSummary"]["accountValue"])
-        
+        margin_summary = user_state.get("marginSummary", {})
+        account_value = float(margin_summary.get("accountValue", 0))
+
         print(f'💎 Total equity for {address_str[:6]}...{address_str[-4:]}: ${account_value:,.2f}')
         return account_value
         
@@ -924,8 +927,8 @@ def _get_ohlcv(symbol, interval, start_time, end_time, batch_size=BATCH_SIZE):
             try:
                 error_json = response.json()
                 print(f'📋 Parsed error: {error_json}')
-            except:
-                pass
+            except Exception:
+                pass  # Response not JSON-parseable, ignore
 
         except requests.exceptions.RequestException as e:
             print(f'\n⚠️ Request failed (attempt {attempt + 1}): {e}')
