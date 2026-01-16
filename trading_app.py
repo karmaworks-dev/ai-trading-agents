@@ -711,6 +711,8 @@ def get_positions_data():
                             mark_price = entry_px
                         
                         position_value = abs(size) * mark_price
+                        # Get unrealized_pnl from dict (pos is a dictionary from to_dict())
+                        unrealized_pnl = pos.get('unrealized_pnl', 0)
                         positions.append({
                             "symbol": symbol,
                             "size": float(size),
@@ -718,7 +720,7 @@ def get_positions_data():
                             "mark_price": float(mark_price),
                             "position_value": float(position_value),
                             "pnl_percent": float(pnl_perc),
-                            "pnl_value": float(pos.unrealized_pnl) if hasattr(pos, 'unrealized_pnl') else 0,
+                            "pnl_value": float(unrealized_pnl),
                             "side": side
                         })
                     print(f"📡 WebSocket: {len(positions)} positions (real-time)")
@@ -768,6 +770,9 @@ def get_positions_data():
 
                 position_value = abs(pos_size) * mark_price
 
+                # Get unrealized PnL from API response
+                unrealized_pnl = float(raw_pos.get("unrealizedPnl", 0))
+
                 positions.append({
                     "symbol": symbol,
                     "size": float(pos_size),
@@ -775,6 +780,7 @@ def get_positions_data():
                     "mark_price": float(mark_price),
                     "position_value": float(position_value),
                     "pnl_percent": float(pnl_perc),
+                    "pnl_value": unrealized_pnl,
                     "side": side
                 })
 
@@ -1248,9 +1254,9 @@ def stream_positions():
                             yield f"data: {json.dumps({'heartbeat': True, 'timestamp': datetime.now().isoformat()})}\n\n"
                             last_heartbeat = current_time
 
-                        # Send full position refresh every 30 seconds for reliable updates
-                        # This ensures positions are always in sync even if WebSocket events are missed
-                        if current_time - last_full_refresh > 30:
+                        # Send full position refresh every 2 seconds for real-time updates
+                        # This ensures positions are always in sync (user requested 2-second refresh)
+                        if current_time - last_full_refresh > 2:
                             try:
                                 positions = get_positions_data()
                                 positions_json = json.dumps(positions)
@@ -1260,12 +1266,9 @@ def stream_positions():
                                 yield f"data: {error_data}\n\n"
                             last_full_refresh = current_time
 
-                        # Fallback polling if WebSocket events not available
-                        if not websocket_available:
-                            positions = get_positions_data()
-                            positions_json = json.dumps(positions)
-                            yield f"data: {positions_json}\n\n"
-                            time.sleep(2)  # Poll every 2 seconds as fallback
+                        # Small sleep to prevent CPU spinning (100ms)
+                        # The 2-second full refresh above handles both WebSocket and API modes
+                        time.sleep(0.1)
 
                     except GeneratorExit:
                         print("📡 SSE client disconnected")

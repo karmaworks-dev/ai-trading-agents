@@ -790,9 +790,13 @@ class TradingAgent:
             try:
                 # get_position returns: positions (list), im_in_pos, pos_size, pos_sym, entry_px, pnl_perc, is_long
                 # The 'positions' list contains ALL subpositions for this symbol
-                positions_list, im_in_pos, _, _, _, _, _ = n.get_position(
-                    symbol, self.account
-                )
+                pos_data = n.get_position(symbol, self.account)
+
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    continue
+
+                positions_list, im_in_pos, _, _, _, _, _ = pos_data
 
                 if im_in_pos and positions_list:
                     # CRITICAL FIX: Iterate through ALL positions, not just the first one
@@ -810,16 +814,6 @@ class TradingAgent:
                         if POSITION_TRACKER_AVAILABLE:
                             age_hours = get_position_age_hours(symbol)
 
-                        position_data = {
-                            "symbol": symbol,
-                            "size": pos_size,
-                            "entry_price": entry_px,
-                            "pnl_percent": pnl_perc,
-                            "is_long": is_long,
-                            "side": "LONG" if is_long else "SHORT",
-                            "age_hours": age_hours,
-                        }
-
                         # Store for tracker sync (use combined size for all positions of this symbol)
                         if symbol not in exchange_positions:
                             exchange_positions[symbol] = {
@@ -829,15 +823,38 @@ class TradingAgent:
                             }
                         exchange_positions[symbol]["size"] += pos_size
 
+                        # Calculate margin_usd for rebalancing (notional / leverage)
+                        notional = abs(pos_size) * entry_px
+                        margin_usd = notional / self.leverage if self.leverage > 0 else notional
+
+                        # Aggregate position data per symbol (NOT as list)
+                        # This format is required by plan_rebalance_actions()
                         if symbol not in all_positions:
-                            all_positions[symbol] = []
-                        all_positions[symbol].append(position_data)
+                            all_positions[symbol] = {
+                                "symbol": symbol,
+                                "size": 0,
+                                "entry_price": entry_px,
+                                "pnl_percent": pnl_perc,
+                                "is_long": is_long,
+                                "side": "LONG" if is_long else "SHORT",
+                                "age_hours": age_hours,
+                                "margin_usd": 0,
+                                "notional": 0,
+                                "direction": "LONG" if is_long else "SHORT",
+                            }
+                        # Aggregate values for same symbol
+                        all_positions[symbol]["size"] += pos_size
+                        all_positions[symbol]["margin_usd"] += margin_usd
+                        all_positions[symbol]["notional"] += notional
+                        # Update pnl_percent to weighted average or latest
+                        all_positions[symbol]["pnl_percent"] = pnl_perc
                         total_position_count += 1
 
                         # Include age in display
                         age_str = f"{age_hours:.1f}h" if age_hours > 0 else "NEW"
+                        side_str = "LONG" if is_long else "SHORT"
                         cprint(
-                            f"   {symbol:<10} | {position_data['side']:<10} | "
+                            f"   {symbol:<10} | {side_str:<10} | "
                             f"Size: {pos_size:>10.4f} | Entry: ${entry_px:>10.2f} | "
                             f"PnL: {pnl_perc:>6.2f}% | Age: {age_str}",
                             "cyan",
@@ -1208,8 +1225,14 @@ Return ONLY valid JSON with the following structure:
                             try:
                                 # Check if position is actually closed
                                 pos_data = n.get_position(symbol, self.account)
+
+                                # Validate pos_data before unpacking
+                                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                                    cprint(f"   ⚠️ Could not verify {symbol} closure - invalid data", "yellow")
+                                    break
+
                                 _, im_in_pos, pos_size, _, _, _, _ = pos_data
-                                
+
                                 if not im_in_pos or pos_size == 0:
                                     position_closed = True
                                     break
@@ -1310,21 +1333,26 @@ Return ONLY valid JSON with the following structure:
 
             try:
                 raw_pos_data = n.get_position(token, self.account)
-                _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = raw_pos_data
 
-                if im_in_pos:
-                    side = "LONG" if is_long else "SHORT"
+                # Validate pos_data before unpacking
+                if raw_pos_data is None or not isinstance(raw_pos_data, tuple) or len(raw_pos_data) < 7:
+                    pass  # Keep default position_context
+                else:
+                    _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = raw_pos_data
 
-                    if entry_px == 0 and pnl_perc == 0:
-                        position_context = (
-                            f"CURRENT POSITION: ✅ Active {side} (Spot) | Size: {pos_size}"
-                        )
-                    else:
-                        position_context = (
-                            f"CURRENT POSITION: ✅ Active {side} | "
-                            f"Size: {pos_size} | Entry: ${entry_px:.4f} | "
-                            f"PnL: {pnl_perc:.2f}%"
-                        )
+                    if im_in_pos:
+                        side = "LONG" if is_long else "SHORT"
+
+                        if entry_px == 0 and pnl_perc == 0:
+                            position_context = (
+                                f"CURRENT POSITION: ✅ Active {side} (Spot) | Size: {pos_size}"
+                            )
+                        else:
+                            position_context = (
+                                f"CURRENT POSITION: ✅ Active {side} | "
+                                f"Size: {pos_size} | Entry: ${entry_px:.4f} | "
+                                f"PnL: {pnl_perc:.2f}%"
+                            )
             except Exception as e:
                 cprint(f"⚠️ Error fetching position context: {e}", "yellow")
 
@@ -1564,6 +1592,10 @@ Return ONLY valid JSON with the following structure:
                 try:
                     pos_data = n.get_position(sym, self.account) if EXCHANGE != "HYPERLIQUID" \
                         else n.get_position(sym, self.account)
+
+                    # Validate pos_data before unpacking
+                    if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                        continue
 
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     if im_in_pos and pos_size != 0:
@@ -2030,6 +2062,11 @@ Return ONLY valid JSON with the following structure:
                     else:
                         pos_data = n.get_position(symbol)
 
+                    # Validate pos_data is valid tuple before unpacking
+                    if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                        cprint(f"⚠️ Invalid position data for {symbol}, skipping", "yellow")
+                        continue
+
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     current_notional = abs(float(pos_size) * float(entry_px)) if im_in_pos else 0
                     current_dir = "LONG" if is_long else "SHORT"
@@ -2323,6 +2360,11 @@ Return ONLY valid JSON with the following structure:
                 else:
                     pos_data = n.get_position(token)
 
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    cprint(f"⚠️ Invalid position data for {token}, skipping", "yellow")
+                    continue
+
                 _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = pos_data
 
                 # If position was manually closed, clean up tracker
@@ -2344,7 +2386,8 @@ Return ONLY valid JSON with the following structure:
 
             cprint(f"\n{'=' * 60}", "cyan")
             cprint(f"🎯 Token: {token_short}", "cyan", attrs=["bold"])
-            cprint(f"📊 Signal: {action} ({row['confidence']}% confidence)", "yellow", attrs=["bold"])
+            confidence = row.get('confidence', 50)  # Default 50% if missing
+            cprint(f"📊 Signal: {action} ({confidence}% confidence)", "yellow", attrs=["bold"])
 
             if im_in_pos and pos_size != 0:
                 # ============= CASE: HAVE POSITION =============
@@ -2419,7 +2462,7 @@ Return ONLY valid JSON with the following structure:
                                 remove_position(token)
 
                             cprint("✅ Position closed successfully!", "white", "on_green")
-                            add_console_log(f"✅ Closed {token} {position_dir} | Signal: {action} ({row['confidence']}%)", "success")
+                            add_console_log(f"✅ Closed {token} {position_dir} | Signal: {action} ({confidence}%)", "success")
                             positions_closed += 1
                         else:
                             cprint("⚠️ Position close may have failed - will retry next cycle", "yellow")
@@ -2480,6 +2523,11 @@ Return ONLY valid JSON with the following structure:
         for token in check_tokens:
             try:
                 pos_data = n.get_position(token, self.account)
+
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    continue
+
                 _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = pos_data
 
                 if im_in_pos and pos_size != 0:
@@ -2517,10 +2565,15 @@ Return ONLY valid JSON with the following structure:
             for symbol in self.symbols:
                 if symbol in EXCLUDED_TOKENS:
                     continue
-                    
+
                 pos_data = n.get_position(symbol, self.account)
+
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    continue
+
                 _, im_in_pos, _, _, _, pnl_perc, _ = pos_data
-                
+
                 if im_in_pos and pnl_perc != 0:
                     # Check TP threshold
                     if pnl_perc >= TAKE_PROFIT_THRESHOLD:
@@ -2612,11 +2665,11 @@ Return ONLY valid JSON with the following structure:
             add_console_log(f"📡 API: Fetching positions from {EXCHANGE}...", "info")
             open_positions = self.fetch_all_open_positions()
             if open_positions:
-                # open_positions is {symbol: [list of position dicts]}
+                # open_positions is {symbol: {aggregated position dict}}
                 pos_items = []
-                for sym, positions_list in list(open_positions.items())[:3]:
-                    if positions_list and len(positions_list) > 0:
-                        side = positions_list[0].get("side", "UNK")
+                for sym, pos_data in list(open_positions.items())[:3]:
+                    if pos_data:
+                        side = pos_data.get("side", "UNK")
                         pos_items.append(f"{sym} ({side})")
                 pos_summary = ", ".join(pos_items)
                 if len(open_positions) > 3:
@@ -2694,7 +2747,8 @@ Return ONLY valid JSON with the following structure:
                 try:
                     current_price = n.get_current_price(token)
                     price_str = f"@ ${current_price:,.2f}" if current_price > 1 else f"@ ${current_price:.6f}"
-                except:
+                except Exception as e:
+                    # Price fetch failed - log but continue (non-critical)
                     price_str = ""
 
                 cprint(f"\n📊 Analyzing {token}...", "white", "on_green")
@@ -2884,8 +2938,9 @@ Return ONLY valid JSON with the following structure:
                 final_equity = n.get_account_value(self.account.address) if EXCHANGE == "HYPERLIQUID" else get_account_balance(self.account)
                 final_positions = self.fetch_all_open_positions()
                 add_console_log(f"📊 Final: {len(final_positions)} positions open | Equity: ${final_equity:.2f}", "info")
-            except:
-                pass
+            except Exception as e:
+                # Non-critical: just skip final summary if fetch fails
+                cprint(f"⚠️ Could not fetch final status: {e}", "yellow")
 
             cprint(f"{'' * 80}\n", "cyan")
 
@@ -2898,11 +2953,11 @@ Return ONLY valid JSON with the following structure:
             try:
                 invested_total = 0.0
                 positions = self.fetch_all_open_positions()
-                for symbol, pos_list in positions.items():
-                    for p in pos_list:
-                        size = abs(float(p.get("size", 0)))
-                        entry_price = float(p.get("entry_price", 0))
-                        invested_total += size * entry_price
+                # positions is {symbol: {aggregated position dict}}
+                for symbol, pos_data in positions.items():
+                    size = abs(float(pos_data.get("size", 0)))
+                    entry_price = float(pos_data.get("entry_price", 0))
+                    invested_total += size * entry_price
             except Exception as e:
                 cprint(f"⚠️ Could not calculate invested total: {e}", "yellow")
                 invested_total = 0.0

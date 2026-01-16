@@ -39,19 +39,42 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
         text: Raw text that may contain JSON embedded in prose
 
     Returns:
-        Parsed JSON dict or None if extraction fails
+        Parsed JSON dict or None if extraction fails.
+        If AI returns a list, it will be wrapped as {"actions": list}
     """
     if not text:
         return None
 
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
+    # First try to find a JSON object {...}
+    obj_match = re.search(r"\{.*\}", text, re.DOTALL)
+    if obj_match:
         try:
-            return json.loads(match.group())
+            parsed = json.loads(obj_match.group())
+            if isinstance(parsed, dict):
+                return parsed
+            elif isinstance(parsed, list):
+                # Wrap list in dict for consistency
+                cprint("⚠️ JSON was object but contained list, wrapping.", "yellow")
+                return {"actions": parsed}
+            else:
+                cprint(f"⚠️ JSON parsed to unexpected type: {type(parsed)}", "yellow")
+                return None
         except json.JSONDecodeError:
-            cprint("⚠️ JSON extraction failed even after matching braces.", "yellow")
-            return None
-    cprint("⚠️ No JSON object found in AI response.", "yellow")
+            pass  # Try list pattern next
+
+    # Try to find a JSON array [...] if no object found
+    arr_match = re.search(r"\[.*\]", text, re.DOTALL)
+    if arr_match:
+        try:
+            parsed = json.loads(arr_match.group())
+            if isinstance(parsed, list):
+                # Wrap list in dict for consistency
+                cprint("⚠️ AI returned list instead of object, wrapping as actions.", "yellow")
+                return {"actions": parsed}
+        except json.JSONDecodeError:
+            pass
+
+    cprint("⚠️ No valid JSON found in AI response.", "yellow")
     return None
 
 

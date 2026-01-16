@@ -363,12 +363,16 @@ class SimplePatternDetector:
         """Calculate strength of support/resistance level"""
         price = prices[index]
         tests = 0
-        
+
+        # Guard against zero price (prevents division by zero)
+        if price == 0:
+            return 0.0
+
         # Count how many times price came close to this level
         for i, p in enumerate(prices):
             if i != index and abs(p - price) / price < 0.01:  # Within 1%
                 tests += 1
-        
+
         # Normalize strength (0.0 to 1.0)
         return min(tests / 5.0, 1.0)
     

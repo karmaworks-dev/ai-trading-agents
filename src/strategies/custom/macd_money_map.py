@@ -255,12 +255,16 @@ class System2DivergenceDetector:
         """
         if len(price_highs) < 2 or len(macd_highs) < 2:
             return {'detected': False}
-        
+
+        # Guard against division by zero
+        if price_highs[-2] == 0 or macd_highs[-2] == 0:
+            return {'detected': False}
+
         # Check last two peaks
         if (price_highs[-1] > price_highs[-2] and macd_highs[-1] < macd_highs[-2]):
-            
+
             strength = abs(
-                (price_highs[-1] / price_highs[-2] - 1) - 
+                (price_highs[-1] / price_highs[-2] - 1) -
                 (macd_highs[-1] / macd_highs[-2] - 1)
             )
             
@@ -292,12 +296,16 @@ class System2DivergenceDetector:
         """
         if len(price_lows) < 2 or len(macd_lows) < 2:
             return {'detected': False}
-        
+
+        # Guard against division by zero
+        if price_lows[-2] == 0 or macd_lows[-2] == 0:
+            return {'detected': False}
+
         # Check last two troughs
         if (price_lows[-1] < price_lows[-2] and macd_lows[-1] > macd_lows[-2]):
-            
+
             strength = abs(
-                (price_lows[-1] / price_lows[-2] - 1) - 
+                (price_lows[-1] / price_lows[-2] - 1) -
                 (macd_lows[-1] / macd_lows[-2] - 1)
             )
             

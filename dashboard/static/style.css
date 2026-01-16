@@ -445,7 +445,8 @@ margin-left: -4px;
 
 /* Positions & Trades Container */
 .positions-container,
-.trades-container {
+.trades-container,
+.trades-list-container {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -730,6 +731,15 @@ margin-left: -4px;
     text-align: right;
     min-width: 60px;
     font-family: var(--font-mono);
+}
+
+.trade-action {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    text-transform: uppercase;
 }
 
 /* Empty State */
