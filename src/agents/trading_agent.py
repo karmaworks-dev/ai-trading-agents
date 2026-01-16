@@ -119,6 +119,17 @@ from src.agents.trading.trade_executor import (
     calculate_current_notional,
     should_close_for_reversal,
     should_exit_position,
+    # Phase 2.1 helpers for execute_allocations refactoring
+    unpack_entry_result,
+    build_trade_result,
+    log_open_trade_result,
+    log_close_trade_result,
+    log_reduce_trade_result,
+    validate_open_action_params,
+    validate_reduce_action_params,
+    validate_close_action_params,
+    has_opposite_position,
+    needs_position_close_first,
     DEFAULT_MIN_NOTIONAL,
 )
 
@@ -1934,7 +1945,7 @@ Return ONLY valid JSON with the following structure:
                 "symbol": sig["symbol"],
                 "action": action_type,
                 "margin_usd": 0,  # Placeholder, will be calculated next
-                "reason": f"Fallback: {sig["action"]} signal ({sig["confidence"]}% confidence)"
+                "reason": f"Fallback: {sig['action']} signal ({sig['confidence']}% confidence)"
             })
 
         if not actions:
@@ -3030,7 +3041,7 @@ def main():
 
             # Log next cycle time BEFORE sleeping
             next_run = datetime.now() + timedelta(minutes=SLEEP_BETWEEN_RUNS_MINUTES)
-            cprint(f"\n⏰ Next cycle at UTC: {next_run.strftime("%d-%m-%Y %H:%M:%S")}", "white", "on_green")
+            cprint(f"\n⏰ Next cycle at UTC: {next_run.strftime('%d-%m-%Y %H:%M:%S')}", "white", "on_green")
             add_console_log(f"Next cycle in {SLEEP_BETWEEN_RUNS_MINUTES} minutes", "info")
 
             # Sleep until next cycle
