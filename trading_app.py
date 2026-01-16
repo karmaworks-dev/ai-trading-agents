@@ -711,6 +711,8 @@ def get_positions_data():
                             mark_price = entry_px
                         
                         position_value = abs(size) * mark_price
+                        # Get unrealized_pnl from dict (pos is a dictionary from to_dict())
+                        unrealized_pnl = pos.get('unrealized_pnl', 0)
                         positions.append({
                             "symbol": symbol,
                             "size": float(size),
@@ -718,7 +720,7 @@ def get_positions_data():
                             "mark_price": float(mark_price),
                             "position_value": float(position_value),
                             "pnl_percent": float(pnl_perc),
-                            "pnl_value": float(pos.unrealized_pnl) if hasattr(pos, 'unrealized_pnl') else 0,
+                            "pnl_value": float(unrealized_pnl),
                             "side": side
                         })
                     print(f"📡 WebSocket: {len(positions)} positions (real-time)")
@@ -768,6 +770,9 @@ def get_positions_data():
 
                 position_value = abs(pos_size) * mark_price
 
+                # Get unrealized PnL from API response
+                unrealized_pnl = float(raw_pos.get("unrealizedPnl", 0))
+
                 positions.append({
                     "symbol": symbol,
                     "size": float(pos_size),
@@ -775,6 +780,7 @@ def get_positions_data():
                     "mark_price": float(mark_price),
                     "position_value": float(position_value),
                     "pnl_percent": float(pnl_perc),
+                    "pnl_value": unrealized_pnl,
                     "side": side
                 })
 
