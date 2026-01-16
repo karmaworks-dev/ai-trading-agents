@@ -1042,3 +1042,291 @@ def execute_position_closes(
     cprint("=" * 60 + "\n", "red")
 
     return closed_count, failed_closes
+
+
+# =============================================================================
+# ALLOCATION EXECUTION HELPERS
+# =============================================================================
+
+def execute_open_position(
+    symbol: str,
+    is_long: bool,
+    notional: float,
+    margin_usd: float,
+    leverage: float,
+    exchange: str,
+    account,
+    entry_fn,
+    short_fn,
+    chunk_kill_fn,
+    unpack_result_fn,
+    im_in_pos: bool,
+    current_is_long: bool,
+    max_usd_order_size: float = 1000,
+    slippage: float = 0.01,
+    position_tracker_available: bool = False,
+    record_position_fn=None,
+    log_position_fn=None
+) -> Tuple[bool, str]:
+    """
+    Execute opening a position (LONG or SHORT) with netting support.
+
+    Args:
+        symbol: Trading symbol
+        is_long: True for LONG, False for SHORT
+        notional: Position notional value
+        margin_usd: Margin amount in USD
+        leverage: Trading leverage
+        exchange: Exchange name (HYPERLIQUID, ASTER, SOLANA, etc.)
+        account: Account object
+        entry_fn: Function for long entry (n.ai_entry)
+        short_fn: Function for short entry (n.open_short)
+        chunk_kill_fn: Function for closing positions (n.chunk_kill)
+        unpack_result_fn: Function to unpack entry result
+        im_in_pos: Whether currently in position
+        current_is_long: Current position direction
+        max_usd_order_size: Max order size for chunk_kill
+        slippage: Slippage for chunk_kill
+        position_tracker_available: Whether position tracker is available
+        record_position_fn: Function to record position entry
+        log_position_fn: Function to log position open
+
+    Returns:
+        Tuple of (success, message)
+    """
+    import time as time_module
+
+    direction = "LONG" if is_long else "SHORT"
+    is_netting = has_opposite_position(
+        "OPEN_LONG" if is_long else "OPEN_SHORT", im_in_pos, current_is_long
+    )
+
+    # Handle netting (opposite position exists)
+    if is_netting:
+        cprint(f"   Opposite position detected - using position reversal", "cyan")
+
+        if exchange == "HYPERLIQUID":
+            cprint(f"   Opening {direction} to net against existing position", "cyan")
+
+            if is_long:
+                entry_result = entry_fn(symbol, notional, leverage=leverage, account=account)
+            else:
+                entry_result = short_fn(symbol, notional, leverage=leverage, account=account)
+
+            result, actual_lev = unpack_result_fn(entry_result, leverage)
+            actual_notional = margin_usd * actual_lev
+
+            log_open_trade_result(bool(result), symbol, direction, actual_notional, actual_lev, is_netting=True)
+
+            if result:
+                if position_tracker_available and record_position_fn:
+                    try:
+                        record_position_fn(symbol=symbol, entry_price=0, size=actual_notional, is_long=is_long)
+                    except Exception as e:
+                        cprint(f"   Position tracker error: {e}", "yellow")
+                if log_position_fn:
+                    try:
+                        log_position_fn(symbol, direction, actual_notional)
+                    except Exception:
+                        pass
+                return True, f"{direction} netting successful"
+            return False, f"{direction} netting failed"
+        else:
+            # For other exchanges, close first then open
+            opposite = "SHORT" if is_long else "LONG"
+            cprint(f"   Closing {opposite} before opening {direction}...", "yellow")
+            chunk_kill_fn(symbol, max_usd_order_size, slippage)
+            time_module.sleep(1)
+
+    # Check SHORT support on SOLANA
+    if not is_long and exchange == "SOLANA":
+        cprint(f"   SHORT not supported on SOLANA", "yellow")
+        return False, "SHORT not supported on SOLANA"
+
+    cprint(f"   Opening {direction}: ${notional:.2f} notional (${margin_usd:.2f} margin)", "green" if is_long else "red")
+
+    # Execute trade
+    result = None
+    actual_lev = leverage
+
+    if exchange == "HYPERLIQUID":
+        if is_long:
+            entry_result = entry_fn(symbol, notional, leverage=leverage, account=account)
+        else:
+            entry_result = short_fn(symbol, notional, leverage=leverage, account=account)
+        result, actual_lev = unpack_result_fn(entry_result, leverage)
+    elif exchange == "ASTER":
+        if is_long:
+            result = entry_fn(symbol, notional, leverage=leverage)
+        else:
+            if short_fn and hasattr(short_fn, '__call__'):
+                result = short_fn(symbol, notional, leverage=leverage)
+            else:
+                cprint(f"   open_short not available for ASTER", "yellow")
+                return False, "open_short not available"
+    else:
+        if is_long:
+            result = entry_fn(symbol, notional)
+        else:
+            return False, f"SHORT not supported on {exchange}"
+
+    actual_notional = margin_usd * actual_lev
+    log_open_trade_result(bool(result), symbol, direction, actual_notional, actual_lev)
+
+    if result:
+        if position_tracker_available and record_position_fn:
+            try:
+                record_position_fn(symbol=symbol, entry_price=0, size=actual_notional, is_long=is_long)
+            except Exception as e:
+                cprint(f"   Position tracker error: {e}", "yellow")
+        if log_position_fn:
+            try:
+                log_position_fn(symbol, direction, actual_notional)
+            except Exception:
+                pass
+        return True, f"{direction} opened successfully"
+
+    return False, f"{direction} open failed"
+
+
+def execute_close_allocation(
+    symbol: str,
+    exchange: str,
+    account,
+    close_fn,
+    chunk_kill_fn,
+    current_dir: str,
+    current_notional: float,
+    max_usd_order_size: float = 1000,
+    slippage: float = 0.01,
+    position_tracker_available: bool = False,
+    remove_position_fn=None
+) -> Tuple[bool, str]:
+    """
+    Execute closing a position for allocation.
+
+    Args:
+        symbol: Trading symbol
+        exchange: Exchange name
+        account: Account object
+        close_fn: Function to close position (n.close_complete_position)
+        chunk_kill_fn: Function for chunked closing (n.chunk_kill)
+        current_dir: Current position direction
+        current_notional: Current position notional
+        max_usd_order_size: Max order size for chunk_kill
+        slippage: Slippage for chunk_kill
+        position_tracker_available: Whether position tracker is available
+        remove_position_fn: Function to remove position from tracker
+
+    Returns:
+        Tuple of (success, message)
+    """
+    cprint(f"   Closing {current_dir} position (${current_notional:.2f} notional)", "yellow")
+
+    close_success = False
+    if exchange == "HYPERLIQUID":
+        close_success = close_fn(symbol, account)
+    else:
+        chunk_kill_fn(symbol, max_usd_order_size, slippage)
+        close_success = True
+
+    if close_success and position_tracker_available and remove_position_fn:
+        remove_position_fn(symbol)
+
+    log_close_trade_result(close_success, symbol, current_dir, current_notional)
+
+    if close_success:
+        return True, "Position closed"
+    return False, "Close failed"
+
+
+def execute_reduce_allocation(
+    symbol: str,
+    reduce_amount: float,
+    current_notional: float,
+    account,
+    partial_close_fn
+) -> Tuple[bool, str]:
+    """
+    Execute reducing a position size.
+
+    Args:
+        symbol: Trading symbol
+        reduce_amount: Amount to reduce by
+        current_notional: Current position notional
+        account: Account object
+        partial_close_fn: Function for partial close (n.partial_close)
+
+    Returns:
+        Tuple of (success, message)
+    """
+    cprint(f"   Current: ${current_notional:.2f} notional", "white")
+    cprint(f"   Reducing by: ${reduce_amount:.2f} notional", "yellow")
+
+    reduce_success = False
+    if partial_close_fn:
+        partial_close_fn(symbol, reduce_amount, account=account)
+        reduce_success = True
+
+    log_reduce_trade_result(reduce_success, symbol, reduce_amount)
+
+    if reduce_success:
+        return True, "Position reduced"
+    return False, "Reduce failed"
+
+
+def execute_exit_close(
+    token: str,
+    position_dir: str,
+    exchange: str,
+    account,
+    close_fn,
+    chunk_kill_fn,
+    max_usd_order_size: float = 1000,
+    slippage: float = 0.01,
+    position_tracker_available: bool = False,
+    remove_position_fn=None,
+    recently_closed_dict: dict = None
+) -> bool:
+    """
+    Execute closing a position during exit phase.
+
+    Args:
+        token: Token symbol
+        position_dir: Position direction (LONG/SHORT)
+        exchange: Exchange name
+        account: Account object
+        close_fn: Function to close position
+        chunk_kill_fn: Function for chunked closing
+        max_usd_order_size: Max order size
+        slippage: Slippage for chunk_kill
+        position_tracker_available: Whether tracker is available
+        remove_position_fn: Function to remove position
+        recently_closed_dict: Optional dict to record closure timestamp
+
+    Returns:
+        True if close successful, False otherwise
+    """
+    import time as time_module
+
+    close_ok = False
+    if exchange == "HYPERLIQUID":
+        close_ok = close_fn(token, account)
+    else:
+        chunk_kill_fn(token, max_usd_order_size, slippage)
+        close_ok = True
+
+    if close_ok:
+        # Record recently-closed timestamp
+        if recently_closed_dict is not None:
+            recently_closed_dict[token] = time_module.time()
+
+        # Remove from position tracker
+        if position_tracker_available and remove_position_fn:
+            remove_position_fn(token)
+
+        cprint("Position closed successfully!", "white", "on_green")
+        return True
+    else:
+        cprint("Position close may have failed - will retry next cycle", "yellow")
+        return False

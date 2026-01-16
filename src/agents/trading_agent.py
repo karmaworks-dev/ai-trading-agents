@@ -151,6 +151,12 @@ from src.agents.trading.trade_executor import (
     format_exit_phase_summary,
     # Phase 3.3 helpers for position close execution
     execute_position_closes as _execute_position_closes,
+    # Phase 5.1 helpers for allocation execution
+    execute_open_position,
+    execute_close_allocation,
+    execute_reduce_allocation,
+    # Phase 5.2 helpers for exit handling
+    execute_exit_close,
     DEFAULT_MIN_NOTIONAL,
 )
 
@@ -1556,202 +1562,111 @@ class TradingAgent:
                             continue
 
                     # ============================================================
-                    # CLOSE: Close entire position
+                    # CLOSE: Close entire position (using helper)
                     # ============================================================
                     if action_type == "CLOSE":
                         can_close, close_error = validate_close_action_params(im_in_pos, pos_size)
                         if not can_close:
-                            cprint(f"   ℹ️ {close_error}", "cyan")
+                            cprint(f"   {close_error}", "cyan")
                             continue
 
-                        cprint(f"   📊 Closing {current_dir} position (${current_notional:.2f} notional)", "yellow")
-
-                        close_success = False
-                        if EXCHANGE == "HYPERLIQUID":
-                            close_success = n.close_complete_position(symbol, self.account)
-                        else:
-                            n.chunk_kill(symbol, max_usd_order_size, slippage)
-                            close_success = True  # chunk_kill doesn't return status
-
-                        if close_success and POSITION_TRACKER_AVAILABLE:
-                            remove_position(symbol)
-
-                        log_close_trade_result(close_success, symbol, current_dir, current_notional)
-                        if close_success:
+                        success, _ = execute_close_allocation(
+                            symbol=symbol,
+                            exchange=EXCHANGE,
+                            account=self.account,
+                            close_fn=n.close_complete_position,
+                            chunk_kill_fn=n.chunk_kill,
+                            current_dir=current_dir,
+                            current_notional=current_notional,
+                            max_usd_order_size=max_usd_order_size,
+                            slippage=slippage,
+                            position_tracker_available=POSITION_TRACKER_AVAILABLE,
+                            remove_position_fn=remove_position if POSITION_TRACKER_AVAILABLE else None
+                        )
+                        if success:
                             executed_count += 1
 
                     # ============================================================
-                    # REDUCE: Reduce position size
+                    # REDUCE: Reduce position size (using helper)
                     # ============================================================
                     elif action_type == "REDUCE":
                         can_reduce, reduce_amount, reduce_error = validate_reduce_action_params(
                             action, im_in_pos, pos_size
                         )
                         if not can_reduce:
-                            cprint(f"   ℹ️ {reduce_error}", "cyan" if "no position" in reduce_error else "yellow")
+                            cprint(f"   {reduce_error}", "cyan" if "no position" in reduce_error else "yellow")
                             continue
 
-                        cprint(f"   📊 Current: ${current_notional:.2f} notional", "white")
-                        cprint(f"   ➖ Reducing by: ${reduce_amount:.2f} notional", "yellow")
-
-                        reduce_success = False
-                        if hasattr(n, 'partial_close'):
-                            n.partial_close(symbol, reduce_amount, account=self.account)
-                            reduce_success = True
-
-                        log_reduce_trade_result(reduce_success, symbol, reduce_amount)
-                        if reduce_success:
+                        success, _ = execute_reduce_allocation(
+                            symbol=symbol,
+                            reduce_amount=reduce_amount,
+                            current_notional=current_notional,
+                            account=self.account,
+                            partial_close_fn=n.partial_close if hasattr(n, 'partial_close') else None
+                        )
+                        if success:
                             executed_count += 1
 
                     # ============================================================
-                    # OPEN_LONG / INCREASE (for LONG)
+                    # OPEN_LONG / INCREASE (for LONG) - using helper
                     # ============================================================
                     elif action_type in ["OPEN_LONG", "INCREASE"] and (action_type == "OPEN_LONG" or (im_in_pos and is_long)):
-                        # margin_usd and notional already validated by validate_open_action_params above
-                        is_netting = has_opposite_position("OPEN_LONG", im_in_pos, is_long)
-
-                        # Handle opposite position (SHORT exists, opening LONG)
-                        if is_netting:
-                            cprint(f"   🔄 Opposite position detected - using position reversal", "cyan")
-
-                            # For HyperLiquid, we can directly open opposite position which will net
-                            if EXCHANGE == "HYPERLIQUID":
-                                cprint(f"   📈 Opening LONG to net against existing SHORT", "cyan")
-                                entry_result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
-                                result, actual_lev = unpack_entry_result(entry_result, LEVERAGE)
-                                actual_notional = margin_usd * actual_lev
-
-                                log_open_trade_result(bool(result), symbol, "LONG", actual_notional, actual_lev, is_netting=True)
-
-                                if result:
-                                    if POSITION_TRACKER_AVAILABLE:
-                                        try:
-                                            record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=True)
-                                        except Exception as e:
-                                            cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-                                    try:
-                                        log_position_open(symbol, "LONG", actual_notional)
-                                    except Exception:
-                                        pass
-                                    executed_count += 1
-                                else:
-                                    failed_count += 1
-                                continue
-                            else:
-                                # For other exchanges, fall back to closing first
-                                cprint(f"   ⚠️ Closing SHORT before opening LONG...", "yellow")
-                                n.chunk_kill(symbol, max_usd_order_size, slippage)
-                                time.sleep(1)
-
-                        cprint(f"   📈 Opening LONG: ${notional:.2f} notional (${margin_usd:.2f} margin)", "green")
-
-                        # Execute trade
-                        result = None
-                        actual_lev = LEVERAGE
-                        if EXCHANGE == "HYPERLIQUID":
-                            entry_result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
-                            result, actual_lev = unpack_entry_result(entry_result, LEVERAGE)
-                        elif EXCHANGE == "ASTER":
-                            result = n.ai_entry(symbol, notional, leverage=LEVERAGE)
-                        else:
-                            result = n.ai_entry(symbol, notional)
-
-                        actual_notional = margin_usd * actual_lev
-                        log_open_trade_result(bool(result), symbol, "LONG", actual_notional, actual_lev)
-
-                        if result:
-                            if POSITION_TRACKER_AVAILABLE:
-                                try:
-                                    record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=True)
-                                except Exception as e:
-                                    cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-                            try:
-                                log_position_open(symbol, "LONG", actual_notional)
-                            except Exception:
-                                pass
+                        success, _ = execute_open_position(
+                            symbol=symbol,
+                            is_long=True,
+                            notional=notional,
+                            margin_usd=margin_usd,
+                            leverage=LEVERAGE,
+                            exchange=EXCHANGE,
+                            account=self.account,
+                            entry_fn=n.ai_entry,
+                            short_fn=n.open_short if hasattr(n, 'open_short') else None,
+                            chunk_kill_fn=n.chunk_kill,
+                            unpack_result_fn=unpack_entry_result,
+                            im_in_pos=im_in_pos,
+                            current_is_long=is_long,
+                            max_usd_order_size=max_usd_order_size,
+                            slippage=slippage,
+                            position_tracker_available=POSITION_TRACKER_AVAILABLE,
+                            record_position_fn=record_position_entry if POSITION_TRACKER_AVAILABLE else None,
+                            log_position_fn=log_position_open
+                        )
+                        if success:
                             executed_count += 1
                         else:
                             failed_count += 1
 
                     # ============================================================
-                    # OPEN_SHORT / INCREASE (for SHORT)
+                    # OPEN_SHORT / INCREASE (for SHORT) - using helper
                     # ============================================================
                     elif action_type in ["OPEN_SHORT"] or (action_type == "INCREASE" and im_in_pos and not is_long):
-                        # margin_usd and notional already validated by validate_open_action_params above
-                        is_netting = has_opposite_position("OPEN_SHORT", im_in_pos, is_long)
-
-                        # Handle opposite position (LONG exists, opening SHORT)
-                        if is_netting:
-                            cprint(f"   🔄 Opposite position detected - allocating in opposite direction", "cyan")
-
-                            # For HyperLiquid, we can directly open opposite position which will net
-                            if EXCHANGE == "HYPERLIQUID":
-                                cprint(f"   📉 Opening SHORT to net against existing LONG", "cyan")
-                                short_result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
-                                result, actual_lev = unpack_entry_result(short_result, LEVERAGE)
-                                actual_notional = margin_usd * actual_lev
-
-                                log_open_trade_result(bool(result), symbol, "SHORT", actual_notional, actual_lev, is_netting=True)
-
-                                if result:
-                                    if POSITION_TRACKER_AVAILABLE:
-                                        try:
-                                            record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=False)
-                                        except Exception as e:
-                                            cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-                                    try:
-                                        log_position_open(symbol, "SHORT", actual_notional)
-                                    except Exception:
-                                        pass
-                                    executed_count += 1
-                                else:
-                                    failed_count += 1
-                                continue
-                            else:
-                                # For other exchanges, fall back to closing first
-                                cprint(f"   ⚠️ Closing LONG before opening SHORT...", "yellow")
-                                n.chunk_kill(symbol, max_usd_order_size, slippage)
-                                time.sleep(1)
-
-                        if EXCHANGE == "SOLANA":
-                            cprint(f"   ⚠️ SHORT not supported on SOLANA", "yellow")
-                            continue
-
-                        cprint(f"   📉 Opening SHORT: ${notional:.2f} notional (${margin_usd:.2f} margin)", "red")
-
-                        # Execute trade
-                        result = None
-                        actual_lev = LEVERAGE
-                        if EXCHANGE == "HYPERLIQUID":
-                            short_result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
-                            result, actual_lev = unpack_entry_result(short_result, LEVERAGE)
-                        elif EXCHANGE == "ASTER":
-                            if hasattr(n, 'open_short'):
-                                result = n.open_short(symbol, notional, leverage=LEVERAGE)
-                            else:
-                                cprint(f"   ⚠️ open_short not available for ASTER", "yellow")
-                                failed_count += 1
-                                continue
-
-                        actual_notional = margin_usd * actual_lev
-                        log_open_trade_result(bool(result), symbol, "SHORT", actual_notional, actual_lev)
-
-                        if result:
-                            if POSITION_TRACKER_AVAILABLE:
-                                try:
-                                    record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=False)
-                                except Exception as e:
-                                    cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-                            try:
-                                log_position_open(symbol, "SHORT", actual_notional)
-                            except Exception:
-                                pass
+                        success, _ = execute_open_position(
+                            symbol=symbol,
+                            is_long=False,
+                            notional=notional,
+                            margin_usd=margin_usd,
+                            leverage=LEVERAGE,
+                            exchange=EXCHANGE,
+                            account=self.account,
+                            entry_fn=n.ai_entry,
+                            short_fn=n.open_short if hasattr(n, 'open_short') else None,
+                            chunk_kill_fn=n.chunk_kill,
+                            unpack_result_fn=unpack_entry_result,
+                            im_in_pos=im_in_pos,
+                            current_is_long=is_long,
+                            max_usd_order_size=max_usd_order_size,
+                            slippage=slippage,
+                            position_tracker_available=POSITION_TRACKER_AVAILABLE,
+                            record_position_fn=record_position_entry if POSITION_TRACKER_AVAILABLE else None,
+                            log_position_fn=log_position_open
+                        )
+                        if success:
                             executed_count += 1
                         else:
                             failed_count += 1
 
                     else:
-                        cprint(f"   ⚠️ Unknown action type: {action_type}", "yellow")
+                        cprint(f"   Unknown action type: {action_type}", "yellow")
 
                 except Exception as e:
                     cprint(f"   ❌ Error: {str(e)}", "red")
@@ -1847,32 +1762,25 @@ class TradingAgent:
 
                 # CRITICAL: Check for stop loss FIRST (overrides all other logic)
                 if should_trigger_stop_loss(pnl_perc, STOP_LOSS_THRESHOLD):
-                    cprint(f"🚨 STOP LOSS TRIGGERED: {pnl_perc:.2f}% <= {STOP_LOSS_THRESHOLD}%", "white", "on_red", attrs=["bold"])
-                    cprint(f"⚠️ FORCE CLOSING {position_dir} position (mandatory -2% stop loss)", "white", "on_red")
+                    cprint(f"STOP LOSS TRIGGERED: {pnl_perc:.2f}% <= {STOP_LOSS_THRESHOLD}%", "white", "on_red", attrs=["bold"])
+                    cprint(f"FORCE CLOSING {position_dir} position (mandatory stop loss)", "white", "on_red")
 
                     try:
-                        close_ok = False
-                        if EXCHANGE == "HYPERLIQUID":
-                            close_ok = n.close_complete_position(token, self.account)
-                        else:
-                            n.chunk_kill(token, max_usd_order_size, slippage)
-                            close_ok = True
-
+                        close_ok = execute_exit_close(
+                            token=token, position_dir=position_dir, exchange=EXCHANGE,
+                            account=self.account, close_fn=n.close_complete_position,
+                            chunk_kill_fn=n.chunk_kill, max_usd_order_size=max_usd_order_size,
+                            slippage=slippage, position_tracker_available=POSITION_TRACKER_AVAILABLE,
+                            remove_position_fn=remove_position if POSITION_TRACKER_AVAILABLE else None
+                        )
                         if close_ok:
-                            # Remove from position tracker
-                            if POSITION_TRACKER_AVAILABLE:
-                                remove_position(token)
-
-                            cprint("✅ Stop loss position closed successfully!", "white", "on_green")
                             add_console_log(f"STOP LOSS: Closed {token} {position_dir} at {pnl_perc:.2f}%", "warning")
                             positions_closed += 1
                         else:
-                            cprint("⚠️ Stop loss close may have failed - will retry next cycle", "white", "on_yellow")
-                            add_console_log(f"⚠️ Stop loss close failed for {token}", "warning")
-
+                            add_console_log(f"Stop loss close failed for {token}", "warning")
                     except Exception as e:
-                        cprint(f"❌ Error closing stop loss position: {str(e)}", "white", "on_red")
-                        add_console_log(f"❌ Failed to close stop loss position {token}: {e}", "error")
+                        cprint(f"Error closing stop loss position: {str(e)}", "white", "on_red")
+                        add_console_log(f"Failed to close stop loss position {token}: {e}", "error")
 
                     continue  # Skip to next token after stop loss
 
@@ -1888,38 +1796,26 @@ class TradingAgent:
                 elif should_close:
                     # Signal contradicts position → CLOSE (ONLY CLOSE, NO OPEN LOGIC HERE)
                     if action == "SELL" and is_long:
-                        cprint("🚨 SELL signal vs LONG position - CLOSING", "white", "on_red")
+                        cprint("SELL signal vs LONG position - CLOSING", "white", "on_red")
                     else:  # BUY signal vs SHORT position
-                        cprint("🚨 BUY signal vs SHORT position - CLOSING", "white", "on_red")
+                        cprint("BUY signal vs SHORT position - CLOSING", "white", "on_red")
 
                     try:
-                        close_ok = False
-                        if EXCHANGE == "HYPERLIQUID":
-                            close_ok = n.close_complete_position(token, self.account)
-                        else:
-                            n.chunk_kill(token, max_usd_order_size, slippage)
-                            close_ok = True
-
+                        close_ok = execute_exit_close(
+                            token=token, position_dir=position_dir, exchange=EXCHANGE,
+                            account=self.account, close_fn=n.close_complete_position,
+                            chunk_kill_fn=n.chunk_kill, max_usd_order_size=max_usd_order_size,
+                            slippage=slippage, position_tracker_available=POSITION_TRACKER_AVAILABLE,
+                            remove_position_fn=remove_position if POSITION_TRACKER_AVAILABLE else None,
+                            recently_closed_dict=self.recently_closed
+                        )
                         if close_ok:
-                            # Record recently-closed timestamp so allocation ignores transient ghost positions
-                            try:
-                                self.recently_closed[token] = time.time()
-                            except Exception:
-                                pass
-
-                            # Remove from position tracker
-                            if POSITION_TRACKER_AVAILABLE:
-                                remove_position(token)
-
-                            cprint("✅ Position closed successfully!", "white", "on_green")
-                            add_console_log(f"✅ Closed {token} {position_dir} | Signal: {action} ({row['confidence']}%)", "success")
+                            add_console_log(f"Closed {token} {position_dir} | Signal: {action} ({row['confidence']}%)", "success")
                             positions_closed += 1
                         else:
-                            cprint("⚠️ Position close may have failed - will retry next cycle", "yellow")
-                            add_console_log(f"⚠️ Close failed for {token}", "warning")
-
+                            add_console_log(f"Close failed for {token}", "warning")
                     except Exception as e:
-                        cprint(f"❌ Error closing position: {str(e)}", "white", "on_red")
+                        cprint(f"Error closing position: {str(e)}", "white", "on_red")
 
                 else:
                     # Signal confirms position direction → KEEP

@@ -124,6 +124,11 @@ from .trade_executor import (
     verify_position_closed,
     execute_single_position_close,
     execute_position_closes,
+    # Allocation execution helpers
+    execute_open_position,
+    execute_close_allocation,
+    execute_reduce_allocation,
+    execute_exit_close,
     DEFAULT_MIN_NOTIONAL,
     MARGIN_REQUIRED_ACTIONS,
     POSITION_REDUCE_ACTIONS,
@@ -235,6 +240,11 @@ __all__ = [
     "verify_position_closed",
     "execute_single_position_close",
     "execute_position_closes",
+    # Allocation execution helpers
+    "execute_open_position",
+    "execute_close_allocation",
+    "execute_reduce_allocation",
+    "execute_exit_close",
     "DEFAULT_MIN_NOTIONAL",
     "MARGIN_REQUIRED_ACTIONS",
     "POSITION_REDUCE_ACTIONS",
