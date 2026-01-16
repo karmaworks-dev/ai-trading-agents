@@ -90,6 +90,16 @@ from src.agents.trading.market_analyzer import (
     build_error_recommendation,
     validate_market_data,
     get_token_from_market_data,
+    # Analysis orchestration functions
+    prepare_analysis_context,
+    analyze_market_swarm,
+    prepare_strategy_context,
+    analyze_market_single,
+)
+
+# Import position analyzer functions (extracted for maintainability)
+from src.agents.trading.position_analyzer import (
+    analyze_positions_with_ai as _analyze_positions_with_ai,
 )
 
 # Import portfolio allocator functions (extracted for maintainability)
@@ -942,237 +952,28 @@ class TradingAgent:
             return False, f"Keep position - P&L {pnl_percent:.2f}%, confidence {ai_confidence}%"
 
     def analyze_open_positions_with_ai(self, positions_data, market_data):
-        """Enhanced with guaranteed TP/SL enforcement"""
-        if not positions_data:
-            return {}
+        """
+        Analyze open positions using AI with guaranteed TP/SL enforcement.
 
-        cprint("\n" + "=" * 60, "yellow")
-        cprint("📊 AI ANALYZING OPEN POSITIONS", "white", "on_magenta", attrs=["bold"])
-        cprint("=" * 60, "yellow")
+        Delegates to the extracted analyze_positions_with_ai function
+        from the position_analyzer module for cleaner code structure.
 
-        # Log each position being analyzed
-        for symbol, positions in positions_data.items():
-            for pos in positions:
-                side = "LONG" if pos["is_long"] else "SHORT"
-                entry = pos["entry_price"]
-                pnl = pos["pnl_percent"]
-                pnl_emoji = "🟢" if pnl >= 0 else "🔴"
-                add_console_log(f"   {pnl_emoji} {symbol} ({side}) | Entry: ${entry:.2f} | PnL: {pnl:+.2f}%", "info")
+        Args:
+            positions_data: Dict mapping symbol to list of position dicts
+            market_data: Dict mapping symbol to DataFrame of market data
 
-        # CRITICAL: Check TP/SL thresholds FIRST - force close regardless of AI analysis
-        validated_decisions = {}
-        for symbol, positions in positions_data.items():
-            for pos in positions:
-                pnl_percent = pos["pnl_percent"]
-
-                # Force TP/SL using helpers
-                if should_trigger_take_profit(pnl_percent, TAKE_PROFIT_THRESHOLD):
-                    reason = f"TAKE PROFIT: {pnl_percent:.2f}% >= {TAKE_PROFIT_THRESHOLD}%"
-                    validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
-                    cprint(f"🚨 {symbol}: TAKE PROFIT TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
-                    add_console_log(f"TAKE PROFIT: Closing {symbol} at +{pnl_percent:.2f}%", "success")
-                    continue
-                elif should_trigger_stop_loss(pnl_percent, STOP_LOSS_THRESHOLD):
-                    reason = f"STOP LOSS: {pnl_percent:.2f}% <= {STOP_LOSS_THRESHOLD}%"
-                    validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
-                    cprint(f"🚨 {symbol}: STOP LOSS TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
-                    add_console_log(f"STOP LOSS: Closing {symbol} at {pnl_percent:.2f}%", "warning")
-                    continue
-
-        # Build position summary for remaining positions
-        position_summary = []
-        for symbol, positions in positions_data.items():
-            if symbol in validated_decisions:
-                continue  # Skip positions already handled by TP/SL
-                
-            for pos in positions:
-                position_summary.append({
-                    "symbol": symbol,
-                    "side": "LONG" if pos["is_long"] else "SHORT",
-                    "size": pos["size"],
-                    "entry_price": pos["entry_price"],
-                    "current_pnl": pos["pnl_percent"],
-                    "age_hours": pos["age_hours"],
-                })
-
-        # Format market conditions
-        market_summary = {}
-        for symbol in positions_data.keys():
-            if symbol in validated_decisions:
-                continue  # Skip positions already handled
-                
-            if symbol in market_data:
-                df = market_data[symbol]
-                if not df.empty:
-                    latest = df.iloc[-1]
-
-                    # Robustly detect the correct close column
-                    if "Close" in df.columns:
-                        current_price = latest["Close"]
-                    elif "close" in df.columns:
-                        current_price = latest["close"]
-                    elif "close_price" in df.columns:
-                        current_price = latest["close_price"]
-                    elif "c" in df.columns:
-                        current_price = latest["c"]
-                    elif "price" in df.columns:
-                        current_price = latest["price"]
-                    else:
-                        cprint(f"⚠️ No close price column found for {symbol}, skipping...", "yellow")
-                        continue
-
-                    market_summary[symbol] = {
-                        "current_price": current_price,
-                        "ma20": latest.get("MA20", 0),
-                        "ma40": latest.get("MA40", 0),
-                        "rsi": latest.get("RSI", 0),
-                        "trend": "Bullish" if current_price > latest.get("MA20", 0) else "Bearish",
-                    }
-
-        # Only analyze positions that weren't force-closed by TP/SL
-        if position_summary:
-            user_prompt = f"""Analyze these open positions:
-
-POSITIONS:
-{json.dumps(position_summary, indent=2)}
-
-CURRENT MARKET CONDITIONS:
-{json.dumps(market_summary, indent=2)}
-
-For each position, decide KEEP or CLOSE with reasoning.
-Return ONLY valid JSON with the following structure:
-{{
-  "SYMBOL": {{
-     "action": "KEEP" or "CLOSE",
-     "reasoning": "short explanation"
-  }}
-}}"""
-
-            try:
-                response = self.chat_with_ai(POSITION_ANALYSIS_PROMPT, user_prompt)
-
-                # Handle None response from AI
-                if not response:
-                    cprint("❌ No response from AI for position analysis", "red")
-                    return validated_decisions
-
-                # Strip Markdown fences if model wrapped response in code blocks
-                if "```json" in response:
-                    response = response.split("```json")[1].split("```")[0]
-                elif "```" in response:
-                    response = response.split("```")[1].split("```")[0]
-
-                # Try safe JSON extraction first
-                decisions = extract_json_from_text(response)
-                if not decisions:
-                    cprint("⚠️ AI response not valid JSON. Attempting text fallback...", "yellow")
-
-                    text = response.lower()
-                    decisions = {}
-                    for symbol in position_summary:
-                        sym = symbol["symbol"]
-                        if sym.lower() in text:
-                            if "close" in text or "sell" in text:
-                                decisions[sym] = {
-                                    "action": "CLOSE",
-                                    "reasoning": "Detected CLOSE or SELL keyword in fallback parsing.",
-                                    "confidence": 60  # Default confidence for fallback
-                                }
-                            elif "keep" in text or "hold" in text or "open" in text:
-                                decisions[sym] = {
-                                    "action": "KEEP",
-                                    "reasoning": "Detected KEEP/HOLD keyword in fallback parsing.",
-                                    "confidence": 0
-                                }
-                            else:
-                                decisions[sym] = {
-                                    "action": "KEEP",
-                                    "reasoning": "No clear directive, default KEEP.",
-                                    "confidence": 0
-                                }
-                        else:
-                            decisions[sym] = {
-                                "action": "KEEP",
-                                "reasoning": "Symbol not mentioned, default KEEP.",
-                                "confidence": 0
-                            }
-
-                    cprint(f"🧠 Fallback interpreted decisions: {decisions}", "cyan")
-
-                if not decisions:
-                    cprint("❌ Error: Could not interpret AI analysis at all.", "red")
-                    cprint(f"   Raw response: {response}", "yellow")
-                    return validated_decisions
-
-                # ============================================================================
-                # APPLY 3-TIER VALIDATION SYSTEM
-                # ============================================================================
-                cprint("\n" + "=" * 60, "magenta")
-                cprint("🛡️ APPLYING 3-TIER VALIDATION SYSTEM", "white", "on_magenta", attrs=["bold"])
-                cprint("=" * 60, "magenta")
-
-                for symbol, decision in decisions.items():
-                    action = decision.get("action", "KEEP")
-                    reason = decision.get("reasoning", "")
-                    ai_confidence = int(decision.get("confidence", 0))
-
-                    if action.upper() == "CLOSE":
-                        # Get position data for validation
-                        pos_data = positions_data.get(symbol, [{}])[0]
-                        pnl_percent = pos_data.get("pnl_percent", 0)
-                        age_hours = pos_data.get("age_hours", 0)
-
-                        # Run validation
-                        should_close, validation_reason = self.validate_close_decision(
-                            symbol, pnl_percent, age_hours, ai_confidence
-                        )
-
-                        if should_close:
-                            validated_decisions[symbol] = {
-                                "action": "CLOSE",
-                                "reasoning": f"{reason} | Validation: {validation_reason}",
-                                "confidence": ai_confidence
-                            }
-                            cprint(f"✅ {symbol}: CLOSE APPROVED", "green", attrs=["bold"])
-                        else:
-                            validated_decisions[symbol] = {
-                                "action": "KEEP",
-                                "reasoning": f"AI suggested CLOSE but validation BLOCKED: {validation_reason}",
-                                "confidence": 0
-                            }
-                            cprint(f"🛡️ {symbol}: CLOSE BLOCKED → FORCING KEEP", "cyan", attrs=["bold"])
-                            add_console_log(f"🛡️ {symbol} CLOSE blocked: {validation_reason}", "warning")
-                    else:
-                        # KEEP decision - no validation needed
-                        validated_decisions[symbol] = decision
-
-            except Exception as e:
-                cprint(f"❌ Error in AI analysis: {e}", "red")
-                import traceback
-                traceback.print_exc()
-
-        # Print final validated decisions
-        cprint("\n" + "=" * 60, "magenta")
-        cprint("🎯 FINAL VALIDATED DECISIONS:", "white", "on_magenta", attrs=["bold"])
-        cprint("=" * 60, "magenta")
-
-        for symbol, decision in validated_decisions.items():
-            action = decision.get("action", "UNKNOWN")
-            reason = decision.get("reasoning", "")
-            confidence = decision.get("confidence", 0)
-            color = "red" if action.upper() == "CLOSE" else "green"
-            cprint(f"   {symbol:<10} → {action:<6} | {reason}", color)
-            # Short format for dashboard: "SYMBOL -> ACTION"
-            add_console_log(f"{symbol} -> {action}", "info")
-
-            # Short format for dashboard
-            if action.upper() == "CLOSE":
-                add_console_log(f"{symbol} -> CLOSE ({confidence}% Sure)", "warning")
-            else:
-                add_console_log(f"{symbol} -> KEEP", "info")
-
-        cprint("=" * 60 + "\n", "magenta")
-        return validated_decisions
+        Returns:
+            Dict of validated close/keep decisions
+        """
+        return _analyze_positions_with_ai(
+            positions_data=positions_data,
+            market_data=market_data,
+            take_profit_threshold=TAKE_PROFIT_THRESHOLD,
+            stop_loss_threshold=STOP_LOSS_THRESHOLD,
+            chat_fn=self.chat_with_ai,
+            system_prompt=POSITION_ANALYSIS_PROMPT,
+            validate_close_fn=self.validate_close_decision
+        )
 
     def execute_position_closes(self, close_decisions):
         """Execute closes for positions marked by AI with verification"""
@@ -1299,248 +1100,90 @@ Return ONLY valid JSON with the following structure:
 
    
     def analyze_market_data(self, token, market_data):
-        """Analyze market data using AI model (single or swarm mode)"""
+        """
+        Analyze market data using AI model (single or swarm mode).
+
+        Uses extracted helper functions from market_analyzer module for cleaner code:
+        - prepare_analysis_context: Prepares position and performance context
+        - analyze_market_swarm: Handles swarm mode analysis
+        - prepare_strategy_context: Prepares strategy context for single mode
+        - analyze_market_single: Handles single model analysis
+        """
         try:
             if token in EXCLUDED_TOKENS:
                 print(f"⚠️ Skipping analysis for excluded token: {token}")
                 return None
 
-            # Fetch current position context
-            position_context = "CURRENT POSITION: None (You have no exposure)."
-
-            try:
-                raw_pos_data = n.get_position(token, self.account)
-                _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = raw_pos_data
-
-                if im_in_pos:
-                    side = "LONG" if is_long else "SHORT"
-
-                    if entry_px == 0 and pnl_perc == 0:
-                        position_context = (
-                            f"CURRENT POSITION: ✅ Active {side} (Spot) | Size: {pos_size}"
-                        )
-                    else:
-                        position_context = (
-                            f"CURRENT POSITION: ✅ Active {side} | "
-                            f"Size: {pos_size} | Entry: ${entry_px:.4f} | "
-                            f"PnL: {pnl_perc:.2f}%"
-                        )
-            except Exception as e:
-                cprint(f"⚠️ Error fetching position context: {e}", "yellow")
-
-            cprint(f"   ℹ️  Context: {position_context}", "cyan")
+            # Prepare common context (position + performance)
+            performance_metrics = self._get_performance_metrics()
+            position_context, performance_context = prepare_analysis_context(
+                token=token,
+                get_position_fn=n.get_position,
+                account=self.account,
+                performance_metrics=performance_metrics
+            )
 
             # ============================================================
             # SWARM MODE
             # ============================================================
             if self.use_swarm_mode:
-                num_models = len(self.swarm.active_models) if self.swarm else 6
-                cprint(
-                    f"\n🌊 Analyzing {token[:8]}... with SWARM ({num_models} AI models voting)",
-                    "cyan",
-                    attrs=["bold"],
+                recommendation, swarm_result = analyze_market_swarm(
+                    token=token,
+                    market_data=market_data,
+                    swarm=self.swarm,
+                    position_context=position_context,
+                    performance_context=performance_context,
+                    format_market_data_fn=self._format_market_data_for_swarm,
+                    calculate_consensus_fn=self._calculate_swarm_consensus,
+                    swarm_prompt_template=SWARM_TRADING_PROMPT
                 )
 
-                # Get performance context for motivation
-                performance_metrics = self._get_performance_metrics()
-                performance_context = (
-                    f"Win Rate: {performance_metrics['win_rate']}% | "
-                    f"Total PnL: ${performance_metrics['total_pnl']} | "
-                    f"Grade: {performance_metrics['grade']} | "
-                    f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
-                )
+                if recommendation:
+                    self.recommendations_df = pd.concat(
+                        [self.recommendations_df, pd.DataFrame([recommendation])],
+                        ignore_index=True
+                    )
 
-                base_market_data = self._format_market_data_for_swarm(token, market_data)
-                formatted_data = f"{position_context}\n\n{base_market_data}"
-
-                swarm_result = self.swarm.query(
-                    prompt=formatted_data, system_prompt=SWARM_TRADING_PROMPT.format(performance_context=performance_context)
-                )
-
-                if not swarm_result:
-                    cprint(f"❌ No response from swarm for {token}", "red")
-                    return None
-
-                action, confidence, reasoning = self._calculate_swarm_consensus(
-                    swarm_result
-                )
-
-                # Store the recommendation only — no trade execution here
-                self.recommendations_df = pd.concat(
-                    [
-                        self.recommendations_df,
-                        pd.DataFrame(
-                            [
-                                {
-                                    "token": token,
-                                    "action": action,
-                                    "confidence": confidence,
-                                    "reasoning": reasoning,
-                                }
-                            ]
-                        ),
-                    ],
-                    ignore_index=True,
-                )
-
-                cprint(f"✅ Swarm analysis complete for {token[:8]}!", "green")
-                add_console_log(f"✅ Swarm  {token} -> {action} | {confidence}% Sure", "success")
-
-                # Return raw result for dashboard or debugging
                 return swarm_result
 
             # ============================================================
             # SINGLE MODEL MODE
             # ============================================================
             else:
-                # -----------------------------
-                # Enriched strategy context
-                # -----------------------------
-                try:
-                    # robust token name detection
-                    if isinstance(market_data, dict):
-                        token_name = market_data.get("symbol") or market_data.get("token") or token
-                    else:
-                        token_name = token
+                # Prepare strategy context
+                strategy_context_text, strategy_context_json = prepare_strategy_context(
+                    token=token,
+                    market_data=market_data,
+                    get_cached_strategy_fn=self._get_cached_strategy_context,
+                    format_strategy_context_fn=self._format_strategy_context_text
+                )
+                self.last_strategy_context = strategy_context_json
 
-                    strat_obj = None
-                    strategy_context_text = "No strategy intelligence available."
-                    strategy_context_json = {}
-
-                    # Attempt to get enriched context from StrategyAgent (cached)
-                    try:
-                        strat_obj = self._get_cached_strategy_context(token_name)
-                    except Exception as e:
-                        cprint(f"⚠️ Error fetching strategy context for {token_name}: {e}", "yellow")
-                        strat_obj = None
-
-                    if strat_obj:
-                        strategy_context_text, strategy_context_json = self._format_strategy_context_text(strat_obj)
-                        add_console_log("Strategies loaded", "success")
-
-                    else:
-                        # fallback to legacy market_data['strategy_signals'] if present
-                        if isinstance(market_data, dict) and "strategy_signals" in market_data:
-                            try:
-                                strategy_context_text = (
-                                    "Strategy Signals Available:\n" +
-                                    json.dumps(market_data["strategy_signals"], indent=2)
-                                )
-                                strategy_context_json = {"legacy_signals": market_data["strategy_signals"]}
-                            except Exception:
-                                strategy_context_text = "Strategy Signals Available (unserializable)."
-                                strategy_context_json = {"legacy_signals": str(market_data.get("strategy_signals"))}
-                        else:
-                            strategy_context_text = "No strategy intelligence available."
-                            strategy_context_json = {}
-
-                    # store last context for debug / dashboard
-                    self.last_strategy_context = strategy_context_json
-
-                except Exception as e:
-                    cprint(f"⚠️ Failed to prepare strategy context: {e}", "yellow")
-                    strategy_context_text = "No strategy intelligence available."
-
-                # Get performance context for motivation
-                performance_metrics = self._get_performance_metrics()
-                performance_context = (
-                    f"Win Rate: {performance_metrics['win_rate']}% | "
-                    f"Total PnL: ${performance_metrics['total_pnl']} | "
-                    f"Grade: {performance_metrics['grade']} | "
-                    f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
+                # Analyze with single model
+                recommendation, response = analyze_market_single(
+                    token=token,
+                    market_data=market_data,
+                    position_context=position_context,
+                    strategy_context_text=strategy_context_text,
+                    performance_context=performance_context,
+                    chat_fn=self.chat_with_ai,
+                    trading_prompt_template=TRADING_PROMPT,
+                    min_confidence=self.min_single_confidence
                 )
 
-                response = self.chat_with_ai(
-                    TRADING_PROMPT.format(
-                        strategy_context=strategy_context_text,
-                        position_context=position_context,
-                        performance_context=performance_context,
-                    ),
-                    f"Market Data to Analyze:\n{market_data}",
-                )
-
-                if not response:
-                    cprint(f"❌ No response from AI for {token}", "red")
-                    return None
-
-                lines = response.split("\n")
-                action = lines[0].strip() if lines else "NOTHING"
-
-                confidence = 0
-                for line in lines:
-                    if "confidence" in line.lower():
-                        try:
-                            # Extract first percentage number (handles "82% confidence" correctly)
-                            match = re.search(r'(\d{1,3})\s*%', line)
-                            if match:
-                                confidence = min(100, max(0, int(match.group(1))))
-                            else:
-                                # Fallback: first standalone number
-                                match = re.search(r'\b(\d{1,3})\b', line)
-                                if match:
-                                    confidence = min(100, max(0, int(match.group(1))))
-                                else:
-                                    confidence = 50
-                        except Exception:
-                            confidence = 50
-
-                reasoning = (
-                    "\n".join(lines[1:]) if len(lines) > 1 else "No detailed reasoning provided"
-                )
-
-                # Apply confidence threshold for single model
-                if action in ["BUY", "SELL"] and confidence < self.min_single_confidence:
-                    cprint(
-                        f"⚠️ LOW CONFIDENCE: {confidence}% < {self.min_single_confidence}% threshold",
-                        "yellow",
-                        attrs=["bold"]
+                if recommendation:
+                    self.recommendations_df = pd.concat(
+                        [self.recommendations_df, pd.DataFrame([recommendation])],
+                        ignore_index=True
                     )
-                    cprint(f"   → Downgrading {action} to NOTHING", "yellow")
-                    add_console_log(f"{token} -> NOTHING | {confidence}% (low confidence)", "warning")
-
-                    original_action = action
-                    action = "NOTHING"
-                    reasoning = f"Original: {original_action} ({confidence}%) → Downgraded to NOTHING (below {self.min_single_confidence}% threshold)\n\n{reasoning}"
-
-                self.recommendations_df = pd.concat(
-                    [
-                        self.recommendations_df,
-                        pd.DataFrame(
-                            [
-                                {
-                                    "token": token,
-                                    "action": action,
-                                    "confidence": confidence,
-                                    "reasoning": reasoning,
-                                }
-                            ]
-                        ),
-                    ],
-                    ignore_index=True,
-                )
-
-                add_console_log(f"Analysis Complete for {token[:4]}...", "info")
-                add_console_log(f"{token} -> {action} | {confidence}%", "success")
 
                 return response
 
         except Exception as e:
             print(f"❌ Error in AI analysis: {str(e)}")
             self.recommendations_df = pd.concat(
-                [
-                    self.recommendations_df,
-                    pd.DataFrame(
-                        [
-                            {
-                                "token": token,
-                                "action": "NOTHING",
-                                "confidence": 0,
-                                "reasoning": f"Error during analysis: {str(e)}",
-                            }
-                        ]
-                    ),
-                ],
-                ignore_index=True,
+                [self.recommendations_df, pd.DataFrame([build_error_recommendation(token, str(e))])],
+                ignore_index=True
             )
             return None
 

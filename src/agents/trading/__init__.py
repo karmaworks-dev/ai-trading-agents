@@ -46,6 +46,24 @@ from .market_analyzer import (
     build_error_recommendation,
     validate_market_data,
     get_token_from_market_data,
+    # Analysis orchestration functions
+    prepare_analysis_context,
+    analyze_market_swarm,
+    prepare_strategy_context,
+    analyze_market_single,
+)
+
+from .position_analyzer import (
+    log_positions_being_analyzed,
+    check_tp_sl_force_closes,
+    build_position_summary_for_ai,
+    build_market_summary_for_positions,
+    build_position_analysis_prompt,
+    strip_markdown_code_blocks,
+    parse_position_analysis_response,
+    validate_ai_close_decisions,
+    log_final_decisions,
+    analyze_positions_with_ai,
 )
 
 from .portfolio_allocator import (
@@ -138,6 +156,21 @@ __all__ = [
     "build_error_recommendation",
     "validate_market_data",
     "get_token_from_market_data",
+    "prepare_analysis_context",
+    "analyze_market_swarm",
+    "prepare_strategy_context",
+    "analyze_market_single",
+    # Position Analyzer
+    "log_positions_being_analyzed",
+    "check_tp_sl_force_closes",
+    "build_position_summary_for_ai",
+    "build_market_summary_for_positions",
+    "build_position_analysis_prompt",
+    "strip_markdown_code_blocks",
+    "parse_position_analysis_response",
+    "validate_ai_close_decisions",
+    "log_final_decisions",
+    "analyze_positions_with_ai",
     # Portfolio Allocator
     "normalize_symbol",
     "filter_strategy_signals",
