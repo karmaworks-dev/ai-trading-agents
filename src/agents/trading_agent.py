@@ -1585,32 +1585,15 @@ Return ONLY valid JSON with the following structure:
             cprint(f"📊 Open positions: {open_positions}", "cyan")
 
             # ==========================================================
-            # STEP 2 — FILTER STRATEGY SIGNALS (LOUD)
+            # STEP 2 — FILTER STRATEGY SIGNALS (using portfolio_allocator helper)
             # ==========================================================
-            signals = []
-            removed = []
-
-            for _, row in self.recommendations_df.iterrows():
-                token = row["token"]
-                action = str(row["action"]).upper()
-
-                if token not in self.symbols:
-                    removed.append(f"{token}: not in symbols")
-                    continue
-
-                if action not in ["BUY", "SELL"]:
-                    removed.append(f"{token}: action {action} not actionable")
-                    continue
-
-                if LONG_ONLY and action == "SELL" and token not in open_positions:
-                    removed.append(f"{token}: SELL blocked by LONG_ONLY")
-                    continue
-
-                signals.append({
-                    "symbol": token,
-                    "action": action,
-                    "confidence": int(row["confidence"]),
-                })
+            recommendations = [
+                {"token": row["token"], "action": row["action"], "confidence": row["confidence"]}
+                for _, row in self.recommendations_df.iterrows()
+            ]
+            signals, removed = filter_strategy_signals(
+                recommendations, self.symbols, LONG_ONLY, open_positions
+            )
 
             if removed:
                 cprint(f"\n❌ Removed {len(removed)} signals:", "yellow")
@@ -1624,7 +1607,7 @@ Return ONLY valid JSON with the following structure:
                 return []
 
             # ==========================================================
-            # STEP 3 — ACCOUNT EQUITY
+            # STEP 3 — ACCOUNT EQUITY (using portfolio_allocator helper)
             # ==========================================================
             account_balance = get_account_balance(self.account)
             total_equity = (
@@ -1638,9 +1621,10 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("Allocation aborted: zero equity", "error")
                 return []
 
-            # Calculate allocatable USD after cash buffer
-            required_buffer_usd = total_equity * (CASH_PERCENTAGE / 100.0)
-            allocatable_usd = max(0, account_balance - required_buffer_usd)
+            # Calculate allocatable USD after cash buffer using helper
+            required_buffer_usd, allocatable_usd = calculate_allocatable_balance(
+                account_balance, total_equity, CASH_PERCENTAGE
+            )
 
             cprint(f"💰 Balance: ${account_balance:.2f}", "cyan")
             cprint(f"💎 Total equity: ${total_equity:.2f}", "cyan")
