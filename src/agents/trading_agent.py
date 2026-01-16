@@ -2064,26 +2064,21 @@ Return ONLY valid JSON with the following structure:
 
                     # For OPEN / INCREASE actions enforce min notional only
                     if action_type in ("OPEN_LONG", "OPEN_SHORT", "INCREASE"):
-                        margin_usd = action.get("margin_usd", 0)
-                        if margin_usd <= 0:
-                            cprint(f"   ⚠️ Skipping {symbol}: invalid margin_usd", "yellow")
-                            add_console_log(f"Skipped {symbol}: invalid margin_usd", "warning")
-                            continue
-
-                        # notional after leverage
-                        notional = margin_usd * LEVERAGE
-                        min_notional = 12.0
-                        if notional < min_notional:
-                            cprint(f"   ⚠️ Skipping {symbol}: notional ${notional:.2f} < min ${min_notional:.2f}", "yellow")
-                            add_console_log(f"Skipped {symbol}: notional below exchange minimum ({notional:.2f} < {min_notional})", "warning")
+                        is_valid, margin_usd, notional, error_reason = validate_open_action_params(
+                            action, LEVERAGE, DEFAULT_MIN_NOTIONAL
+                        )
+                        if not is_valid:
+                            cprint(f"   ⚠️ Skipping {symbol}: {error_reason}", "yellow")
+                            add_console_log(f"Skipped {symbol}: {error_reason}", "warning")
                             continue
 
                     # ============================================================
                     # CLOSE: Close entire position
                     # ============================================================
                     if action_type == "CLOSE":
-                        if not im_in_pos or pos_size == 0:
-                            cprint(f"   ℹ️ No position to close", "cyan")
+                        can_close, close_error = validate_close_action_params(im_in_pos, pos_size)
+                        if not can_close:
+                            cprint(f"   ℹ️ {close_error}", "cyan")
                             continue
 
                         cprint(f"   📊 Closing {current_dir} position (${current_notional:.2f} notional)", "yellow")
@@ -2095,203 +2090,144 @@ Return ONLY valid JSON with the following structure:
                             n.chunk_kill(symbol, max_usd_order_size, slippage)
                             close_success = True  # chunk_kill doesn't return status
 
-                        if close_success:
-                            if POSITION_TRACKER_AVAILABLE:
-                                remove_position(symbol)
+                        if close_success and POSITION_TRACKER_AVAILABLE:
+                            remove_position(symbol)
 
-                            cprint(f"   ✅ Position closed!", "green")
-                            add_console_log(f"✅ Closed {symbol} {current_dir}", "success")
+                        log_close_trade_result(close_success, symbol, current_dir, current_notional)
+                        if close_success:
                             executed_count += 1
-                        else:
-                            cprint(f"   ⚠️ Close may have failed for {symbol}", "yellow")
-                            add_console_log(f"⚠️ Close failed for {symbol}", "warning")
 
                     # ============================================================
                     # REDUCE: Reduce position size
                     # ============================================================
                     elif action_type == "REDUCE":
-                        reduce_amount = action.get("reduce_by_usd", 0)
-
-                        if not im_in_pos or pos_size == 0:
-                            cprint(f"   ℹ️ No position to reduce", "cyan")
-                            continue
-
-                        if reduce_amount <= 0:
-                            cprint(f"   ⚠️ Invalid reduce amount", "yellow")
+                        can_reduce, reduce_amount, reduce_error = validate_reduce_action_params(
+                            action, im_in_pos, pos_size
+                        )
+                        if not can_reduce:
+                            cprint(f"   ℹ️ {reduce_error}", "cyan" if "no position" in reduce_error else "yellow")
                             continue
 
                         cprint(f"   📊 Current: ${current_notional:.2f} notional", "white")
                         cprint(f"   ➖ Reducing by: ${reduce_amount:.2f} notional", "yellow")
 
+                        reduce_success = False
                         if hasattr(n, 'partial_close'):
                             n.partial_close(symbol, reduce_amount, account=self.account)
-                            cprint(f"   ✅ Position reduced!", "green")
-                            add_console_log(f"✅ Reduced {symbol} by ${reduce_amount:.2f}", "success")
+                            reduce_success = True
+
+                        log_reduce_trade_result(reduce_success, symbol, reduce_amount)
+                        if reduce_success:
                             executed_count += 1
-                        else:
-                            cprint(f"   ⚠️ partial_close not available", "yellow")
 
                     # ============================================================
                     # OPEN_LONG / INCREASE (for LONG)
                     # ============================================================
                     elif action_type in ["OPEN_LONG", "INCREASE"] and (action_type == "OPEN_LONG" or (im_in_pos and is_long)):
-                        margin_usd = action.get("margin_usd", 0)
-                        if margin_usd <= 0:
-                            cprint(f"   ⚠️ Invalid margin amount", "yellow")
-                            continue
+                        # margin_usd and notional already validated by validate_open_action_params above
+                        is_netting = has_opposite_position("OPEN_LONG", im_in_pos, is_long)
 
-                        notional = margin_usd * LEVERAGE
-
-                        # CRITICAL FIX: Handle position conflicts more efficiently
-                        if im_in_pos and not is_long:
-                            # Opposite position exists - allocate in opposite direction instead of closing first
+                        # Handle opposite position (SHORT exists, opening LONG)
+                        if is_netting:
                             cprint(f"   🔄 Opposite position detected - using position reversal", "cyan")
-                            
-                            # For HyperLiquid, we can directly open opposite position which will net against existing
+
+                            # For HyperLiquid, we can directly open opposite position which will net
                             if EXCHANGE == "HYPERLIQUID":
                                 cprint(f"   📈 Opening LONG to net against existing SHORT", "cyan")
                                 entry_result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
-                                # ai_entry now returns (success: bool, actual_leverage: int)
-                                result, actual_lev = entry_result if isinstance(entry_result, tuple) else (entry_result, LEVERAGE)
+                                result, actual_lev = unpack_entry_result(entry_result, LEVERAGE)
+                                actual_notional = margin_usd * actual_lev
+
+                                log_open_trade_result(bool(result), symbol, "LONG", actual_notional, actual_lev, is_netting=True)
 
                                 if result:
-                                    # Recalculate actual notional based on actual leverage used
-                                    actual_notional = margin_usd * actual_lev
-                                    cprint(f"   ✅ LONG position opened (netting against SHORT) @ {actual_lev}x leverage", "green")
-                                    add_console_log(f"✅ Opened LONG {symbol} ${actual_notional:.2f} (netting)", "success")
-
-                                    # Update tracker to reflect net position
                                     if POSITION_TRACKER_AVAILABLE:
                                         try:
                                             record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=True)
                                         except Exception as e:
                                             cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-
                                     try:
                                         log_position_open(symbol, "LONG", actual_notional)
-                                    except Exception as e:
-                                        cprint(f"   ⚠️ Position log error: {e}", "yellow")
-
+                                    except Exception:
+                                        pass
                                     executed_count += 1
-                                    continue  # Skip the rest of the logic for this action
                                 else:
-                                    cprint(f"   ❌ Failed to open LONG position", "red")
-                                    add_console_log(f"❌ Failed to open LONG {symbol} ${notional:.2f}", "error")
                                     failed_count += 1
-                                    continue
+                                continue
                             else:
                                 # For other exchanges, fall back to closing first
                                 cprint(f"   ⚠️ Closing SHORT before opening LONG...", "yellow")
-                                close_ok = False
-                                if EXCHANGE == "HYPERLIQUID":
-                                    close_ok = n.close_complete_position(symbol, self.account)
-                                else:
-                                    n.chunk_kill(symbol, max_usd_order_size, slippage)
-                                    close_ok = True
-                                if not close_ok:
-                                    cprint(f"   ⚠️ Failed to close SHORT, skipping LONG entry", "yellow")
-                                    continue
+                                n.chunk_kill(symbol, max_usd_order_size, slippage)
                                 time.sleep(1)
 
                         cprint(f"   📈 Opening LONG: ${notional:.2f} notional (${margin_usd:.2f} margin)", "green")
 
-                        # Execute trade and verify success
+                        # Execute trade
                         result = None
                         actual_lev = LEVERAGE
                         if EXCHANGE == "HYPERLIQUID":
                             entry_result = n.ai_entry(symbol, notional, leverage=LEVERAGE, account=self.account)
-                            # ai_entry now returns (success: bool, actual_leverage: int)
-                            result, actual_lev = entry_result if isinstance(entry_result, tuple) else (entry_result, LEVERAGE)
+                            result, actual_lev = unpack_entry_result(entry_result, LEVERAGE)
                         elif EXCHANGE == "ASTER":
                             result = n.ai_entry(symbol, notional, leverage=LEVERAGE)
                         else:
                             result = n.ai_entry(symbol, notional)
 
-                        # Verify trade executed successfully
-                        if result:
-                            # Recalculate actual notional based on actual leverage used
-                            actual_notional = margin_usd * actual_lev
-                            cprint(f"   ✅ LONG position opened @ {actual_lev}x leverage!", "green")
-                            add_console_log(f"✅ Opened LONG {symbol} ${actual_notional:.2f}", "success")
+                        actual_notional = margin_usd * actual_lev
+                        log_open_trade_result(bool(result), symbol, "LONG", actual_notional, actual_lev)
 
-                            # Record in tracker
+                        if result:
                             if POSITION_TRACKER_AVAILABLE:
                                 try:
                                     record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=True)
                                 except Exception as e:
                                     cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-
                             try:
                                 log_position_open(symbol, "LONG", actual_notional)
-                            except Exception as e:
-                                cprint(f"   ⚠️ Position log error: {e}", "yellow")
-
+                            except Exception:
+                                pass
                             executed_count += 1
                         else:
-                            cprint(f"   ❌ LONG position failed to open (no result returned)", "red")
-                            add_console_log(f"❌ {symbol} LONG failed (no result)", "error")
                             failed_count += 1
 
                     # ============================================================
                     # OPEN_SHORT / INCREASE (for SHORT)
                     # ============================================================
                     elif action_type in ["OPEN_SHORT"] or (action_type == "INCREASE" and im_in_pos and not is_long):
-                        margin_usd = action.get("margin_usd", 0)
-                        if margin_usd <= 0:
-                            cprint(f"   ⚠️ Invalid margin amount", "yellow")
-                            continue
+                        # margin_usd and notional already validated by validate_open_action_params above
+                        is_netting = has_opposite_position("OPEN_SHORT", im_in_pos, is_long)
 
-                        notional = margin_usd * LEVERAGE
-
-                        # CRITICAL FIX: Handle position conflicts more efficiently
-                        if im_in_pos and is_long:
-                            # Opposite position exists - allocate in opposite direction instead of closing first
+                        # Handle opposite position (LONG exists, opening SHORT)
+                        if is_netting:
                             cprint(f"   🔄 Opposite position detected - allocating in opposite direction", "cyan")
-                            
-                            # For HyperLiquid, we can directly open opposite position which will net against existing
+
+                            # For HyperLiquid, we can directly open opposite position which will net
                             if EXCHANGE == "HYPERLIQUID":
                                 cprint(f"   📉 Opening SHORT to net against existing LONG", "cyan")
                                 short_result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
-                                # open_short now returns (order_result: dict, actual_leverage: int)
-                                result, actual_lev = short_result if isinstance(short_result, tuple) else (short_result, LEVERAGE)
+                                result, actual_lev = unpack_entry_result(short_result, LEVERAGE)
+                                actual_notional = margin_usd * actual_lev
+
+                                log_open_trade_result(bool(result), symbol, "SHORT", actual_notional, actual_lev, is_netting=True)
 
                                 if result:
-                                    # Recalculate actual notional based on actual leverage used
-                                    actual_notional = margin_usd * actual_lev
-                                    cprint(f"   ✅ SHORT position opened (netting against LONG) @ {actual_lev}x leverage", "green")
-                                    add_console_log(f"✅ Opened SHORT {symbol} ${actual_notional:.2f} (netting)", "success")
-
-                                    # Update tracker to reflect net position
                                     if POSITION_TRACKER_AVAILABLE:
                                         try:
                                             record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=False)
                                         except Exception as e:
                                             cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-
                                     try:
                                         log_position_open(symbol, "SHORT", actual_notional)
-                                    except Exception as e:
-                                        cprint(f"   ⚠️ Position log error: {e}", "yellow")
-
+                                    except Exception:
+                                        pass
                                     executed_count += 1
-                                    continue  # Skip the rest of the logic for this action
                                 else:
-                                    cprint(f"   ❌ Failed to open SHORT position", "red")
-                                    add_console_log(f"❌ Failed to open SHORT {symbol} ${notional:.2f}", "error")
                                     failed_count += 1
-                                    continue
+                                continue
                             else:
                                 # For other exchanges, fall back to closing first
                                 cprint(f"   ⚠️ Closing LONG before opening SHORT...", "yellow")
-                                close_ok = False
-                                if EXCHANGE == "HYPERLIQUID":
-                                    close_ok = n.close_complete_position(symbol, self.account)
-                                else:
-                                    n.chunk_kill(symbol, max_usd_order_size, slippage)
-                                    close_ok = True
-                                if not close_ok:
-                                    cprint(f"   ⚠️ Failed to close LONG, skipping SHORT entry", "yellow")
-                                    continue
+                                n.chunk_kill(symbol, max_usd_order_size, slippage)
                                 time.sleep(1)
 
                         if EXCHANGE == "SOLANA":
@@ -2300,13 +2236,12 @@ Return ONLY valid JSON with the following structure:
 
                         cprint(f"   📉 Opening SHORT: ${notional:.2f} notional (${margin_usd:.2f} margin)", "red")
 
-                        # Execute trade and verify success
+                        # Execute trade
                         result = None
                         actual_lev = LEVERAGE
                         if EXCHANGE == "HYPERLIQUID":
                             short_result = n.open_short(symbol, notional, leverage=LEVERAGE, account=self.account)
-                            # open_short now returns (order_result: dict, actual_leverage: int)
-                            result, actual_lev = short_result if isinstance(short_result, tuple) else (short_result, LEVERAGE)
+                            result, actual_lev = unpack_entry_result(short_result, LEVERAGE)
                         elif EXCHANGE == "ASTER":
                             if hasattr(n, 'open_short'):
                                 result = n.open_short(symbol, notional, leverage=LEVERAGE)
@@ -2315,29 +2250,21 @@ Return ONLY valid JSON with the following structure:
                                 failed_count += 1
                                 continue
 
-                        # Verify trade executed successfully
-                        if result:
-                            # Recalculate actual notional based on actual leverage used
-                            actual_notional = margin_usd * actual_lev
-                            cprint(f"   ✅ SHORT position opened @ {actual_lev}x leverage!", "green")
-                            add_console_log(f"✅ Opened SHORT {symbol} ${actual_notional:.2f}", "success")
+                        actual_notional = margin_usd * actual_lev
+                        log_open_trade_result(bool(result), symbol, "SHORT", actual_notional, actual_lev)
 
-                            # Record in tracker
+                        if result:
                             if POSITION_TRACKER_AVAILABLE:
                                 try:
                                     record_position_entry(symbol=symbol, entry_price=0, size=actual_notional, is_long=False)
                                 except Exception as e:
                                     cprint(f"   ⚠️ Position tracker error: {e}", "yellow")
-
                             try:
                                 log_position_open(symbol, "SHORT", actual_notional)
-                            except Exception as e:
-                                cprint(f"   ⚠️ Position log error: {e}", "yellow")
-
+                            except Exception:
+                                pass
                             executed_count += 1
                         else:
-                            cprint(f"   ❌ SHORT position failed to open (no result returned)", "red")
-                            add_console_log(f"❌ {symbol} SHORT failed (no result)", "error")
                             failed_count += 1
 
                     else:
@@ -2352,11 +2279,13 @@ Return ONLY valid JSON with the following structure:
 
                 time.sleep(2)  # Rate limiting between trades
 
-            # Summary
+            # Summary using helper functions
+            summary = build_execution_summary(executed_count, failed_count)
+            summary_text = format_execution_summary(summary)
             cprint(f"\n{'=' * 60}", "green")
-            cprint(f"✅ EXECUTION COMPLETE: {executed_count} succeeded, {failed_count} failed", "green", attrs=["bold"])
+            cprint(f"✅ {summary_text}", "green", attrs=["bold"])
             cprint(f"{'=' * 60}\n", "green")
-            add_console_log(f"Execution complete: {executed_count} succeeded, {failed_count} failed", "success")
+            add_console_log(summary_text, "success")
 
         except Exception as e:
             cprint(f"❌ Error in execute_allocations: {e}", "red")
