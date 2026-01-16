@@ -130,6 +130,10 @@ from src.agents.trading.trade_executor import (
     validate_close_action_params,
     has_opposite_position,
     needs_position_close_first,
+    # Phase 2.2 helpers for handle_exits refactoring
+    should_trigger_stop_loss,
+    signal_contradicts_position,
+    format_exit_phase_summary,
     DEFAULT_MIN_NOTIONAL,
 )
 
@@ -2363,7 +2367,7 @@ Return ONLY valid JSON with the following structure:
                 cprint(f"{'=' * 60}", "cyan")
 
                 # CRITICAL: Check for stop loss FIRST (overrides all other logic)
-                if pnl_perc <= STOP_LOSS_THRESHOLD:
+                if should_trigger_stop_loss(pnl_perc, STOP_LOSS_THRESHOLD):
                     cprint(f"🚨 STOP LOSS TRIGGERED: {pnl_perc:.2f}% <= {STOP_LOSS_THRESHOLD}%", "white", "on_red", attrs=["bold"])
                     cprint(f"⚠️ FORCE CLOSING {position_dir} position (mandatory -2% stop loss)", "white", "on_red")
 
@@ -2393,11 +2397,8 @@ Return ONLY valid JSON with the following structure:
 
                     continue  # Skip to next token after stop loss
 
-                # Determine if signal contradicts position direction
-                signal_contradicts_position = (
-                    (action == "SELL" and is_long) or      # SELL signal vs LONG position
-                    (action == "BUY" and not is_long)      # BUY signal vs SHORT position
-                )
+                # Determine if signal contradicts position direction using helper
+                should_close = signal_contradicts_position(action, is_long)
 
                 if action == "NOTHING":
                     # NOTHING = hold current position regardless of direction
@@ -2405,7 +2406,7 @@ Return ONLY valid JSON with the following structure:
                     cprint(f"💎 Maintaining {position_dir} position", "cyan")
                     positions_held += 1
 
-                elif signal_contradicts_position:
+                elif should_close:
                     # Signal contradicts position → CLOSE (ONLY CLOSE, NO OPEN LOGIC HERE)
                     if action == "SELL" and is_long:
                         cprint("🚨 SELL signal vs LONG position - CLOSING", "white", "on_red")
@@ -2469,11 +2470,12 @@ Return ONLY valid JSON with the following structure:
                 else:  # BUY
                     cprint("📈 BUY signal - LONG will be opened in allocation phase", "white", "on_green")
 
-        # Summary
+        # Summary using helper function
+        summary_text = format_exit_phase_summary(positions_closed, positions_held)
         cprint(f"\n{'=' * 60}", "green")
-        cprint(f"✅ PHASE 1 COMPLETE: Closed {positions_closed}, Held {positions_held} positions", "green", attrs=["bold"])
+        cprint(f"✅ {summary_text}", "green", attrs=["bold"])
         cprint(f"{'=' * 60}", "green")
-        add_console_log(f"Closed {positions_closed}, Held {positions_held}", "success")
+        add_console_log(summary_text, "success")
 
     def show_final_portfolio_report(self):
         """Display final portfolio status - NO LOOPS, just a snapshot"""

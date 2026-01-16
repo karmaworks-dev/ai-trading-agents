@@ -92,6 +92,10 @@ from .trade_executor import (
     validate_close_action_params,
     has_opposite_position,
     needs_position_close_first,
+    # Exit phase helpers
+    should_trigger_stop_loss,
+    signal_contradicts_position,
+    format_exit_phase_summary,
     DEFAULT_MIN_NOTIONAL,
     MARGIN_REQUIRED_ACTIONS,
     POSITION_REDUCE_ACTIONS,
@@ -175,6 +179,10 @@ __all__ = [
     "validate_close_action_params",
     "has_opposite_position",
     "needs_position_close_first",
+    # Exit phase helpers
+    "should_trigger_stop_loss",
+    "signal_contradicts_position",
+    "format_exit_phase_summary",
     "DEFAULT_MIN_NOTIONAL",
     "MARGIN_REQUIRED_ACTIONS",
     "POSITION_REDUCE_ACTIONS",

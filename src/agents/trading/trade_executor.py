@@ -773,3 +773,73 @@ def has_opposite_position(
         return True
 
     return False
+
+
+# =============================================================================
+# EXIT PHASE HELPERS
+# =============================================================================
+
+def should_trigger_stop_loss(
+    pnl_percent: float,
+    threshold: float = -2.0
+) -> bool:
+    """
+    Check if stop loss should be triggered.
+
+    Args:
+        pnl_percent: Current PnL percentage
+        threshold: Stop loss threshold (negative number)
+
+    Returns:
+        True if stop loss should trigger
+    """
+    return pnl_percent <= threshold
+
+
+def signal_contradicts_position(
+    signal_action: str,
+    is_long: bool
+) -> bool:
+    """
+    Check if signal contradicts current position direction.
+
+    Logic:
+    - SELL signal + LONG position → contradicts (True)
+    - BUY signal + SHORT position → contradicts (True)
+    - Otherwise → confirms (False)
+
+    Args:
+        signal_action: "BUY", "SELL", or "NOTHING"
+        is_long: Whether current position is long
+
+    Returns:
+        True if signal contradicts position
+    """
+    action = signal_action.upper()
+
+    if action == "NOTHING":
+        return False  # NOTHING never contradicts
+
+    if action == "SELL" and is_long:
+        return True
+    if action == "BUY" and not is_long:
+        return True
+
+    return False
+
+
+def format_exit_phase_summary(
+    closed_count: int,
+    held_count: int
+) -> str:
+    """
+    Format summary for exit phase completion.
+
+    Args:
+        closed_count: Number of positions closed
+        held_count: Number of positions held
+
+    Returns:
+        Formatted summary string
+    """
+    return f"PHASE 1 COMPLETE: Closed {closed_count}, Held {held_count} positions"
