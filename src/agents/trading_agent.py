@@ -790,9 +790,13 @@ class TradingAgent:
             try:
                 # get_position returns: positions (list), im_in_pos, pos_size, pos_sym, entry_px, pnl_perc, is_long
                 # The 'positions' list contains ALL subpositions for this symbol
-                positions_list, im_in_pos, _, _, _, _, _ = n.get_position(
-                    symbol, self.account
-                )
+                pos_data = n.get_position(symbol, self.account)
+
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    continue
+
+                positions_list, im_in_pos, _, _, _, _, _ = pos_data
 
                 if im_in_pos and positions_list:
                     # CRITICAL FIX: Iterate through ALL positions, not just the first one
@@ -1208,8 +1212,14 @@ Return ONLY valid JSON with the following structure:
                             try:
                                 # Check if position is actually closed
                                 pos_data = n.get_position(symbol, self.account)
+
+                                # Validate pos_data before unpacking
+                                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                                    cprint(f"   ⚠️ Could not verify {symbol} closure - invalid data", "yellow")
+                                    break
+
                                 _, im_in_pos, pos_size, _, _, _, _ = pos_data
-                                
+
                                 if not im_in_pos or pos_size == 0:
                                     position_closed = True
                                     break
@@ -1310,21 +1320,26 @@ Return ONLY valid JSON with the following structure:
 
             try:
                 raw_pos_data = n.get_position(token, self.account)
-                _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = raw_pos_data
 
-                if im_in_pos:
-                    side = "LONG" if is_long else "SHORT"
+                # Validate pos_data before unpacking
+                if raw_pos_data is None or not isinstance(raw_pos_data, tuple) or len(raw_pos_data) < 7:
+                    pass  # Keep default position_context
+                else:
+                    _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = raw_pos_data
 
-                    if entry_px == 0 and pnl_perc == 0:
-                        position_context = (
-                            f"CURRENT POSITION: ✅ Active {side} (Spot) | Size: {pos_size}"
-                        )
-                    else:
-                        position_context = (
-                            f"CURRENT POSITION: ✅ Active {side} | "
-                            f"Size: {pos_size} | Entry: ${entry_px:.4f} | "
-                            f"PnL: {pnl_perc:.2f}%"
-                        )
+                    if im_in_pos:
+                        side = "LONG" if is_long else "SHORT"
+
+                        if entry_px == 0 and pnl_perc == 0:
+                            position_context = (
+                                f"CURRENT POSITION: ✅ Active {side} (Spot) | Size: {pos_size}"
+                            )
+                        else:
+                            position_context = (
+                                f"CURRENT POSITION: ✅ Active {side} | "
+                                f"Size: {pos_size} | Entry: ${entry_px:.4f} | "
+                                f"PnL: {pnl_perc:.2f}%"
+                            )
             except Exception as e:
                 cprint(f"⚠️ Error fetching position context: {e}", "yellow")
 
@@ -1564,6 +1579,10 @@ Return ONLY valid JSON with the following structure:
                 try:
                     pos_data = n.get_position(sym, self.account) if EXCHANGE != "HYPERLIQUID" \
                         else n.get_position(sym, self.account)
+
+                    # Validate pos_data before unpacking
+                    if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                        continue
 
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     if im_in_pos and pos_size != 0:
@@ -2030,6 +2049,11 @@ Return ONLY valid JSON with the following structure:
                     else:
                         pos_data = n.get_position(symbol)
 
+                    # Validate pos_data is valid tuple before unpacking
+                    if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                        cprint(f"⚠️ Invalid position data for {symbol}, skipping", "yellow")
+                        continue
+
                     _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
                     current_notional = abs(float(pos_size) * float(entry_px)) if im_in_pos else 0
                     current_dir = "LONG" if is_long else "SHORT"
@@ -2323,6 +2347,11 @@ Return ONLY valid JSON with the following structure:
                 else:
                     pos_data = n.get_position(token)
 
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    cprint(f"⚠️ Invalid position data for {token}, skipping", "yellow")
+                    continue
+
                 _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = pos_data
 
                 # If position was manually closed, clean up tracker
@@ -2481,6 +2510,11 @@ Return ONLY valid JSON with the following structure:
         for token in check_tokens:
             try:
                 pos_data = n.get_position(token, self.account)
+
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    continue
+
                 _, im_in_pos, pos_size, _, entry_px, pnl_perc, is_long = pos_data
 
                 if im_in_pos and pos_size != 0:
@@ -2518,10 +2552,15 @@ Return ONLY valid JSON with the following structure:
             for symbol in self.symbols:
                 if symbol in EXCLUDED_TOKENS:
                     continue
-                    
+
                 pos_data = n.get_position(symbol, self.account)
+
+                # Validate pos_data before unpacking
+                if pos_data is None or not isinstance(pos_data, tuple) or len(pos_data) < 7:
+                    continue
+
                 _, im_in_pos, _, _, _, pnl_perc, _ = pos_data
-                
+
                 if im_in_pos and pnl_perc != 0:
                     # Check TP threshold
                     if pnl_perc >= TAKE_PROFIT_THRESHOLD:
