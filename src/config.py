@@ -19,7 +19,7 @@ EXCLUDED_TOKENS = [USDC_ADDRESS, SOL_ADDRESS]
 # ⚡ HyperLiquid Configuration
 # Main trading tokens - diversified portfolio
 HYPERLIQUID_SYMBOLS = ['BTC', 'ETH', 'SOL', 'LTC', 'AAVE', 'HYPE']
-HYPERLIQUID_LEVERAGE = 10  # Current leverage setting (matches trading_agent.py)
+# NOTE: HYPERLIQUID_LEVERAGE is now an alias for LEVERAGE (defined in Risk Management below)
 
 # Position sizing 🎯
 # CRITICAL FOR $10 ACCOUNT:
@@ -51,8 +51,11 @@ TOKEN_EXCHANGE_MAP = {
 }
 
 # 🛡️ Risk Management Settings (Tuned for $10 Account)
-CASH_PERCENTAGE = 20  # Keep 20% of account as backup
-MAX_POSITION_PERCENTAGE = 80  # Allow using full balance since account is small
+# NOTE: These are the authoritative settings - no duplicates below
+CASH_PERCENTAGE = 10  # Keep 10% of account as cash buffer
+MAX_POSITION_PERCENTAGE = 90  # Max % of balance per position
+LEVERAGE = 20  # Leverage multiplier (also used by trading_agent.py)
+HYPERLIQUID_LEVERAGE = LEVERAGE  # Alias for backwards compatibility
 TAKE_PROFIT_PERCENT = 4.5  # Take profit at +4.5%
 STOP_LOSS_PERCENT = 1.5   # Stop loss at -1.5%
 STOPLOSS_PRICE = 0    # Not used in this specific agent logic yet
@@ -139,12 +142,11 @@ MIN_TRADES_LAST_HOUR = 2  # Alias for nice_funcs.py compatibility
 REALTIME_CLIPS_ENABLED = False
 
 # 💰 POSITION SIZING & RISK MANAGEMENT
+# NOTE: CASH_PERCENTAGE, MAX_POSITION_PERCENTAGE, and LEVERAGE are defined above
+# in the Risk Management section to avoid duplicate definitions
 USE_PORTFOLIO_ALLOCATION = True
-MAX_POSITION_PERCENTAGE = 90  # Max % of balance per position
-LEVERAGE = 20  # Leverage multiplier
-CASH_PERCENTAGE = 10  # Reserve cash %
 
-# Stop Loss & Take Profit
+# Stop Loss & Take Profit (PnL-based)
 STOP_LOSS_PERCENTAGE = 2.0  # SL @ -2% PnL
 TAKE_PROFIT_PERCENTAGE = 5.0  # TP @ +5% PnL
 
@@ -155,3 +157,6 @@ MIN_SWARM_CONFIDENCE = 65  # Swarm consensus threshold (55-65% recommended)
 # ⚙️ POSITION MANAGEMENT SETTINGS
 MIN_AGE_HOURS = 0.1  # Minimum hold time before close (hours)
 MIN_CLOSE_CONFIDENCE = 70  # AI confidence needed to close position
+
+# Minimum order value for HyperLiquid
+MIN_ORDER_NOTIONAL = 12.0  # $12 minimum (HyperLiquid requires $10, we use $12 for safety)

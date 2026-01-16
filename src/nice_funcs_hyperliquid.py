@@ -1463,3 +1463,120 @@ def close_complete_position(symbol, account, slippage=0.01, max_retries=3):
     print(f'{colored(f"❌ Failed to close {symbol} after {max_retries} attempts", "red")}')
     add_console_log(f"❌ Failed to close {symbol}", "error")
     return False
+
+
+# ============================================================================
+# COMPATIBILITY FUNCTIONS (Matching nice_funcs.py interface)
+# ============================================================================
+
+def chunk_kill(symbol, max_usd_order_size=None, slippage=None, account=None):
+    """
+    Close position - HyperLiquid version (no chunking needed).
+
+    This function provides compatibility with the Solana nice_funcs.py interface.
+    On HyperLiquid, positions can be closed in a single order, so this simply
+    wraps kill_switch.
+
+    Args:
+        symbol: Token symbol (e.g., 'BTC', 'ETH')
+        max_usd_order_size: Ignored (kept for compatibility)
+        slippage: Ignored (kept for compatibility)
+        account: HyperLiquid account object (optional, will create from env if not provided)
+
+    Returns:
+        Order result from kill_switch
+    """
+    if account is None:
+        account = _get_account_from_env()
+
+    cprint(f"🔪 chunk_kill called for {symbol} (using kill_switch)", "cyan")
+    return kill_switch(symbol, account)
+
+
+def partial_close(symbol, reduce_usd_amount, account=None, slippage=0.01):
+    """
+    Partially close a position by a USD notional amount.
+
+    Args:
+        symbol: Token symbol (e.g., 'BTC', 'ETH')
+        reduce_usd_amount: USD notional amount to reduce by
+        account: HyperLiquid account object (optional)
+        slippage: Slippage tolerance (default 1%)
+
+    Returns:
+        bool: True if partial close succeeded, False otherwise
+    """
+    if account is None:
+        account = _get_account_from_env()
+
+    try:
+        # Get current position
+        positions, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = get_position(symbol, account)
+
+        if not im_in_pos or pos_size == 0:
+            cprint(f"⚠️ No position to reduce for {symbol}", "yellow")
+            return False
+
+        # Calculate current notional
+        current_price = get_current_price(symbol)
+        current_notional = abs(pos_size) * current_price
+
+        # Validate reduce amount
+        if reduce_usd_amount >= current_notional:
+            cprint(f"⚠️ Reduce amount ${reduce_usd_amount:.2f} >= position ${current_notional:.2f}, using full close", "yellow")
+            return close_complete_position(symbol, account)
+
+        # Calculate size to close
+        reduce_size = reduce_usd_amount / current_price
+
+        # Get decimals and round
+        sz_decimals, _ = get_sz_px_decimals(symbol)
+        reduce_size = round(reduce_size, sz_decimals)
+
+        # Ensure minimum order value
+        if reduce_size * current_price < 10:
+            cprint(f"⚠️ Reduce value ${reduce_size * current_price:.2f} below $10 minimum", "yellow")
+            return False
+
+        cprint(f"📉 Partial close: reducing {symbol} by {reduce_size} (${reduce_usd_amount:.2f})", "yellow")
+
+        # Get prices
+        ask, bid, _ = ask_bid(symbol)
+
+        # Place reduce-only order
+        exchange = Exchange(account, constants.MAINNET_API_URL)
+
+        if is_long:
+            # Sell to reduce long
+            close_price = bid * (1 - slippage)
+            if symbol == 'BTC':
+                close_price = round(close_price)
+            else:
+                close_price = round(close_price, 1)
+
+            order_result = exchange.order(symbol, False, reduce_size, close_price,
+                                         {"limit": {"tif": "Ioc"}}, reduce_only=True)
+        else:
+            # Buy to reduce short
+            close_price = ask * (1 + slippage)
+            if symbol == 'BTC':
+                close_price = round(close_price)
+            else:
+                close_price = round(close_price, 1)
+
+            order_result = exchange.order(symbol, True, reduce_size, close_price,
+                                         {"limit": {"tif": "Ioc"}}, reduce_only=True)
+
+        if order_result and order_result.get('status') == 'ok':
+            cprint(f"✅ Partial close successful: reduced by ${reduce_usd_amount:.2f}", "green")
+            add_console_log(f"✅ Reduced {symbol} by ${reduce_usd_amount:.2f}", "trade")
+            return True
+        else:
+            error_msg = order_result.get('response', {}).get('error', 'Unknown error') if order_result else 'No response'
+            cprint(f"❌ Partial close failed: {error_msg}", "red")
+            return False
+
+    except Exception as e:
+        cprint(f"❌ Error in partial_close: {e}", "red")
+        traceback.print_exc()
+        return False
