@@ -814,16 +814,6 @@ class TradingAgent:
                         if POSITION_TRACKER_AVAILABLE:
                             age_hours = get_position_age_hours(symbol)
 
-                        position_data = {
-                            "symbol": symbol,
-                            "size": pos_size,
-                            "entry_price": entry_px,
-                            "pnl_percent": pnl_perc,
-                            "is_long": is_long,
-                            "side": "LONG" if is_long else "SHORT",
-                            "age_hours": age_hours,
-                        }
-
                         # Store for tracker sync (use combined size for all positions of this symbol)
                         if symbol not in exchange_positions:
                             exchange_positions[symbol] = {
@@ -833,15 +823,38 @@ class TradingAgent:
                             }
                         exchange_positions[symbol]["size"] += pos_size
 
+                        # Calculate margin_usd for rebalancing (notional / leverage)
+                        notional = abs(pos_size) * entry_px
+                        margin_usd = notional / self.leverage if self.leverage > 0 else notional
+
+                        # Aggregate position data per symbol (NOT as list)
+                        # This format is required by plan_rebalance_actions()
                         if symbol not in all_positions:
-                            all_positions[symbol] = []
-                        all_positions[symbol].append(position_data)
+                            all_positions[symbol] = {
+                                "symbol": symbol,
+                                "size": 0,
+                                "entry_price": entry_px,
+                                "pnl_percent": pnl_perc,
+                                "is_long": is_long,
+                                "side": "LONG" if is_long else "SHORT",
+                                "age_hours": age_hours,
+                                "margin_usd": 0,
+                                "notional": 0,
+                                "direction": "LONG" if is_long else "SHORT",
+                            }
+                        # Aggregate values for same symbol
+                        all_positions[symbol]["size"] += pos_size
+                        all_positions[symbol]["margin_usd"] += margin_usd
+                        all_positions[symbol]["notional"] += notional
+                        # Update pnl_percent to weighted average or latest
+                        all_positions[symbol]["pnl_percent"] = pnl_perc
                         total_position_count += 1
 
                         # Include age in display
                         age_str = f"{age_hours:.1f}h" if age_hours > 0 else "NEW"
+                        side_str = "LONG" if is_long else "SHORT"
                         cprint(
-                            f"   {symbol:<10} | {position_data['side']:<10} | "
+                            f"   {symbol:<10} | {side_str:<10} | "
                             f"Size: {pos_size:>10.4f} | Entry: ${entry_px:>10.2f} | "
                             f"PnL: {pnl_perc:>6.2f}% | Age: {age_str}",
                             "cyan",
@@ -2652,11 +2665,11 @@ Return ONLY valid JSON with the following structure:
             add_console_log(f"📡 API: Fetching positions from {EXCHANGE}...", "info")
             open_positions = self.fetch_all_open_positions()
             if open_positions:
-                # open_positions is {symbol: [list of position dicts]}
+                # open_positions is {symbol: {aggregated position dict}}
                 pos_items = []
-                for sym, positions_list in list(open_positions.items())[:3]:
-                    if positions_list and len(positions_list) > 0:
-                        side = positions_list[0].get("side", "UNK")
+                for sym, pos_data in list(open_positions.items())[:3]:
+                    if pos_data:
+                        side = pos_data.get("side", "UNK")
                         pos_items.append(f"{sym} ({side})")
                 pos_summary = ", ".join(pos_items)
                 if len(open_positions) > 3:
@@ -2940,11 +2953,11 @@ Return ONLY valid JSON with the following structure:
             try:
                 invested_total = 0.0
                 positions = self.fetch_all_open_positions()
-                for symbol, pos_list in positions.items():
-                    for p in pos_list:
-                        size = abs(float(p.get("size", 0)))
-                        entry_price = float(p.get("entry_price", 0))
-                        invested_total += size * entry_price
+                # positions is {symbol: {aggregated position dict}}
+                for symbol, pos_data in positions.items():
+                    size = abs(float(pos_data.get("size", 0)))
+                    entry_price = float(pos_data.get("entry_price", 0))
+                    invested_total += size * entry_price
             except Exception as e:
                 cprint(f"⚠️ Could not calculate invested total: {e}", "yellow")
                 invested_total = 0.0

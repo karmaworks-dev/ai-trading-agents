@@ -354,15 +354,28 @@ async function closeAllPositions() {
 
 function updateTrades(trades) {
     const container = document.getElementById('trades');
-    
+    const recentContainer = document.getElementById('recent-trades');
+    const tradesCountEl = document.getElementById('trades-count');
+
     if (!trades || trades.length === 0) {
         container.innerHTML = '<div class="empty-state"></div>';
+        if (recentContainer) {
+            recentContainer.innerHTML = '<div class="empty-state">No recent trades</div>';
+        }
+        if (tradesCountEl) {
+            tradesCountEl.textContent = '0';
+        }
         return;
     }
-    
-    // Show last 10 trades as simple text lines
-    container.innerHTML = trades.slice(0, 10).map(trade => {
-        const time = new Date(trade.timestamp).toLocaleTimeString('en-US', { 
+
+    // Update trades count badge
+    if (tradesCountEl) {
+        tradesCountEl.textContent = trades.length.toString();
+    }
+
+    // Helper function to render a trade row
+    const renderTrade = (trade) => {
+        const time = new Date(trade.timestamp).toLocaleTimeString('en-US', {
             hour12: false,
             hour: '2-digit',
             minute: '2-digit'
@@ -371,16 +384,26 @@ function updateTrades(trades) {
         const pnlStr = pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
         const pnlClass = pnl >= 0 ? 'positive' : 'negative';
         const side = trade.side || 'LONG';
-        
+        const action = trade.action || 'CLOSE';
+
         return `
             <div class="trade-line">
                 <span class="trade-time">${time}</span>
                 <span class="trade-symbol">${trade.symbol}</span>
                 <span class="side ${side.toLowerCase()}">${side}</span>
+                <span class="trade-action">${action}</span>
                 <span class="trade-pnl pnl ${pnlClass}">${pnlStr}</span>
             </div>
         `;
-    }).join('');
+    };
+
+    // Update Pulse Graph trades container (last 10)
+    container.innerHTML = trades.slice(0, 10).map(renderTrade).join('');
+
+    // Update Recent Trades card (last 20)
+    if (recentContainer) {
+        recentContainer.innerHTML = trades.slice(0, 20).map(renderTrade).join('');
+    }
 }
 
 // Update console logs
