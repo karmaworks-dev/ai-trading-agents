@@ -860,3 +860,185 @@ def format_exit_phase_summary(
         Formatted summary string
     """
     return f"PHASE 1 COMPLETE: Closed {closed_count}, Held {held_count} positions"
+
+
+# =============================================================================
+# POSITION CLOSE EXECUTION HELPERS
+# =============================================================================
+
+def verify_position_closed(
+    symbol: str,
+    get_position_fn,
+    account,
+    max_attempts: int = 5,
+    delay_seconds: float = 1.0
+) -> bool:
+    """
+    Verify that a position has been closed with retries.
+
+    Args:
+        symbol: Symbol to check
+        get_position_fn: Function to get position (e.g., n.get_position)
+        account: Account object
+        max_attempts: Max verification attempts
+        delay_seconds: Delay between attempts
+
+    Returns:
+        True if position is closed, False otherwise
+    """
+    import time as time_module
+
+    for attempt in range(1, max_attempts + 1):
+        time_module.sleep(delay_seconds)
+
+        try:
+            pos_data = get_position_fn(symbol, account)
+            _, im_in_pos, pos_size, _, _, _, _ = pos_data
+
+            if not im_in_pos or pos_size == 0:
+                return True
+            else:
+                cprint(f"   Verifying {symbol} closure... (attempt {attempt}/{max_attempts})", "yellow")
+
+        except Exception as verify_error:
+            cprint(f"   Verification error for {symbol}: {verify_error}", "yellow")
+            break
+
+    return False
+
+
+def execute_single_position_close(
+    symbol: str,
+    decision: Dict[str, Any],
+    close_position_fn,
+    get_position_fn,
+    account,
+    remove_from_tracker_fn=None,
+    tracker_available: bool = False
+) -> Tuple[bool, str]:
+    """
+    Execute close for a single position with verification.
+
+    Args:
+        symbol: Symbol to close
+        decision: Decision dict with action and reasoning
+        close_position_fn: Function to close position (e.g., n.close_complete_position)
+        get_position_fn: Function to get position (e.g., n.get_position)
+        account: Account object
+        remove_from_tracker_fn: Optional function to remove from position tracker
+        tracker_available: Whether position tracker is available
+
+    Returns:
+        Tuple of (success, message)
+    """
+    import time as time_module
+
+    cprint(f"\n   Closing {symbol}...", "yellow")
+    cprint(f"   Reason: {decision.get('reasoning', 'No reason')}", "white")
+
+    try:
+        close_result = close_position_fn(symbol, account)
+
+        if close_result:
+            # Verify position is closed
+            position_closed = verify_position_closed(
+                symbol, get_position_fn, account
+            )
+
+            if position_closed:
+                # Remove from tracker if available
+                if tracker_available and remove_from_tracker_fn:
+                    remove_from_tracker_fn(symbol)
+                    cprint(f"   Removed {symbol} from position tracker", "cyan")
+
+                cprint(f"{symbol} position closed successfully", "green", attrs=["bold"])
+                add_console_log(f"Closed {symbol} | Reason: {decision.get('reasoning', '')}", "success")
+                return True, "Position closed successfully"
+            else:
+                cprint(f"   {symbol} position close verification FAILED", "red", attrs=["bold"])
+                cprint(f"   Position may still be open - will retry next cycle", "yellow")
+                add_console_log(f"{symbol} close verification failed - position may still be open", "error")
+                return False, "Verification failed"
+        else:
+            cprint(f"   Position close returned False for {symbol}", "yellow")
+            add_console_log(f"Close may have failed for {symbol}", "warning")
+            return False, "Close returned False"
+
+    except Exception as e:
+        cprint(f"   Error closing {symbol}: {e}", "red")
+        import traceback
+        traceback.print_exc()
+        return False, str(e)
+    finally:
+        time_module.sleep(2)
+
+
+def execute_position_closes(
+    close_decisions: Dict[str, Dict[str, Any]],
+    close_position_fn,
+    get_position_fn,
+    account,
+    remove_from_tracker_fn=None,
+    tracker_available: bool = False
+) -> Tuple[int, List[str]]:
+    """
+    Execute closes for positions marked by AI.
+
+    Args:
+        close_decisions: Dict mapping symbol to decision dict
+        close_position_fn: Function to close position
+        get_position_fn: Function to get position
+        account: Account object
+        remove_from_tracker_fn: Optional function to remove from tracker
+        tracker_available: Whether tracker is available
+
+    Returns:
+        Tuple of (closed_count, failed_closes_list)
+    """
+    if not close_decisions:
+        return 0, []
+
+    cprint("\n" + "=" * 60, "red")
+    cprint("EXECUTING POSITION CLOSES", "white", "on_red", attrs=["bold"])
+    cprint("=" * 60, "red")
+
+    closed_count = 0
+    failed_closes = []
+
+    for symbol, decision in close_decisions.items():
+        if decision.get("action", "").upper() != "CLOSE":
+            continue
+
+        success, _ = execute_single_position_close(
+            symbol=symbol,
+            decision=decision,
+            close_position_fn=close_position_fn,
+            get_position_fn=get_position_fn,
+            account=account,
+            remove_from_tracker_fn=remove_from_tracker_fn,
+            tracker_available=tracker_available
+        )
+
+        if success:
+            closed_count += 1
+        else:
+            failed_closes.append(symbol)
+
+    # Summary logging
+    if closed_count > 0:
+        cprint(
+            f"\nSuccessfully closed {closed_count} position(s)",
+            "white",
+            "on_green",
+            attrs=["bold"],
+        )
+    else:
+        cprint("\n   No positions needed closing", "cyan")
+
+    if failed_closes:
+        cprint(f"\nFailed to close {len(failed_closes)} positions: {', '.join(failed_closes)}", "red")
+        cprint("These will be retried in the next cycle", "yellow")
+
+    cprint("=" * 60 + "\n", "red")
+
+    return closed_count, failed_closes

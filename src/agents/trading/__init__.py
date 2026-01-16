@@ -115,6 +115,10 @@ from .trade_executor import (
     should_trigger_take_profit,
     signal_contradicts_position,
     format_exit_phase_summary,
+    # Position close execution helpers
+    verify_position_closed,
+    execute_single_position_close,
+    execute_position_closes,
     DEFAULT_MIN_NOTIONAL,
     MARGIN_REQUIRED_ACTIONS,
     POSITION_REDUCE_ACTIONS,
@@ -218,6 +222,10 @@ __all__ = [
     "should_trigger_take_profit",
     "signal_contradicts_position",
     "format_exit_phase_summary",
+    # Position close execution helpers
+    "verify_position_closed",
+    "execute_single_position_close",
+    "execute_position_closes",
     "DEFAULT_MIN_NOTIONAL",
     "MARGIN_REQUIRED_ACTIONS",
     "POSITION_REDUCE_ACTIONS",
