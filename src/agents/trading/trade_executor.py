@@ -473,3 +473,303 @@ def categorize_exit_decision(
         return "CONFIRM"
 
     return "EXIT"
+
+
+# =============================================================================
+# TRADE RESULT HANDLING
+# =============================================================================
+
+def unpack_entry_result(
+    entry_result,
+    default_leverage: float
+) -> Tuple[Any, float]:
+    """
+    Unpack entry result which may be a tuple or single value.
+
+    Exchange functions may return:
+    - (success: bool, actual_leverage: int) tuple
+    - Just a result value
+
+    Args:
+        entry_result: Result from exchange entry function
+        default_leverage: Default leverage to use if not in result
+
+    Returns:
+        Tuple of (result, actual_leverage)
+    """
+    if isinstance(entry_result, tuple) and len(entry_result) == 2:
+        return entry_result[0], entry_result[1]
+    return entry_result, default_leverage
+
+
+def build_trade_result(
+    success: bool,
+    symbol: str,
+    action_type: str,
+    notional: float,
+    leverage: float,
+    side: str,
+    error: str = ""
+) -> Dict[str, Any]:
+    """
+    Build a standardized trade result dictionary.
+
+    Args:
+        success: Whether trade succeeded
+        symbol: Trading symbol
+        action_type: Type of action executed
+        notional: Notional value traded
+        leverage: Leverage used
+        side: Position side (LONG/SHORT)
+        error: Error message if failed
+
+    Returns:
+        Trade result dictionary
+    """
+    return {
+        "success": success,
+        "symbol": symbol,
+        "action": action_type,
+        "notional": notional,
+        "leverage": leverage,
+        "side": side,
+        "error": error,
+    }
+
+
+def log_open_trade_result(
+    success: bool,
+    symbol: str,
+    side: str,
+    notional: float,
+    leverage: float,
+    is_netting: bool = False
+) -> None:
+    """
+    Log the result of an open trade action.
+
+    Args:
+        success: Whether trade succeeded
+        symbol: Trading symbol
+        side: "LONG" or "SHORT"
+        notional: Actual notional after leverage adjustment
+        leverage: Actual leverage used
+        is_netting: Whether this was a netting operation
+    """
+    netting_suffix = " (netting)" if is_netting else ""
+
+    if success:
+        cprint(f"   ✅ {side} position opened{netting_suffix} @ {leverage}x leverage!", "green")
+        add_console_log(f"✅ Opened {side} {symbol} ${notional:.2f}{netting_suffix}", "success")
+    else:
+        cprint(f"   ❌ {side} position failed to open (no result returned)", "red")
+        add_console_log(f"❌ {symbol} {side} failed (no result)", "error")
+
+
+def log_close_trade_result(
+    success: bool,
+    symbol: str,
+    side: str,
+    notional: float = 0
+) -> None:
+    """
+    Log the result of a close trade action.
+
+    Args:
+        success: Whether close succeeded
+        symbol: Trading symbol
+        side: Original position side
+        notional: Position notional that was closed
+    """
+    if success:
+        cprint(f"   ✅ Position closed!", "green")
+        add_console_log(f"✅ Closed {symbol} {side}", "success")
+    else:
+        cprint(f"   ⚠️ Close may have failed for {symbol}", "yellow")
+        add_console_log(f"⚠️ Close failed for {symbol}", "warning")
+
+
+def log_reduce_trade_result(
+    success: bool,
+    symbol: str,
+    reduce_amount: float
+) -> None:
+    """
+    Log the result of a reduce trade action.
+
+    Args:
+        success: Whether reduce succeeded
+        symbol: Trading symbol
+        reduce_amount: Amount reduced
+    """
+    if success:
+        cprint(f"   ✅ Position reduced!", "green")
+        add_console_log(f"✅ Reduced {symbol} by ${reduce_amount:.2f}", "success")
+    else:
+        cprint(f"   ⚠️ partial_close not available", "yellow")
+
+
+# =============================================================================
+# ACTION PRE-VALIDATION
+# =============================================================================
+
+def validate_open_action_params(
+    action: Dict[str, Any],
+    leverage: float,
+    min_notional: float = DEFAULT_MIN_NOTIONAL
+) -> Tuple[bool, float, float, str]:
+    """
+    Validate parameters for OPEN_LONG/OPEN_SHORT/INCREASE actions.
+
+    Args:
+        action: Action dictionary
+        leverage: Current leverage setting
+        min_notional: Minimum notional requirement
+
+    Returns:
+        Tuple of (is_valid, margin_usd, notional, error_reason)
+    """
+    margin_usd = action.get("margin_usd", 0)
+
+    if margin_usd <= 0:
+        return False, 0, 0, "invalid margin_usd"
+
+    notional = calculate_notional(margin_usd, leverage)
+
+    meets_min, reason = check_min_notional(notional, min_notional)
+    if not meets_min:
+        return False, margin_usd, notional, reason
+
+    return True, margin_usd, notional, ""
+
+
+def validate_reduce_action_params(
+    action: Dict[str, Any],
+    is_in_position: bool,
+    position_size: float
+) -> Tuple[bool, float, str]:
+    """
+    Validate parameters for REDUCE action.
+
+    Args:
+        action: Action dictionary
+        is_in_position: Whether there's an existing position
+        position_size: Current position size
+
+    Returns:
+        Tuple of (is_valid, reduce_amount, error_reason)
+    """
+    reduce_amount = action.get("reduce_by_usd", 0)
+
+    if not is_in_position or position_size == 0:
+        return False, 0, "no position to reduce"
+
+    if reduce_amount <= 0:
+        return False, 0, "invalid reduce amount"
+
+    return True, reduce_amount, ""
+
+
+def validate_close_action_params(
+    is_in_position: bool,
+    position_size: float
+) -> Tuple[bool, str]:
+    """
+    Validate parameters for CLOSE action.
+
+    Args:
+        is_in_position: Whether there's an existing position
+        position_size: Current position size
+
+    Returns:
+        Tuple of (is_valid, error_reason)
+    """
+    if not is_in_position or position_size == 0:
+        return False, "no position to close"
+
+    return True, ""
+
+
+# =============================================================================
+# EXECUTION FLOW HELPERS
+# =============================================================================
+
+def determine_open_action_side(action_type: str) -> str:
+    """
+    Determine the side (LONG/SHORT) for an open action.
+
+    Args:
+        action_type: OPEN_LONG, OPEN_SHORT, or INCREASE
+
+    Returns:
+        "LONG" or "SHORT"
+    """
+    if action_type in ["OPEN_LONG"]:
+        return "LONG"
+    elif action_type in ["OPEN_SHORT"]:
+        return "SHORT"
+    return "UNKNOWN"
+
+
+def needs_position_close_first(
+    action_type: str,
+    is_in_position: bool,
+    is_long: bool,
+    exchange: str
+) -> bool:
+    """
+    Determine if existing position needs to be closed before opening new one.
+
+    For HyperLiquid, positions can be netted directly.
+    For other exchanges, opposite positions need to be closed first.
+
+    Args:
+        action_type: OPEN_LONG or OPEN_SHORT
+        is_in_position: Whether there's an existing position
+        is_long: Whether current position is long
+        exchange: Exchange name
+
+    Returns:
+        True if position should be closed first
+    """
+    if not is_in_position:
+        return False
+
+    # HyperLiquid supports netting
+    if exchange == "HYPERLIQUID":
+        return False
+
+    # Check if opposite direction
+    if action_type == "OPEN_LONG" and not is_long:
+        return True
+    if action_type == "OPEN_SHORT" and is_long:
+        return True
+
+    return False
+
+
+def has_opposite_position(
+    action_type: str,
+    is_in_position: bool,
+    is_long: bool
+) -> bool:
+    """
+    Check if there's an opposite position that would be netted.
+
+    Args:
+        action_type: OPEN_LONG or OPEN_SHORT
+        is_in_position: Whether there's an existing position
+        is_long: Whether current position is long
+
+    Returns:
+        True if opposite position exists
+    """
+    if not is_in_position:
+        return False
+
+    if action_type == "OPEN_LONG" and not is_long:
+        return True
+    if action_type == "OPEN_SHORT" and is_long:
+        return True
+
+    return False
