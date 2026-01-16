@@ -2734,35 +2734,7 @@ Return ONLY valid JSON with the following structure:
                 add_console_log("────────────────────────────────────", "info")
                 add_console_log(f"💰 PHASE 5: AI PORTFOLIO ALLOCATION", "info")
 
-                # Log account status
-                try:
-                    account_balance = get_account_balance(self.account)
-                    total_equity = n.get_account_value(self.account.address) if EXCHANGE == "HYPERLIQUID" else account_balance
-                    in_positions = total_equity - account_balance
-                    cash_buffer = total_equity * (CASH_PERCENTAGE / 100.0)
-                    allocatable = max(0, account_balance - cash_buffer)
-                    add_console_log(f"💰 Equity: ${total_equity:.2f} | Balance: ${account_balance:.2f} | In Positions: ${in_positions:.2f}", "info")
-                    add_console_log(f"   Cash Buffer ({CASH_PERCENTAGE}%): ${cash_buffer:.2f} | Allocatable: ${allocatable:.2f}", "info")
-                except Exception as e:
-                    add_console_log(f"⚠️ Could not fetch account status: {e}", "warning")
-
-                # Phase 1: Close contradictory positions (signals vs positions)
-                cprint("\n📌 Exit Contradictory Positions", "yellow", attrs=["bold"])
-                self.handle_exits()
-
-                if self.should_stop():
-                    add_console_log("⏹️ Stop signal received - skipping allocation", "warning")
-                    return
-
-                # Wait for exchange to process closes
-                cprint("⏳ Waiting for exchange to process...", "cyan")
-                time.sleep(3)
-
-                # Phase 2: AI-Driven Smart Allocation
-                add_console_log("🤖 Requesting AI allocation...", "info")
-                cprint("\n📌 AI Smart Allocation", "cyan", attrs=["bold"])
-                
-                # Log account status
+                # Calculate account status for allocation
                 try:
                     account_balance = get_account_balance(self.account)
                     total_equity = n.get_account_value(self.account.address) if EXCHANGE == "HYPERLIQUID" else account_balance
@@ -2773,7 +2745,7 @@ Return ONLY valid JSON with the following structure:
                     add_console_log(f"   Cash Buffer ({CASH_PERCENTAGE}%): ${cash_buffer:.2f} | Allocatable: ${allocatable_usd:.2f}", "info")
                 except Exception as e:
                     add_console_log(f"⚠️ Could not fetch account status: {e}", "warning")
-                    allocatable_usd = 0.0 # Set to 0 to prevent accidental over-allocation
+                    allocatable_usd = 0.0  # Set to 0 to prevent accidental over-allocation
 
                 # Phase 1: Close contradictory positions (signals vs positions)
                 cprint("\n📌 Exit Contradictory Positions", "yellow", attrs=["bold"])
