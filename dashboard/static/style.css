@@ -482,7 +482,7 @@ margin-left: -4px;
 .trade-label {
     font-size: 9px;
     text-transform: uppercase;
-    display: none,
+    display: block;
     letter-spacing: 0.5px;
     color: var(--text-muted);
     font-weight: 600;
@@ -2341,6 +2341,41 @@ animation-duration: 3.8s;
     transition: all 0.2s ease;
 }
 
+.strategy-card.disabled {
+    opacity: 0.6;
+}
+
+.strategy-params {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.strategy-param-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.strategy-param-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    width: 100px;
+}
+
+.strategy-param-input[type="checkbox"] {
+    width: auto;
+}
+
 .strategy-card:hover {
     border-color: var(--accent-blue);
 }
@@ -2358,6 +2393,32 @@ animation-duration: 3.8s;
 
 .strategy-info {
     flex: 1;
+}
+
+.strategy-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-edit-params {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    background: rgba(33, 150, 243, 0.1);
+    color: var(--accent-blue);
+    border: 1px solid var(--accent-blue);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-params:hover {
+    background: var(--accent-blue);
+    color: white;
 }
 
 .strategy-name {

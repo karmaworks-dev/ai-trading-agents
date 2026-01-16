@@ -59,7 +59,11 @@ class QuadRotationStrategy(BaseStrategy):
         self.abcd_bars_90 = 7  # Bars stoch4 must stay >90 for bullish shield
         self.abcd_bars_10 = 7  # Bars stoch4 must stay <10 for bearish shield
         
-        cprint("🕉️ Karma's Quad Rotation Strategy initialized with 4x Stochastics", "cyan")
+        # Multi-Timeframe Settings
+        self.timeframes = ['15m', '1h', '4h']
+        self.tf_weights = {'15m': 0.5, '1h': 1.0, '4h': 1.5}  # Higher weight for higher timeframes
+        
+        cprint(f"🕉️ Karma's Quad Rotation Strategy initialized with {len(self.timeframes)} timeframes", "cyan")
     
     def calculate_stochastic(self, data: pd.DataFrame, k_period: int, d_period: int, smooth: int = 1) -> tuple:
         """Calculate Stochastic oscillator"""
@@ -166,132 +170,152 @@ class QuadRotationStrategy(BaseStrategy):
         recent_bars = stoch4_d.iloc[-self.abcd_bars_10:]
         return all(val < self.extreme_oversold for val in recent_bars if not pd.isna(val))
     
+    def analyze_timeframe(self, token: str, timeframe: str) -> dict:
+        """Analyze a single timeframe for signals"""
+        # Get market data (need more history for higher timeframes)
+        days_back = 5 if timeframe == '15m' else 14 if timeframe == '1h' else 30
+        data = n.get_data(token, days_back=days_back, timeframe=timeframe)
+        
+        if data is None or data.empty:
+            return None
+            
+        # Ensure we have required columns
+        if not all(col in data.columns for col in ['open', 'high', 'low', 'close']):
+            return None
+            
+        # Calculate all 4 stochastics
+        stoch_d_values = {}
+        stoch_k_values = {}
+        
+        for name, config in self.stoch_configs.items():
+            stoch_k, stoch_d = self.calculate_stochastic(
+                data,
+                k_period=config['k'],
+                d_period=config['d'],
+                smooth=config['smooth']
+            )
+            stoch_k_values[name] = stoch_k
+            stoch_d_values[name] = stoch_d
+        
+        # Calculate weighted average
+        stoch_avg = self.calculate_weighted_average(stoch_d_values)
+        
+        # Get current values
+        stoch1_current = stoch_d_values['stoch1'].iloc[-1]
+        stoch1_previous = stoch_d_values['stoch1'].iloc[-2]
+        stoch_avg_current = stoch_avg.iloc[-1]
+        current_price = float(data['close'].iloc[-1])
+        
+        # Count agreements
+        bullish_count = self.count_stochs_sloping_up_below(stoch_d_values, self.oversold)
+        bearish_count = self.count_stochs_sloping_down_above(stoch_d_values, self.overbought)
+        
+        # Check super signals
+        super_signal_up = self.check_super_signal_up(stoch_d_values)
+        super_signal_down = self.check_super_signal_down(stoch_d_values)
+        
+        # Check trend shields
+        trend_shield_bullish = self.check_trend_shield_bullish(stoch_d_values['stoch4'])
+        trend_shield_bearish = self.check_trend_shield_bearish(stoch_d_values['stoch4'])
+        
+        return {
+            'stoch1_current': stoch1_current,
+            'stoch1_previous': stoch1_previous,
+            'stoch_avg_current': stoch_avg_current,
+            'bullish_count': bullish_count,
+            'bearish_count': bearish_count,
+            'super_signal_up': super_signal_up,
+            'super_signal_down': super_signal_down,
+            'trend_shield_bullish': trend_shield_bullish,
+            'trend_shield_bearish': trend_shield_bearish,
+            'current_price': current_price
+        }
+
     def generate_signals(self) -> dict:
-        """Generate trading signals based on Quad Rotation"""
+        """Generate trading signals based on Multi-Timeframe Quad Rotation"""
         try:
             for token in MONITORED_TOKENS:
-                # Get market data (need enough history for slowest stochastic)
-                data = n.get_data(token, days_back=5, timeframe='15m')
-                if data is None or data.empty:
+                tf_results = {}
+                for tf in self.timeframes:
+                    result = self.analyze_timeframe(token, tf)
+                    if result:
+                        tf_results[tf] = result
+                
+                if not tf_results:
                     continue
                 
-                # Ensure we have required columns
-                if not all(col in data.columns for col in ['open', 'high', 'low', 'close']):
+                # Base signal from 15m (trigger timeframe)
+                trigger_tf = '15m'
+                if trigger_tf not in tf_results:
                     continue
+                    
+                trigger_data = tf_results[trigger_tf]
                 
-                # Calculate all 4 stochastics
-                stoch_d_values = {}
-                stoch_k_values = {}
+                # Aggregate multi-timeframe confirmation
+                total_bullish_weight = 0
+                total_bearish_weight = 0
+                max_possible_weight = sum(self.tf_weights.values())
                 
-                for name, config in self.stoch_configs.items():
-                    stoch_k, stoch_d = self.calculate_stochastic(
-                        data, 
-                        k_period=config['k'],
-                        d_period=config['d'],
-                        smooth=config['smooth']
-                    )
-                    stoch_k_values[name] = stoch_k
-                    stoch_d_values[name] = stoch_d
-                
-                # Calculate weighted average
-                stoch_avg = self.calculate_weighted_average(stoch_d_values)
-                
-                # Get current values
-                stoch1_current = stoch_d_values['stoch1'].iloc[-1]
-                stoch1_previous = stoch_d_values['stoch1'].iloc[-2]
-                stoch_avg_current = stoch_avg.iloc[-1]
-                current_price = float(data['close'].iloc[-1])
-                
-                # Skip if we have NaN values
-                if pd.isna(stoch1_current) or pd.isna(stoch_avg_current):
-                    continue
-                
-                # Count agreements
-                bullish_count = self.count_stochs_sloping_up_below(stoch_d_values, self.oversold)
-                bearish_count = self.count_stochs_sloping_down_above(stoch_d_values, self.overbought)
-                
-                # Check super signals
-                super_signal_up = self.check_super_signal_up(stoch_d_values)
-                super_signal_down = self.check_super_signal_down(stoch_d_values)
-                
-                # Check trend shields
-                trend_shield_bullish = self.check_trend_shield_bullish(stoch_d_values['stoch4'])
-                trend_shield_bearish = self.check_trend_shield_bearish(stoch_d_values['stoch4'])
-                
+                for tf, data in tf_results.items():
+                    weight = self.tf_weights[tf]
+                    if data['bullish_count'] >= self.min_stoch_agreement or data['super_signal_up']:
+                        total_bullish_weight += weight
+                    if data['bearish_count'] >= self.min_stoch_agreement or data['super_signal_down']:
+                        total_bearish_weight += weight
+
                 # Initialize signal
                 signal = {
                     'token': token,
                     'signal': 0,
                     'direction': 'NEUTRAL',
                     'metadata': {
-                        'strategy_type': 'quad_rotation',
-                        'indicators': {
-                            'stoch1': float(stoch1_current),
-                            'stoch_avg': float(stoch_avg_current),
-                            'bullish_count': bullish_count,
-                            'bearish_count': bearish_count
+                        'strategy_type': 'quad_rotation_mtf',
+                        'timeframes_analyzed': list(tf_results.keys()),
+                        'trigger_indicators': {
+                            'stoch1': float(trigger_data['stoch1_current']),
+                            'stoch_avg': float(trigger_data['stoch_avg_current']),
+                            'bullish_count': trigger_data['bullish_count'],
+                            'bearish_count': trigger_data['bearish_count']
                         },
-                        'confidence_factors': {
-                            'super_signal_up': super_signal_up,
-                            'super_signal_down': super_signal_down,
-                            'trend_shield_bullish': trend_shield_bullish,
-                            'trend_shield_bearish': trend_shield_bearish
-                        },
-                        'analysis': {
-                            'current_price': current_price,
-                            'signal_type': None,
-                            'agreement_level': None
+                        'mtf_confidence': {
+                            'bullish_weight': total_bullish_weight / max_possible_weight,
+                            'bearish_weight': total_bearish_weight / max_possible_weight
                         }
                     }
                 }
                 
                 # BULLISH SIGNAL LOGIC
-                # Trigger: Stoch1 crosses above oversold AND is above average
-                bullish_trigger = (stoch1_previous <= self.oversold and 
-                                  stoch1_current > self.oversold and 
-                                  stoch1_current > stoch_avg_current)
+                bullish_trigger = (trigger_data['stoch1_previous'] <= self.oversold and
+                                  trigger_data['stoch1_current'] > self.oversold and
+                                  trigger_data['stoch1_current'] > trigger_data['stoch_avg_current'])
                 
-                # Confirmation: Minimum agreement OR super signal
-                bullish_confirmation = (bullish_count >= self.min_stoch_agreement or super_signal_up)
+                # Bullish Shield Check across timeframes (at least higher TFs should not be extreme bearish)
+                shield_allows_long = not any(tf_results[tf]['trend_shield_bearish'] for tf in tf_results if tf != '15m')
                 
-                # Shield: Don't enter if bearish shield is active
-                shield_allows_long = not trend_shield_bearish
-                
-                if bullish_trigger and bullish_confirmation and shield_allows_long:
-                    signal_strength = 1.0 if super_signal_up else 0.7 + (bullish_count / 4 * 0.3)
+                if bullish_trigger and total_bullish_weight > 0 and shield_allows_long:
+                    # Signal strength weighted by MTF agreement
+                    signal_strength = (total_bullish_weight / max_possible_weight)
                     signal.update({
                         'signal': signal_strength,
                         'direction': 'BUY'
                     })
-                    signal['metadata']['analysis']['signal_type'] = 'SUPER UP' if super_signal_up else f'{bullish_count}/4 Agreement'
-                    signal['metadata']['analysis']['agreement_level'] = bullish_count
-                    
-                    cprint(f"🕉️ Bullish Signal: {token} | Stoch1: {stoch1_current:.1f} | "
-                          f"Agreement: {bullish_count}/4 | Super: {super_signal_up}", "green")
+                    cprint(f"🕉️ MTF Bullish Signal: {token} | Strength: {signal_strength:.2f}", "green")
                 
                 # BEARISH SIGNAL LOGIC
-                # Trigger: Stoch1 crosses below overbought AND is below average
-                bearish_trigger = (stoch1_previous >= self.overbought and 
-                                  stoch1_current < self.overbought and 
-                                  stoch1_current < stoch_avg_current)
+                bearish_trigger = (trigger_data['stoch1_previous'] >= self.overbought and
+                                  trigger_data['stoch1_current'] < self.overbought and
+                                  trigger_data['stoch1_current'] < trigger_data['stoch_avg_current'])
                 
-                # Confirmation: Minimum agreement OR super signal
-                bearish_confirmation = (bearish_count >= self.min_stoch_agreement or super_signal_down)
+                # Bearish Shield Check across timeframes
+                shield_allows_short = not any(tf_results[tf]['trend_shield_bullish'] for tf in tf_results if tf != '15m')
                 
-                # Shield: Don't enter if bullish shield is active
-                shield_allows_short = not trend_shield_bullish
-                
-                if bearish_trigger and bearish_confirmation and shield_allows_short:
-                    signal_strength = 1.0 if super_signal_down else 0.7 + (bearish_count / 4 * 0.3)
+                if bearish_trigger and total_bearish_weight > 0 and shield_allows_short:
+                    signal_strength = (total_bearish_weight / max_possible_weight)
                     signal.update({
                         'signal': signal_strength,
                         'direction': 'SELL'
                     })
-                    signal['metadata']['analysis']['signal_type'] = 'SUPER DOWN' if super_signal_down else f'{bearish_count}/4 Agreement'
-                    signal['metadata']['analysis']['agreement_level'] = bearish_count
-                    
-                    cprint(f"🕉️ Bearish Signal: {token} | Stoch1: {stoch1_current:.1f} | "
-                          f"Agreement: {bearish_count}/4 | Super: {super_signal_down}", "red")
+                    cprint(f"🕉️ MTF Bearish Signal: {token} | Strength: {signal_strength:.2f}", "red")
                 
                 # Validate and format signal
                 if signal['direction'] != 'NEUTRAL':

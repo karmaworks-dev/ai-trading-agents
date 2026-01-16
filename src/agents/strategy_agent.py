@@ -12,6 +12,7 @@ from termcolor import cprint
 
 from src.config import *
 from src.models import model_factory
+from src.utils.logging_utils import add_console_log
 
 # ============================================================
 # 🏦 Exchange Manager (optional)
@@ -215,11 +216,15 @@ class StrategyAgent:
         """Collect and evaluate signals from all enabled strategies."""
         try:
             signals = []
-            print(f"\n🔍 Analyzing {token} with {len(self.enabled_strategies)} strategies...")
+            msg = f"🔍 Analyzing {token} with {len(self.enabled_strategies)} strategies..."
+            print(f"\n{msg}")
+            add_console_log(msg, "info")
 
             for strategy in self.enabled_strategies:
+                add_console_log(f"🧠 Strategy: {strategy.name} analyzing {token}...", "info")
                 signal = strategy.generate_signals()
                 if signal and signal["token"] == token:
+                    add_console_log(f"✅ {strategy.name} generated {signal['direction']} signal ({signal['signal']})", "success")
                     signals.append({
                         "token": signal["token"],
                         "strategy_name": strategy.name,
@@ -255,10 +260,14 @@ class StrategyAgent:
             approved_signals = []
             for signal, decision in zip(signals, evaluation["decisions"]):
                 if "EXECUTE" in decision.upper():
-                    print(f"✅ LLM approved {signal['strategy_name']}'s {signal['direction']} signal")
+                    msg = f"✅ LLM approved {signal['strategy_name']}'s {signal['direction']} signal"
+                    print(msg)
+                    add_console_log(msg, "success")
                     approved_signals.append(signal)
                 else:
-                    print(f"❌ LLM rejected {signal['strategy_name']}'s {signal['direction']} signal")
+                    msg = f"❌ LLM rejected {signal['strategy_name']}'s {signal['direction']} signal"
+                    print(msg)
+                    add_console_log(msg, "warning")
 
             # --- Optional execution ---
             if approved_signals:

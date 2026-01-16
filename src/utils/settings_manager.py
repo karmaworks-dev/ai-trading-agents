@@ -124,6 +124,8 @@ DEFAULT_SETTINGS = {
         "compounding_agr": True,    # Adaptive position sizing strategy
     },
 
+    "starting_balance": 10.0,       # Initial capital for PnL calculation
+
     # Timestamp
     "last_updated": None
 }
@@ -479,5 +481,14 @@ def validate_settings(settings):
         valid, error = validate_swarm_models(settings["swarm_models"])
         if not valid:
             errors.append(error)
+
+    # Validate starting_balance
+    if "starting_balance" in settings:
+        try:
+            start_bal = float(settings["starting_balance"])
+            if start_bal <= 0:
+                errors.append("starting_balance must be greater than 0")
+        except (ValueError, TypeError):
+            errors.append("starting_balance must be a number")
 
     return len(errors) == 0, errors

@@ -108,7 +108,7 @@ async function updateDashboard() {
         
         // Update all metrics
         updateBalance(data.account_balance, data.total_equity);
-        updatePnL(data.pnl);
+        updatePnL(data.pnl, data.starting_balance);
         updateStatus(data.status, data.agent_running);
         updateExchange(data.exchange);
         updateTimestamp();
@@ -140,15 +140,21 @@ function updateBalance(available, equity) {
 }
 
 // Update P&L
-function updatePnL(pnl) {
+function updatePnL(pnl, startingBalance = null) {
     const pnlEl = document.getElementById('pnl');
     const pnlPctEl = document.getElementById('pnl-pct');
+    
+    // If startingBalance not provided by API, try to get from UI input, fallback to 10
+    if (startingBalance === null || isNaN(startingBalance)) {
+        const input = document.getElementById('starting-balance');
+        startingBalance = (input && input.value) ? parseFloat(input.value) : 10;
+    }
     
     const pnlClass = pnl >= 0 ? 'positive' : 'negative';
     pnlEl.className = `value pnl ${pnlClass}`;
     pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
     
-    const pnlPct = ((pnl / 10) * 100).toFixed(2); // Assuming $10 starting balance
+    const pnlPct = ((pnl / startingBalance) * 100).toFixed(2);
     pnlPctEl.className = `sublabel ${pnlClass}`;
     pnlPctEl.textContent = `${pnl >= 0 ? '+' : ''}${pnlPct}%`;
 }
@@ -773,6 +779,7 @@ function applySettings(settings) {
     document.getElementById('max-position-pct').value = settings.max_position_pct || 90;
     document.getElementById('leverage').value = settings.leverage || 20;
     document.getElementById('cash-buffer-pct').value = settings.cash_buffer_pct || 10;
+    document.getElementById('starting-balance').value = settings.starting_balance || 10;
     
     // Position management
     document.getElementById('min-age-hours').value = settings.min_age_hours || 0.1;
@@ -844,6 +851,9 @@ function renderStrategies(strategies) {
         const riskClass = `risk-${strategy.risk_level}`;
         const cardClass = strategy.enabled ? '' : 'disabled';
         const timeframes = strategy.recommended_timeframes.join(', ');
+        
+        // Check if strategy has parameters to show "Edit" button
+        const hasParams = strategy.parameters && Object.keys(strategy.parameters).length > 0;
 
         return `
             <div class="strategy-card ${cardClass}" data-strategy-id="${strategy.id}">
@@ -852,12 +862,19 @@ function renderStrategies(strategies) {
                         <div class="strategy-name">${strategy.name}</div>
                         <div class="strategy-category">${strategy.category}</div>
                     </div>
-                    <label class="strategy-toggle">
-                        <input type="checkbox"
-                               ${strategy.enabled ? 'checked' : ''}
-                               onchange="toggleStrategy('${strategy.id}', this.checked)">
-                        <span class="toggle-slider"></span>
-                    </label>
+                    <div class="strategy-actions">
+                        ${hasParams ? `
+                            <button class="btn-small btn-edit-params" onclick="openStrategyParams('${strategy.id}', '${strategy.name}')" title="Edit Parameters">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            </button>
+                        ` : ''}
+                        <label class="strategy-toggle">
+                            <input type="checkbox"
+                                   ${strategy.enabled ? 'checked' : ''}
+                                   onchange="toggleStrategy('${strategy.id}', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
                 <div class="strategy-description">${strategy.description}</div>
                 <div class="strategy-meta">
@@ -878,6 +895,134 @@ function renderStrategies(strategies) {
             </div>
         `;
     }).join('');
+}
+
+let activeStrategyId = null;
+
+async function openStrategyParams(strategyId, strategyName) {
+    activeStrategyId = strategyId;
+    document.getElementById('strategy-params-title').textContent = `${strategyName} Parameters`;
+    const container = document.getElementById('strategy-params-container');
+    container.innerHTML = '<div class="loading-state">Loading parameters...</div>';
+    document.getElementById('strategy-params-status').textContent = '';
+    
+    document.getElementById('strategy-params-modal').classList.add('show');
+
+    try {
+        const response = await fetch(`/api/strategies/${strategyId}/parameters`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderStrategyParams(data.parameters);
+        } else {
+            container.innerHTML = `<div class="error-message">${data.message}</div>`;
+        }
+    } catch (error) {
+        console.error('Error loading strategy parameters:', error);
+        container.innerHTML = '<div class="error-message">Failed to load parameters</div>';
+    }
+}
+
+function closeStrategyParams(event) {
+    if (!event || event.target.id === 'strategy-params-modal' || event.target.classList.contains('modal-close')) {
+        document.getElementById('strategy-params-modal').classList.remove('show');
+        activeStrategyId = null;
+    }
+}
+
+function renderStrategyParams(parameters) {
+    const container = document.getElementById('strategy-params-container');
+    
+    if (Object.keys(parameters).length === 0) {
+        container.innerHTML = '<div class="info-box">No adjustable parameters for this strategy.</div>';
+        return;
+    }
+
+    container.innerHTML = Object.entries(parameters).map(([key, config]) => {
+        let inputHtml = '';
+        const id = `param-${key}`;
+
+        if (config.type === 'number') {
+            inputHtml = `
+                <div class="input-with-hint">
+                    <input type="number" id="${id}" class="setting-input"
+                           min="${config.min}" max="${config.max}" step="${config.step}"
+                           value="${config.value}" />
+                    <span class="input-hint">Range: ${config.min} to ${config.max}</span>
+                </div>
+            `;
+        } else if (config.type === 'boolean') {
+            inputHtml = `
+                <label class="toggle-switch">
+                    <input type="checkbox" id="${id}" ${config.value ? 'checked' : ''} />
+                    <span class="toggle-slider"></span>
+                </label>
+            `;
+        } else if (config.type === 'select') {
+            inputHtml = `
+                <select id="${id}" class="setting-input">
+                    ${config.options.map(opt => `
+                        <option value="${opt}" ${opt === config.value ? 'selected' : ''}>${opt}</option>
+                    `).join('')}
+                </select>
+            `;
+        }
+
+        return `
+            <div class="setting-group" data-param-key="${key}">
+                <label for="${id}">${config.label}</label>
+                ${inputHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+async function saveStrategyParameters() {
+    if (!activeStrategyId) return;
+
+    const container = document.getElementById('strategy-params-container');
+    const statusEl = document.getElementById('strategy-params-status');
+    const params = {};
+
+    container.querySelectorAll('.setting-group').forEach(group => {
+        const key = group.dataset.paramKey;
+        const input = group.querySelector('input, select');
+        
+        if (input.type === 'checkbox') {
+            params[key] = input.checked;
+        } else if (input.type === 'number') {
+            params[key] = parseFloat(input.value);
+        } else {
+            params[key] = input.value;
+        }
+    });
+
+    try {
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'validation-message info';
+
+        const response = await fetch(`/api/strategies/${activeStrategyId}/parameters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusEl.textContent = 'Parameters saved successfully!';
+            statusEl.className = 'validation-message success';
+            addConsoleMessage(`Updated ${activeStrategyId} parameters`, 'success');
+            setTimeout(() => closeStrategyParams(), 1500);
+        } else {
+            statusEl.textContent = data.message || 'Failed to save parameters';
+            statusEl.className = 'validation-message error';
+        }
+    } catch (error) {
+        console.error('Error saving strategy parameters:', error);
+        statusEl.textContent = 'Error saving parameters';
+        statusEl.className = 'validation-message error';
+    }
 }
 
 // Toggle a strategy on/off
@@ -1524,7 +1669,13 @@ function loadAccountProfile() {
                 const totalPnl = currentBalance - startBalance;
 
                 const pnlEl = document.getElementById('account-total-pnl');
-                pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
+                
+                // Get current starting balance for the profile view too
+                const startingBalanceInput = document.getElementById('starting-balance');
+                const startingBalance = (startingBalanceInput && startingBalanceInput.value) ? parseFloat(startingBalanceInput.value) : 10;
+                const pnlPct = ((totalPnl / startingBalance) * 100).toFixed(2);
+                
+                pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)} (${totalPnl >= 0 ? '+' : ''}${pnlPct}%)`;
                 pnlEl.className = `stat-value pnl ${totalPnl >= 0 ? 'positive' : 'negative'}`;
             }
         })
