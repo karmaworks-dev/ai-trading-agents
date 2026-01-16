@@ -132,6 +132,7 @@ from src.agents.trading.trade_executor import (
     needs_position_close_first,
     # Phase 2.2 helpers for handle_exits refactoring
     should_trigger_stop_loss,
+    should_trigger_take_profit,
     signal_contradicts_position,
     format_exit_phase_summary,
     DEFAULT_MIN_NOTIONAL,
@@ -963,23 +964,17 @@ class TradingAgent:
         for symbol, positions in positions_data.items():
             for pos in positions:
                 pnl_percent = pos["pnl_percent"]
-                
-                # Force TP/SL regardless of AI analysis
-                if pnl_percent >= TAKE_PROFIT_THRESHOLD:
-                    validated_decisions[symbol] = {
-                        "action": "CLOSE", 
-                        "reasoning": f"TAKE PROFIT: {pnl_percent:.2f}% >= {TAKE_PROFIT_THRESHOLD}%",
-                        "confidence": 100
-                    }
+
+                # Force TP/SL using helpers
+                if should_trigger_take_profit(pnl_percent, TAKE_PROFIT_THRESHOLD):
+                    reason = f"TAKE PROFIT: {pnl_percent:.2f}% >= {TAKE_PROFIT_THRESHOLD}%"
+                    validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
                     cprint(f"🚨 {symbol}: TAKE PROFIT TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
                     add_console_log(f"TAKE PROFIT: Closing {symbol} at +{pnl_percent:.2f}%", "success")
                     continue
-                elif pnl_percent <= STOP_LOSS_THRESHOLD:
-                    validated_decisions[symbol] = {
-                        "action": "CLOSE",
-                        "reasoning": f"STOP LOSS: {pnl_percent:.2f}% <= {STOP_LOSS_THRESHOLD}%",
-                        "confidence": 100
-                    }
+                elif should_trigger_stop_loss(pnl_percent, STOP_LOSS_THRESHOLD):
+                    reason = f"STOP LOSS: {pnl_percent:.2f}% <= {STOP_LOSS_THRESHOLD}%"
+                    validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
                     cprint(f"🚨 {symbol}: STOP LOSS TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
                     add_console_log(f"STOP LOSS: Closing {symbol} at {pnl_percent:.2f}%", "warning")
                     continue

@@ -796,6 +796,23 @@ def should_trigger_stop_loss(
     return pnl_percent <= threshold
 
 
+def should_trigger_take_profit(
+    pnl_percent: float,
+    threshold: float = 6.0
+) -> bool:
+    """
+    Check if take profit should be triggered.
+
+    Args:
+        pnl_percent: Current PnL percentage
+        threshold: Take profit threshold (positive number)
+
+    Returns:
+        True if take profit should trigger
+    """
+    return pnl_percent >= threshold
+
+
 def signal_contradicts_position(
     signal_action: str,
     is_long: bool

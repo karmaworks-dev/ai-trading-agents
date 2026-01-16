@@ -94,6 +94,7 @@ from .trade_executor import (
     needs_position_close_first,
     # Exit phase helpers
     should_trigger_stop_loss,
+    should_trigger_take_profit,
     signal_contradicts_position,
     format_exit_phase_summary,
     DEFAULT_MIN_NOTIONAL,
@@ -181,6 +182,7 @@ __all__ = [
     "needs_position_close_first",
     # Exit phase helpers
     "should_trigger_stop_loss",
+    "should_trigger_take_profit",
     "signal_contradicts_position",
     "format_exit_phase_summary",
     "DEFAULT_MIN_NOTIONAL",
