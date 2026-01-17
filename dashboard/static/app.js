@@ -353,12 +353,10 @@ async function closeAllPositions() {
 // Update trades history (simplified plain text)
 
 function updateTrades(trades) {
-    const container = document.getElementById('trades');
     const recentContainer = document.getElementById('recent-trades');
     const tradesCountEl = document.getElementById('trades-count');
 
     if (!trades || trades.length === 0) {
-        container.innerHTML = '<div class="empty-state"></div>';
         if (recentContainer) {
             recentContainer.innerHTML = '<div class="empty-state">No recent trades</div>';
         }
@@ -397,10 +395,7 @@ function updateTrades(trades) {
         `;
     };
 
-    // Update Pulse Graph trades container (last 10)
-    container.innerHTML = trades.slice(0, 10).map(renderTrade).join('');
-
-    // Update Recent Trades card (last 20)
+    // Update Recent Trades card only (last 20)
     if (recentContainer) {
         recentContainer.innerHTML = trades.slice(0, 20).map(renderTrade).join('');
     }
