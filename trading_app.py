@@ -129,6 +129,10 @@ stop_agent_flag = False
 shutdown_in_progress = False
 stop_event = threading.Event()  # Event for clean shutdown signaling
 
+# Position refresh control - forces API fetch after trades
+_last_trade_time = 0.0  # Timestamp of last trade execution
+_POSITION_REFRESH_GRACE_PERIOD = 10.0  # Seconds to use API after a trade
+
 # Global variables for WebSocket position streaming
 websocket_positions = []
 websocket_positions_lock = threading.Lock()
@@ -675,8 +679,17 @@ def get_account_data():
         }
 
 
+def mark_trade_executed():
+    """Mark that a trade was executed - forces position refresh via API"""
+    global _last_trade_time
+    _last_trade_time = time.time()
+    print("📍 Trade executed - position refresh marked")
+
+
 def get_positions_data():
     """Fetch ALL live open positions from HyperLiquid using WebSocket (real-time)"""
+    global _last_trade_time
+
     if not EXCHANGE_CONNECTED or n is None:
         print("⚠️ Exchange not connected or nice_funcs not loaded")
         return []
@@ -685,50 +698,58 @@ def get_positions_data():
         # Get account
         account = _get_account()
         address = os.getenv("ACCOUNT_ADDRESS", account.address)
-        
-        # Try WebSocket first for real-time data
-        try:
-            from src.websocket import get_data_manager, is_websocket_connected
-            if is_websocket_connected():
-                dm = get_data_manager()
-                ws_positions = dm.get_all_positions(address)
-                if ws_positions:
-                    positions = []
-                    for pos in ws_positions:
-                        symbol = pos.get('coin', pos.get('symbol', 'Unknown'))
-                        size = pos.get('size', 0)
-                        if size == 0:
-                            continue
-                        entry_px = pos.get('entry_price', 0)
-                        pnl_perc = pos.get('pnl_percent', 0)
-                        is_long = size > 0
-                        side = "LONG" if is_long else "SHORT"
-                        
-                        # Get mark price from WebSocket
-                        try:
-                            mark_price = dm.get_current_price(symbol)
-                        except Exception:
-                            mark_price = entry_px
-                        
-                        position_value = abs(size) * mark_price
-                        # Get unrealized_pnl from dict (pos is a dictionary from to_dict())
-                        unrealized_pnl = pos.get('unrealized_pnl', 0)
-                        positions.append({
-                            "symbol": symbol,
-                            "size": float(size),
-                            "entry_price": float(entry_px),
-                            "mark_price": float(mark_price),
-                            "position_value": float(position_value),
-                            "pnl_percent": float(pnl_perc),
-                            "pnl_value": float(unrealized_pnl),
-                            "side": side
-                        })
-                    print(f"📡 WebSocket: {len(positions)} positions (real-time)")
-                    return positions
-        except ImportError:
-            print("⚠️ WebSocket module not available, falling back to API")
-        except Exception as ws_err:
-            print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
+
+        # Check if a trade happened recently - use API fallback for fresh data
+        time_since_trade = time.time() - _last_trade_time
+        use_api_fallback = time_since_trade < _POSITION_REFRESH_GRACE_PERIOD
+
+        if use_api_fallback:
+            print(f"📍 Recent trade detected ({time_since_trade:.1f}s ago) - using API for fresh positions")
+
+        # Try WebSocket first for real-time data (unless trade happened recently)
+        if not use_api_fallback:
+            try:
+                from src.websocket import get_data_manager, is_websocket_connected
+                if is_websocket_connected():
+                    dm = get_data_manager()
+                    ws_positions = dm.get_all_positions(address)
+                    if ws_positions:
+                        positions = []
+                        for pos in ws_positions:
+                            symbol = pos.get('coin', pos.get('symbol', 'Unknown'))
+                            size = pos.get('size', 0)
+                            if size == 0:
+                                continue
+                            entry_px = pos.get('entry_price', 0)
+                            pnl_perc = pos.get('pnl_percent', 0)
+                            is_long = size > 0
+                            side = "LONG" if is_long else "SHORT"
+
+                            # Get mark price from WebSocket
+                            try:
+                                mark_price = dm.get_current_price(symbol)
+                            except Exception:
+                                mark_price = entry_px
+
+                            position_value = abs(size) * mark_price
+                            # Get unrealized_pnl from dict (pos is a dictionary from to_dict())
+                            unrealized_pnl = pos.get('unrealized_pnl', 0)
+                            positions.append({
+                                "symbol": symbol,
+                                "size": float(size),
+                                "entry_price": float(entry_px),
+                                "mark_price": float(mark_price),
+                                "position_value": float(position_value),
+                                "pnl_percent": float(pnl_perc),
+                                "pnl_value": float(unrealized_pnl),
+                                "side": side
+                            })
+                        print(f"📡 WebSocket: {len(positions)} positions (real-time)")
+                        return positions
+            except ImportError:
+                print("⚠️ WebSocket module not available, falling back to API")
+            except Exception as ws_err:
+                print(f"⚠️ WebSocket error: {ws_err}, falling back to API")
 
         # Fallback to API polling
         print(f"🔍 API fallback: Fetching positions for {address[:8]}...")

@@ -10,6 +10,9 @@ to enable easier testing and reuse.
 
 from typing import Dict, Any, List, Tuple, Optional
 from datetime import datetime
+from pathlib import Path
+import json
+import os
 
 # Import logging utilities with fallback
 try:
@@ -38,6 +41,87 @@ MARGIN_REQUIRED_ACTIONS = ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]
 
 # Action types that reduce positions
 POSITION_REDUCE_ACTIONS = ["CLOSE", "REDUCE"]
+
+# Trades file path - stored in project root data/ folder
+# This ensures trades are visible to the web dashboard
+_TRADES_FILE = None
+
+def _get_trades_file():
+    """Get the trades file path, creating the data directory if needed."""
+    global _TRADES_FILE
+    if _TRADES_FILE is None:
+        # Navigate from src/agents/trading/ to project root
+        project_root = Path(__file__).parent.parent.parent.parent
+        data_dir = project_root / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        _TRADES_FILE = data_dir / "trades.json"
+    return _TRADES_FILE
+
+
+def save_trade(
+    symbol: str,
+    side: str,
+    action: str,
+    notional: float = 0,
+    pnl: float = 0,
+    entry_price: float = 0,
+    exit_price: float = 0,
+    reason: str = ""
+) -> None:
+    """
+    Save a completed trade to the trades file for dashboard display.
+
+    Args:
+        symbol: Trading symbol (e.g., "BTC", "ETH")
+        side: Position side ("LONG" or "SHORT")
+        action: Trade action ("OPEN" or "CLOSE")
+        notional: Position notional value in USD
+        pnl: Realized profit/loss (for CLOSE trades)
+        entry_price: Entry price (for OPEN trades)
+        exit_price: Exit price (for CLOSE trades)
+        reason: Reason for trade (optional)
+    """
+    try:
+        trades_file = _get_trades_file()
+
+        # Load existing trades
+        if trades_file.exists():
+            with open(trades_file, 'r') as f:
+                content = f.read()
+                trades = json.loads(content) if content.strip() else []
+        else:
+            trades = []
+
+        # Create trade record
+        trade_data = {
+            "timestamp": datetime.now().isoformat(),
+            "symbol": symbol,
+            "side": side,
+            "action": action,
+            "notional": round(notional, 2),
+            "pnl": round(pnl, 2),
+            "entry_price": round(entry_price, 4) if entry_price else 0,
+            "exit_price": round(exit_price, 4) if exit_price else 0,
+            "reason": reason
+        }
+
+        trades.append(trade_data)
+        trades = trades[-100:]  # Keep last 100 trades
+
+        with open(trades_file, 'w') as f:
+            json.dump(trades, f, indent=2)
+
+        cprint(f"   💾 Trade saved: {action} {side} {symbol}", "cyan")
+
+        # Notify trading_app that a trade happened (for position refresh)
+        try:
+            from trading_app import mark_trade_executed
+            mark_trade_executed()
+        except ImportError:
+            pass  # trading_app not available (e.g., running standalone)
+
+    except Exception as e:
+        cprint(f"   ⚠️ Error saving trade: {e}", "yellow")
 
 
 # =============================================================================
@@ -546,7 +630,7 @@ def log_open_trade_result(
     is_netting: bool = False
 ) -> None:
     """
-    Log the result of an open trade action.
+    Log the result of an open trade action and save to trades file.
 
     Args:
         success: Whether trade succeeded
@@ -561,6 +645,14 @@ def log_open_trade_result(
     if success:
         cprint(f"   ✅ {side} position opened{netting_suffix} @ {leverage}x leverage!", "green")
         add_console_log(f"✅ Opened {side} {symbol} ${notional:.2f}{netting_suffix}", "success")
+        # Save trade to file for dashboard display
+        save_trade(
+            symbol=symbol,
+            side=side,
+            action="OPEN",
+            notional=notional,
+            reason=f"AI allocation @ {leverage}x"
+        )
     else:
         cprint(f"   ❌ {side} position failed to open (no result returned)", "red")
         add_console_log(f"❌ {symbol} {side} failed (no result)", "error")
@@ -570,20 +662,33 @@ def log_close_trade_result(
     success: bool,
     symbol: str,
     side: str,
-    notional: float = 0
+    notional: float = 0,
+    pnl: float = 0,
+    reason: str = ""
 ) -> None:
     """
-    Log the result of a close trade action.
+    Log the result of a close trade action and save to trades file.
 
     Args:
         success: Whether close succeeded
         symbol: Trading symbol
         side: Original position side
         notional: Position notional that was closed
+        pnl: Realized profit/loss from the trade
+        reason: Reason for closing (e.g., "TP/SL", "AI signal")
     """
     if success:
         cprint(f"   ✅ Position closed!", "green")
         add_console_log(f"✅ Closed {symbol} {side}", "success")
+        # Save trade to file for dashboard display
+        save_trade(
+            symbol=symbol,
+            side=side,
+            action="CLOSE",
+            notional=notional,
+            pnl=pnl,
+            reason=reason or "AI allocation"
+        )
     else:
         cprint(f"   ⚠️ Close may have failed for {symbol}", "yellow")
         add_console_log(f"⚠️ Close failed for {symbol}", "warning")
@@ -592,19 +697,29 @@ def log_close_trade_result(
 def log_reduce_trade_result(
     success: bool,
     symbol: str,
-    reduce_amount: float
+    reduce_amount: float,
+    side: str = "LONG"
 ) -> None:
     """
-    Log the result of a reduce trade action.
+    Log the result of a reduce trade action and save to trades file.
 
     Args:
         success: Whether reduce succeeded
         symbol: Trading symbol
         reduce_amount: Amount reduced
+        side: Position side being reduced
     """
     if success:
         cprint(f"   ✅ Position reduced!", "green")
         add_console_log(f"✅ Reduced {symbol} by ${reduce_amount:.2f}", "success")
+        # Save trade to file for dashboard display
+        save_trade(
+            symbol=symbol,
+            side=side,
+            action="REDUCE",
+            notional=reduce_amount,
+            reason="AI rebalance"
+        )
     else:
         cprint(f"   ⚠️ partial_close not available", "yellow")
 
