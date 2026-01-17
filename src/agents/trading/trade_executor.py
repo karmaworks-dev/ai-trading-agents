@@ -42,23 +42,7 @@ MARGIN_REQUIRED_ACTIONS = ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]
 # Action types that reduce positions
 POSITION_REDUCE_ACTIONS = ["CLOSE", "REDUCE"]
 
-# Trades file path - stored in src/data/ folder
-# This matches where trading_app.py reads from
-_TRADES_FILE = None
-
-def _get_trades_file():
-    """Get the trades file path, creating the data directory if needed."""
-    global _TRADES_FILE
-    if _TRADES_FILE is None:
-        # Navigate from src/agents/trading/ to src/data/
-        # Path: src/agents/trading/ -> src/agents/ -> src/ -> src/data/
-        src_dir = Path(__file__).parent.parent.parent
-        data_dir = src_dir / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        _TRADES_FILE = data_dir / "trades.json"
-    return _TRADES_FILE
-
-
+# Use the new TradeRecorder class for enhanced trade logging
 def save_trade(
     symbol: str,
     side: str,
@@ -72,6 +56,9 @@ def save_trade(
     """
     Save a completed trade to the trades file for dashboard display.
 
+    Uses the TradeRecorder class for enhanced trade logging with
+    comprehensive metadata and retrieval capabilities.
+
     Args:
         symbol: Trading symbol (e.g., "BTC", "ETH")
         side: Position side ("LONG" or "SHORT")
@@ -83,46 +70,61 @@ def save_trade(
         reason: Reason for trade (optional)
     """
     try:
-        trades_file = _get_trades_file()
-
-        # Load existing trades
-        if trades_file.exists():
-            with open(trades_file, 'r') as f:
-                content = f.read()
-                trades = json.loads(content) if content.strip() else []
-        else:
-            trades = []
-
-        # Create trade record
-        trade_data = {
-            "timestamp": datetime.now().isoformat(),
-            "symbol": symbol,
-            "side": side,
-            "action": action,
-            "notional": round(notional, 2),
-            "pnl": round(pnl, 2),
-            "entry_price": round(entry_price, 4) if entry_price else 0,
-            "exit_price": round(exit_price, 4) if exit_price else 0,
-            "reason": reason
-        }
-
-        trades.append(trade_data)
-        trades = trades[-100:]  # Keep last 100 trades
-
-        with open(trades_file, 'w') as f:
-            json.dump(trades, f, indent=2)
-
-        cprint(f"   💾 Trade saved: {action} {side} {symbol}", "cyan")
-
-        # Notify trading_app that a trade happened (for position refresh)
+        # Import and use TradeRecorder
+        from src.data.trade_recorder import get_recorder
+        recorder = get_recorder()
+        recorder.record_trade(
+            symbol=symbol,
+            side=side,
+            action=action,
+            notional=notional,
+            pnl=pnl,
+            entry_price=entry_price,
+            exit_price=exit_price,
+            reason=reason
+        )
+    except ImportError:
+        # Fallback to basic file-based logging if TradeRecorder not available
         try:
-            from trading_app import mark_trade_executed
-            mark_trade_executed()
-        except ImportError:
-            pass  # trading_app not available (e.g., running standalone)
+            src_dir = Path(__file__).parent.parent.parent
+            data_dir = src_dir / "data"
+            data_dir.mkdir(parents=True, exist_ok=True)
+            trades_file = data_dir / "trades.json"
 
-    except Exception as e:
-        cprint(f"   ⚠️ Error saving trade: {e}", "yellow")
+            if trades_file.exists():
+                with open(trades_file, 'r') as f:
+                    content = f.read()
+                    trades = json.loads(content) if content.strip() else []
+            else:
+                trades = []
+
+            trade_data = {
+                "timestamp": datetime.now().isoformat(),
+                "symbol": symbol,
+                "side": side,
+                "action": action,
+                "notional": round(notional, 2),
+                "pnl": round(pnl, 2),
+                "entry_price": round(entry_price, 4) if entry_price else 0,
+                "exit_price": round(exit_price, 4) if exit_price else 0,
+                "reason": reason
+            }
+
+            trades.append(trade_data)
+            trades = trades[-100:]
+
+            with open(trades_file, 'w') as f:
+                json.dump(trades, f, indent=2)
+
+            cprint(f"   💾 Trade saved (fallback): {action} {side} {symbol}", "cyan")
+
+            try:
+                from trading_app import mark_trade_executed
+                mark_trade_executed()
+            except ImportError:
+                pass
+        except Exception as e:
+            cprint(f"   ⚠️ Error saving trade: {e}", "yellow")
 
 
 # =============================================================================

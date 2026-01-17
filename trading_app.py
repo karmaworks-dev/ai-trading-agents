@@ -1415,6 +1415,84 @@ def get_trades():
         return jsonify([])
 
 
+@app.route('/api/performance')
+@login_required
+def get_performance():
+    """API endpoint for trading performance metrics"""
+    try:
+        from src.data.performance_calculator import get_performance_calculator
+        calculator = get_performance_calculator()
+        metrics = calculator.calculate_metrics()
+        return jsonify(metrics)
+    except ImportError:
+        # Fallback if performance_calculator not available
+        return jsonify({
+            "total_trades": 0,
+            "closed_trades": 0,
+            "total_pnl": 0.0,
+            "win_rate": 0.0,
+            "profit_factor": 0.0,
+            "error": "Performance calculator not available"
+        })
+    except Exception as e:
+        print(f"❌ Error in /api/performance: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/performance/daily')
+@login_required
+def get_daily_performance():
+    """API endpoint for daily performance breakdown"""
+    try:
+        from src.data.performance_calculator import get_performance_calculator
+        calculator = get_performance_calculator()
+        days = request.args.get('days', 7, type=int)
+        daily = calculator.get_daily_breakdown(days=days)
+        return jsonify(daily)
+    except ImportError:
+        return jsonify([])
+    except Exception as e:
+        print(f"❌ Error in /api/performance/daily: {e}")
+        return jsonify([])
+
+
+@app.route('/api/performance/symbols')
+@login_required
+def get_symbol_performance():
+    """API endpoint for performance breakdown by symbol"""
+    try:
+        from src.data.performance_calculator import get_performance_calculator
+        calculator = get_performance_calculator()
+        symbols = calculator.get_symbol_breakdown()
+        return jsonify(symbols)
+    except ImportError:
+        return jsonify([])
+    except Exception as e:
+        print(f"❌ Error in /api/performance/symbols: {e}")
+        return jsonify([])
+
+
+@app.route('/api/trade-stats')
+@login_required
+def get_trade_stats():
+    """API endpoint for trade statistics from TradeRecorder"""
+    try:
+        from src.data.trade_recorder import get_recorder
+        recorder = get_recorder()
+        stats = recorder.calculate_statistics()
+        return jsonify(stats)
+    except ImportError:
+        return jsonify({
+            "total_trades": 0,
+            "closed_trades": 0,
+            "total_pnl": 0.0,
+            "win_rate": 0.0
+        })
+    except Exception as e:
+        print(f"❌ Error in /api/trade-stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/close-position/<symbol>', methods=['POST'])
 @login_required
 def close_position_api(symbol):
