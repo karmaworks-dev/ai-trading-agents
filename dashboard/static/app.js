@@ -47,31 +47,30 @@ function getPulseOpacity(layerIndex, activeCount) {
     return startOpacity - (eased * (startOpacity - endOpacity));
 }
 
-// Generate bezel path: starts flat at entry level, curves to price, returns flat to entry level
-function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffset) {
-    // Near edge-to-edge: 20px padding each side (2.5%)
+// Generate bezel path: flat entry → price curve → dot at 75% → bezel out → flat end
+function generatePulsePath(priceHistory, entryPrice, currentPrice, svgWidth, svgHeight, yOffset) {
+    // Near edge-to-edge: 20px padding each side
     const padding = { left: 20, right: 20, top: 30, bottom: 30 };
-    const flatSectionWidth = 18;  // 15-20px flat horizontal section at start/end
+    const flatSectionWidth = 18;  // Flat horizontal section at start/end
     const bezelWidth = 35;        // Width of bezel curve transition
 
     const startX = padding.left;
     const endX = svgWidth - padding.right;
 
     if (!priceHistory || priceHistory.length < 2) {
-        // Flat line if no history
         const y = svgHeight / 2 + yOffset;
         return {
             linePath: `M ${startX} ${y} L ${endX} ${y}`,
             fillPath: `M ${startX} ${y} L ${endX} ${y} L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`,
             entryY: y,
             startX: startX,
-            endX: endX
+            currentDot: null
         };
     }
 
     const prices = priceHistory.map(p => p.price);
-    const minPrice = Math.min(entryPrice, ...prices) * 0.995;
-    const maxPrice = Math.max(entryPrice, ...prices) * 1.005;
+    const minPrice = Math.min(entryPrice, currentPrice, ...prices) * 0.995;
+    const maxPrice = Math.max(entryPrice, currentPrice, ...prices) * 1.005;
     const priceRange = maxPrice - minPrice || entryPrice * 0.01;
 
     // Convert price to Y coordinate (inverted - higher price = lower Y)
@@ -81,19 +80,22 @@ function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffse
     };
 
     const entryY = priceToY(entryPrice);
+    const currentY = priceToY(currentPrice);
 
-    // Calculate zones: [flat start] [bezel in] [price curve] [bezel out] [flat end]
+    // Zones: [flat 18px] [bezel in 35px] [price curve to 75%] [DOT] [bezel out] [flat 18px]
     const flatStartEnd = startX + flatSectionWidth;
     const bezelInEnd = flatStartEnd + bezelWidth;
     const flatEndStart = endX - flatSectionWidth;
-    const bezelOutStart = flatEndStart - bezelWidth;
 
-    // Price curve uses the middle section
+    // Current price dot at ~75% of total width
+    const totalWidth = endX - startX;
+    const dotX = startX + totalWidth * 0.75;
+
+    // Price curve spans from bezel-in-end to dot position
     const priceZoneStart = bezelInEnd;
-    const priceZoneEnd = bezelOutStart;
-    const priceZoneWidth = priceZoneEnd - priceZoneStart;
+    const priceZoneWidth = dotX - priceZoneStart;
 
-    // Generate points along the price path (only in price zone)
+    // Generate points along the price path (up to the dot)
     const points = priceHistory.map((point, index) => {
         const progress = index / (priceHistory.length - 1);
         const x = priceZoneStart + progress * priceZoneWidth;
@@ -101,15 +103,15 @@ function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffse
         return { x, y };
     });
 
-    // Build path with clear zones:
-    // 1. Flat start section (horizontal at entry level)
+    // Build path:
+    // 1. Flat start section at entry level
     let pathD = `M ${startX} ${entryY} L ${flatStartEnd} ${entryY}`;
 
-    // 2. Bezel in: smooth curve from entry level to first price point
+    // 2. Bezel in: curve from entry level to first price point
     const firstPoint = points[0];
     pathD += ` C ${flatStartEnd + bezelWidth * 0.5} ${entryY}, ${firstPoint.x - bezelWidth * 0.4} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
 
-    // 3. Smooth curve through all price points
+    // 3. Smooth curve through price points
     for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1];
         const curr = points[i];
@@ -117,17 +119,24 @@ function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffse
         pathD += ` Q ${cpX} ${prev.y}, ${curr.x} ${curr.y}`;
     }
 
-    // 4. Bezel out: smooth curve from last price point back to entry level
+    // 4. Continue to current price dot position
     const lastPoint = points[points.length - 1];
-    pathD += ` C ${lastPoint.x + bezelWidth * 0.4} ${lastPoint.y}, ${flatEndStart - bezelWidth * 0.5} ${entryY}, ${flatEndStart} ${entryY}`;
+    pathD += ` Q ${(lastPoint.x + dotX) / 2} ${lastPoint.y}, ${dotX} ${currentY}`;
 
-    // 5. Flat end section (horizontal at entry level)
+    // 5. Bezel out: curve from current price back to entry level
+    const bezelOutWidth = flatEndStart - dotX;
+    pathD += ` C ${dotX + bezelOutWidth * 0.4} ${currentY}, ${flatEndStart - bezelOutWidth * 0.3} ${entryY}, ${flatEndStart} ${entryY}`;
+
+    // 6. Flat end section at entry level
     pathD += ` L ${endX} ${entryY}`;
 
-    // Fill path (for gradient below the line)
+    // Fill path for gradient
     const fillPath = pathD + ` L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`;
 
-    return { linePath: pathD, fillPath, entryY, startX, endX };
+    // Return dot position for rendering
+    const currentDot = { x: dotX, y: currentY };
+
+    return { linePath: pathD, fillPath, entryY, startX, currentDot };
 }
 
 // Generate mock price history if not available
@@ -193,7 +202,7 @@ function renderPulseGraph(openPositions, closedTrades) {
         });
     }
 
-    // Generate SVG content
+    // Generate SVG content with pulsing animation
     let svgContent = `
         <defs>
             <linearGradient id="pulse-grad-profit" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -209,6 +218,13 @@ function renderPulseGraph(openPositions, closedTrades) {
                 <stop offset="100%" stop-color="${PULSE_CONFIG.colors.closed}" stop-opacity="0"/>
             </linearGradient>
         </defs>
+        <style>
+            @keyframes pulse-dot {
+                0%, 100% { r: 4; opacity: 1; }
+                50% { r: 6; opacity: 0.8; }
+            }
+            .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+        </style>
     `;
 
     // Render each trade/position
@@ -221,9 +237,10 @@ function renderPulseGraph(openPositions, closedTrades) {
         // Get price history or generate mock
         const priceHistory = data.priceHistory || generateMockPriceHistory(data);
         const entryPrice = data.entry_price || data.entryPrice || 100;
+        const currentPrice = data.mark_price || data.exit_price || data.currentPrice || entryPrice;
 
-        const { linePath, fillPath, entryY, startX, endX } = generatePulsePath(
-            priceHistory, entryPrice, svgWidth, svgHeight, yOffset
+        const { linePath, fillPath, entryY, startX, currentDot } = generatePulsePath(
+            priceHistory, entryPrice, currentPrice, svgWidth, svgHeight, yOffset
         );
 
         // Determine colors based on PnL
@@ -241,14 +258,8 @@ function renderPulseGraph(openPositions, closedTrades) {
 
         const strokeWidth = isActive ? PULSE_CONFIG.activeStrokeWidth : PULSE_CONFIG.closedStrokeWidth;
 
-        // Dot positions: at start and end of flat sections
-        const dotStartX = startX;
-        const dotEndX = endX;
-        const dotRadius = isActive ? 4 : 2.5;
-
-        // Label positions: just after start dot, just before end dot
-        const labelStartX = startX + 12;
-        const labelEndX = endX - 12;
+        // Label position: symbol at start of flat section
+        const labelStartX = startX + 8;
 
         // Add group for this trade
         svgContent += `
@@ -260,13 +271,15 @@ function renderPulseGraph(openPositions, closedTrades) {
                       stroke-width="${strokeWidth}"
                       stroke-linecap="round"
                       stroke-linejoin="round"/>
-                <circle cx="${dotStartX}" cy="${entryY.toFixed(1)}" r="${dotRadius}" fill="${strokeColor}"/>
-                <circle cx="${dotEndX}" cy="${entryY.toFixed(1)}" r="${dotRadius}" fill="${strokeColor}"/>
-                ${isActive ? `
-                    <text x="${labelStartX}" y="${(entryY - 10).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
+                ${isActive && currentDot ? `
+                    <!-- Pulsing dot at current price (75% width) -->
+                    <circle class="pulse-dot" cx="${currentDot.x.toFixed(1)}" cy="${currentDot.y.toFixed(1)}" r="4" fill="${strokeColor}"/>
+                    <!-- Symbol label at left flat section -->
+                    <text x="${labelStartX}" y="${(entryY - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
                         ${data.symbol || 'N/A'}
                     </text>
-                    <text x="${labelEndX}" y="${(entryY - 10).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif" text-anchor="end">
+                    <!-- PnL percentage near the dot -->
+                    <text x="${(currentDot.x + 12).toFixed(1)}" y="${(currentDot.y - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
                         ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%
                     </text>
                 ` : ''}
