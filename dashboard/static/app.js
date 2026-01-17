@@ -124,6 +124,9 @@ async function updateDashboard() {
         const trades = await tradesResponse.json();
         updateTrades(trades);
 
+        // Fetch and update performance metrics
+        updatePerformance();
+
         // Update portfolio chart
         updatePortfolioChart();
 
@@ -398,6 +401,78 @@ function updateTrades(trades) {
     // Update Recent Trades card only (last 20)
     if (recentContainer) {
         recentContainer.innerHTML = trades.slice(0, 20).map(renderTrade).join('');
+    }
+}
+
+// Update performance metrics
+async function updatePerformance() {
+    try {
+        const response = await fetch('/api/performance');
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        // Update win rate badge
+        const winRateBadge = document.getElementById('perf-win-rate');
+        if (winRateBadge) {
+            winRateBadge.textContent = `${data.win_rate || 0}%`;
+        }
+
+        // Update total PnL
+        const totalPnl = data.total_pnl || 0;
+        const totalPnlEl = document.getElementById('perf-total-pnl');
+        if (totalPnlEl) {
+            totalPnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
+            totalPnlEl.className = `perf-value ${totalPnl >= 0 ? 'positive' : 'negative'}`;
+        }
+
+        // Update win rate value
+        const winRateEl = document.getElementById('perf-win-rate-val');
+        if (winRateEl) {
+            winRateEl.textContent = `${data.win_rate || 0}%`;
+        }
+
+        // Update profit factor
+        const profitFactorEl = document.getElementById('perf-profit-factor');
+        if (profitFactorEl) {
+            const pf = data.profit_factor || 0;
+            profitFactorEl.textContent = pf === Infinity ? 'INF' : pf.toFixed(2);
+        }
+
+        // Update total trades
+        const totalTradesEl = document.getElementById('perf-total-trades');
+        if (totalTradesEl) {
+            totalTradesEl.textContent = data.closed_trades || 0;
+        }
+
+        // Update avg win
+        const avgWinEl = document.getElementById('perf-avg-win');
+        if (avgWinEl) {
+            avgWinEl.textContent = `+$${(data.avg_win || 0).toFixed(2)}`;
+        }
+
+        // Update avg loss
+        const avgLossEl = document.getElementById('perf-avg-loss');
+        if (avgLossEl) {
+            avgLossEl.textContent = `-$${(data.avg_loss || 0).toFixed(2)}`;
+        }
+
+        // Update best trade
+        const bestTradeEl = document.getElementById('perf-best-trade');
+        if (bestTradeEl) {
+            const best = data.largest_win || 0;
+            bestTradeEl.textContent = `+$${best.toFixed(2)}`;
+        }
+
+        // Update worst trade
+        const worstTradeEl = document.getElementById('perf-worst-trade');
+        if (worstTradeEl) {
+            const worst = data.largest_loss || 0;
+            worstTradeEl.textContent = `$${worst.toFixed(2)}`;
+        }
+
+    } catch (error) {
+        console.error('Error updating performance:', error);
     }
 }
 

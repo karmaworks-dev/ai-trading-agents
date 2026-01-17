@@ -38,12 +38,65 @@ def get_performance_metrics(trades_file_path: Optional[Path] = None) -> Dict[str
     """
     Calculate recent trading performance for AI motivation.
 
+    Uses PerformanceCalculator for comprehensive metrics, with fallback
+    to basic file-based calculation if not available.
+
     Args:
         trades_file_path: Path to trades.json file. If None, uses default location.
 
     Returns:
-        Dictionary with win_rate, total_pnl, winning_trades, total_trades, grade
+        Dictionary with win_rate, total_pnl, winning_trades, total_trades, grade,
+        plus additional metrics from PerformanceCalculator when available.
     """
+    # Try to use PerformanceCalculator for enhanced metrics
+    try:
+        from src.data.performance_calculator import get_performance_calculator
+        calculator = get_performance_calculator()
+        metrics = calculator.calculate_metrics()
+
+        # Add grade based on win rate
+        win_rate = metrics.get('win_rate', 0)
+        if win_rate >= 70:
+            grade = 'EXCELLENT'
+        elif win_rate >= 60:
+            grade = 'GREAT'
+        elif win_rate >= 50:
+            grade = 'GOOD'
+        elif metrics.get('closed_trades', 0) == 0:
+            grade = 'STARTING'
+        else:
+            grade = 'NEEDS IMPROVEMENT'
+
+        # Get symbol performance for learning context
+        symbol_perf = calculator.get_symbol_breakdown()
+        best_symbol = symbol_perf[0]['symbol'] if symbol_perf and symbol_perf[0]['pnl'] > 0 else None
+        worst_symbol = symbol_perf[-1]['symbol'] if symbol_perf and len(symbol_perf) > 1 and symbol_perf[-1]['pnl'] < 0 else None
+
+        return {
+            'win_rate': metrics.get('win_rate', 0),
+            'total_pnl': metrics.get('total_pnl', 0),
+            'winning_trades': metrics.get('winning_trades', 0),
+            'total_trades': metrics.get('closed_trades', 0),
+            'grade': grade,
+            # Enhanced metrics
+            'profit_factor': metrics.get('profit_factor', 0),
+            'avg_win': metrics.get('avg_win', 0),
+            'avg_loss': metrics.get('avg_loss', 0),
+            'largest_win': metrics.get('largest_win', 0),
+            'largest_loss': metrics.get('largest_loss', 0),
+            'max_drawdown': metrics.get('max_drawdown', 0),
+            'sharpe_ratio': metrics.get('sharpe_ratio', 0),
+            'expectancy': metrics.get('expectancy', 0),
+            'best_symbol': best_symbol,
+            'worst_symbol': worst_symbol,
+        }
+
+    except ImportError:
+        pass  # Fall through to basic calculation
+    except Exception as e:
+        cprint(f"⚠️ PerformanceCalculator error: {e}, using fallback", "yellow")
+
+    # Fallback to basic file-based calculation
     try:
         if trades_file_path is None:
             trades_file_path = Path(__file__).parent.parent.parent / "data" / "trades.json"
@@ -80,13 +133,13 @@ def get_performance_metrics(trades_file_path: Optional[Path] = None) -> Dict[str
 
         # Assign performance grade
         if win_rate >= 70:
-            grade = 'EXCELLENT ⭐⭐⭐'
+            grade = 'EXCELLENT'
         elif win_rate >= 60:
-            grade = 'GREAT ⭐⭐'
+            grade = 'GREAT'
         elif win_rate >= 50:
-            grade = 'GOOD ⭐'
+            grade = 'GOOD'
         else:
-            grade = 'NEEDS IMPROVEMENT ⚠️'
+            grade = 'NEEDS IMPROVEMENT'
 
         return {
             'win_rate': round(win_rate, 1),

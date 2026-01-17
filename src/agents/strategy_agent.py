@@ -243,7 +243,7 @@ class StrategyAgent:
 
             # --- Market data for context ---
             try:
-                from src.data.ohlcv_collector import collect_token_data
+                from src.utils.ohlcv_collector import collect_token_data
                 market_data = collect_token_data(token)
             except Exception as e:
                 print(f"⚠️ Could not get market data: {e}")

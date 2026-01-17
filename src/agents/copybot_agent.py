@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from src.config import *
 from src import nice_funcs as n
-from src.data.ohlcv_collector import collect_all_tokens, collect_token_data
+from src.utils.ohlcv_collector import collect_all_tokens, collect_token_data
 
 # 🕉️ Karma Dev: Calculate paths dynamically
 PROJECT_ROOT = Path(__file__).parent.parent.parent

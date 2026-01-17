@@ -43,7 +43,7 @@ if project_root not in sys.path:
 # 👇 NOW you can import from src safely
 from src.models import model_factory
 from src.agents.swarm_agent import SwarmAgent
-from src.data.ohlcv_collector import collect_all_tokens
+from src.utils.ohlcv_collector import collect_all_tokens
 from src.agents.strategy_agent import StrategyAgent
 
 # Import AI prompt templates (extracted for maintainability)
@@ -432,7 +432,7 @@ else:
     cprint("Available exchanges: ASTER, HYPERLIQUID, SOLANA", "yellow")
     sys.exit(1)
 
-from src.data.ohlcv_collector import collect_all_tokens
+from src.utils.ohlcv_collector import collect_all_tokens
 
 # ============================================================================
 # PROMPTS - Now imported from src.agents.trading.prompts
@@ -712,6 +712,32 @@ class TradingAgent:
         Wrapper for extracted function in ai_interface module.
         """
         return _get_performance_metrics()
+
+    def _build_performance_context(self, performance_metrics: dict) -> str:
+        """Build formatted performance context string for AI prompts.
+
+        Args:
+            performance_metrics: Dict from _get_performance_metrics()
+
+        Returns:
+            Formatted string with performance details for AI context
+        """
+        context = (
+            f"Win Rate: {performance_metrics['win_rate']}% | "
+            f"Total PnL: ${performance_metrics['total_pnl']} | "
+            f"Grade: {performance_metrics['grade']} | "
+            f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
+        )
+        # Add enhanced metrics if available from PerformanceCalculator
+        if performance_metrics.get('profit_factor'):
+            pf = performance_metrics['profit_factor']
+            pf_str = f"{pf:.2f}" if pf != float('inf') else "INF"
+            context += f" | PF: {pf_str}"
+        if performance_metrics.get('best_symbol'):
+            context += f" | Best: {performance_metrics['best_symbol']}"
+        if performance_metrics.get('worst_symbol'):
+            context += f" | Avoid: {performance_metrics['worst_symbol']}"
+        return context
 
     def _build_swarm_models_config(self):
         """
@@ -1372,12 +1398,7 @@ Return ONLY valid JSON with the following structure:
 
                 # Get performance context for motivation
                 performance_metrics = self._get_performance_metrics()
-                performance_context = (
-                    f"Win Rate: {performance_metrics['win_rate']}% | "
-                    f"Total PnL: ${performance_metrics['total_pnl']} | "
-                    f"Grade: {performance_metrics['grade']} | "
-                    f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
-                )
+                performance_context = self._build_performance_context(performance_metrics)
 
                 base_market_data = self._format_market_data_for_swarm(token, market_data)
                 formatted_data = f"{position_context}\n\n{base_market_data}"
@@ -1472,12 +1493,7 @@ Return ONLY valid JSON with the following structure:
 
                 # Get performance context for motivation
                 performance_metrics = self._get_performance_metrics()
-                performance_context = (
-                    f"Win Rate: {performance_metrics['win_rate']}% | "
-                    f"Total PnL: ${performance_metrics['total_pnl']} | "
-                    f"Grade: {performance_metrics['grade']} | "
-                    f"Recent Trades: {performance_metrics['winning_trades']}/{performance_metrics['total_trades']}"
-                )
+                performance_context = self._build_performance_context(performance_metrics)
 
                 response = self.chat_with_ai(
                     TRADING_PROMPT.format(

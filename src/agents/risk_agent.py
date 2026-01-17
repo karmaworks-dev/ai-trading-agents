@@ -51,7 +51,7 @@ from dotenv import load_dotenv
 import openai
 from src import config
 from src import nice_funcs as n
-from src.data.ohlcv_collector import collect_all_tokens
+from src.utils.ohlcv_collector import collect_all_tokens
 from datetime import datetime, timedelta
 import time
 from src.config import *

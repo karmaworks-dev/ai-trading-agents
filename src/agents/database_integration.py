@@ -11,7 +11,7 @@ from pathlib import Path
 
 # Import the compact pattern database
 from src.patterns.compact_database import get_pattern_database, PatternExample
-from src.data.ohlcv_collector import collect_all_tokens
+from src.utils.ohlcv_collector import collect_all_tokens
 from src.config import EXCHANGE, HYPERLIQUID_SYMBOLS
 
 # Configure logging
@@ -144,7 +144,7 @@ class DatabaseIntegration:
         """Get current market data for symbol"""
         try:
             # Use existing market data collection
-            from src.data.ohlcv_collector import collect_token_data
+            from src.utils.ohlcv_collector import collect_token_data
             
             market_data = collect_token_data(symbol)
             return market_data
