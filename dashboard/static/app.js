@@ -49,41 +49,42 @@ function getPulseOpacity(layerIndex, activeCount) {
 
 // Generate bezel path: starts flat at entry level, curves to price, returns flat to entry level
 function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffset) {
-    // 90% width = 5% padding each side (40px for 800px width)
-    const padding = { left: 40, right: 40, top: 25, bottom: 25 };
-    const flatSectionWidth = 30;  // Flat horizontal section at start/end
-    const bezelWidth = 40;        // Width of bezel curve transition
+    // Near edge-to-edge: 20px padding each side (2.5%)
+    const padding = { left: 20, right: 20, top: 30, bottom: 30 };
+    const flatSectionWidth = 18;  // 15-20px flat horizontal section at start/end
+    const bezelWidth = 35;        // Width of bezel curve transition
+
+    const startX = padding.left;
+    const endX = svgWidth - padding.right;
 
     if (!priceHistory || priceHistory.length < 2) {
         // Flat line if no history
         const y = svgHeight / 2 + yOffset;
-        const startX = padding.left;
-        const endX = svgWidth - padding.right;
         return {
             linePath: `M ${startX} ${y} L ${endX} ${y}`,
             fillPath: `M ${startX} ${y} L ${endX} ${y} L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`,
-            entryY: y
+            entryY: y,
+            startX: startX,
+            endX: endX
         };
     }
 
     const prices = priceHistory.map(p => p.price);
-    const minPrice = Math.min(entryPrice, ...prices) * 0.998;
-    const maxPrice = Math.max(entryPrice, ...prices) * 1.002;
+    const minPrice = Math.min(entryPrice, ...prices) * 0.995;
+    const maxPrice = Math.max(entryPrice, ...prices) * 1.005;
     const priceRange = maxPrice - minPrice || entryPrice * 0.01;
 
     // Convert price to Y coordinate (inverted - higher price = lower Y)
     const priceToY = (price) => {
         const normalized = (price - minPrice) / priceRange;
-        return padding.top + yOffset + (1 - normalized) * (svgHeight - padding.top - padding.bottom - 60);
+        return padding.top + yOffset + (1 - normalized) * (svgHeight - padding.top - padding.bottom - 50);
     };
 
     const entryY = priceToY(entryPrice);
 
     // Calculate zones: [flat start] [bezel in] [price curve] [bezel out] [flat end]
-    const startX = padding.left;
     const flatStartEnd = startX + flatSectionWidth;
     const bezelInEnd = flatStartEnd + bezelWidth;
-    const endX = svgWidth - padding.right;
     const flatEndStart = endX - flatSectionWidth;
     const bezelOutStart = flatEndStart - bezelWidth;
 
@@ -106,7 +107,7 @@ function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffse
 
     // 2. Bezel in: smooth curve from entry level to first price point
     const firstPoint = points[0];
-    pathD += ` C ${flatStartEnd + bezelWidth * 0.4} ${entryY}, ${firstPoint.x - bezelWidth * 0.3} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
+    pathD += ` C ${flatStartEnd + bezelWidth * 0.5} ${entryY}, ${firstPoint.x - bezelWidth * 0.4} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
 
     // 3. Smooth curve through all price points
     for (let i = 1; i < points.length; i++) {
@@ -118,7 +119,7 @@ function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffse
 
     // 4. Bezel out: smooth curve from last price point back to entry level
     const lastPoint = points[points.length - 1];
-    pathD += ` C ${lastPoint.x + bezelWidth * 0.3} ${lastPoint.y}, ${flatEndStart - bezelWidth * 0.4} ${entryY}, ${flatEndStart} ${entryY}`;
+    pathD += ` C ${lastPoint.x + bezelWidth * 0.4} ${lastPoint.y}, ${flatEndStart - bezelWidth * 0.5} ${entryY}, ${flatEndStart} ${entryY}`;
 
     // 5. Flat end section (horizontal at entry level)
     pathD += ` L ${endX} ${entryY}`;
@@ -126,7 +127,7 @@ function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffse
     // Fill path (for gradient below the line)
     const fillPath = pathD + ` L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`;
 
-    return { linePath: pathD, fillPath, entryY };
+    return { linePath: pathD, fillPath, entryY, startX, endX };
 }
 
 // Generate mock price history if not available
@@ -221,7 +222,7 @@ function renderPulseGraph(openPositions, closedTrades) {
         const priceHistory = data.priceHistory || generateMockPriceHistory(data);
         const entryPrice = data.entry_price || data.entryPrice || 100;
 
-        const { linePath, fillPath, entryY } = generatePulsePath(
+        const { linePath, fillPath, entryY, startX, endX } = generatePulsePath(
             priceHistory, entryPrice, svgWidth, svgHeight, yOffset
         );
 
@@ -240,6 +241,15 @@ function renderPulseGraph(openPositions, closedTrades) {
 
         const strokeWidth = isActive ? PULSE_CONFIG.activeStrokeWidth : PULSE_CONFIG.closedStrokeWidth;
 
+        // Dot positions: at start and end of flat sections
+        const dotStartX = startX;
+        const dotEndX = endX;
+        const dotRadius = isActive ? 4 : 2.5;
+
+        // Label positions: just after start dot, just before end dot
+        const labelStartX = startX + 12;
+        const labelEndX = endX - 12;
+
         // Add group for this trade
         svgContent += `
             <g opacity="${opacity.toFixed(2)}">
@@ -250,14 +260,14 @@ function renderPulseGraph(openPositions, closedTrades) {
                       stroke-width="${strokeWidth}"
                       stroke-linecap="round"
                       stroke-linejoin="round"/>
-                <circle cx="50" cy="${entryY.toFixed(1)}" r="${isActive ? 3.5 : 2.5}" fill="${strokeColor}"/>
-                <circle cx="${svgWidth - 50}" cy="${entryY.toFixed(1)}" r="${isActive ? 3.5 : 2.5}" fill="${strokeColor}"/>
+                <circle cx="${dotStartX}" cy="${entryY.toFixed(1)}" r="${dotRadius}" fill="${strokeColor}"/>
+                <circle cx="${dotEndX}" cy="${entryY.toFixed(1)}" r="${dotRadius}" fill="${strokeColor}"/>
                 ${isActive ? `
-                    <text x="60" y="${(entryY - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
+                    <text x="${labelStartX}" y="${(entryY - 10).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
                         ${data.symbol || 'N/A'}
                     </text>
-                    <text x="${svgWidth - 60}" y="${(entryY - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif" text-anchor="end">
-                        ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%
+                    <text x="${labelEndX}" y="${(entryY - 10).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif" text-anchor="end">
+                        ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%
                     </text>
                 ` : ''}
             </g>
