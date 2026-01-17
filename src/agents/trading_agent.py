@@ -968,49 +968,49 @@ class TradingAgent:
         cprint("=" * 60, "yellow")
 
         # Log each position being analyzed
-        for symbol, positions in positions_data.items():
-            for pos in positions:
-                side = "LONG" if pos["is_long"] else "SHORT"
-                entry = pos["entry_price"]
-                pnl = pos["pnl_percent"]
-                pnl_emoji = "🟢" if pnl >= 0 else "🔴"
-                add_console_log(f"   {pnl_emoji} {symbol} ({side}) | Entry: ${entry:.2f} | PnL: {pnl:+.2f}%", "info")
+        # NOTE: positions_data is {symbol: dict} format (aggregated per symbol), not {symbol: [list]}
+        for symbol, pos in positions_data.items():
+            side = "LONG" if pos.get("is_long", False) else "SHORT"
+            entry = pos.get("entry_price", 0)
+            pnl = pos.get("pnl_percent", 0)
+            pnl_emoji = "🟢" if pnl >= 0 else "🔴"
+            add_console_log(f"   {pnl_emoji} {symbol} ({side}) | Entry: ${entry:.2f} | PnL: {pnl:+.2f}%", "info")
 
         # CRITICAL: Check TP/SL thresholds FIRST - force close regardless of AI analysis
+        # NOTE: positions_data is {symbol: dict} format (aggregated per symbol), not {symbol: [list]}
         validated_decisions = {}
-        for symbol, positions in positions_data.items():
-            for pos in positions:
-                pnl_percent = pos["pnl_percent"]
+        for symbol, pos in positions_data.items():
+            pnl_percent = pos.get("pnl_percent", 0)
 
-                # Force TP/SL using helpers
-                if should_trigger_take_profit(pnl_percent, TAKE_PROFIT_THRESHOLD):
-                    reason = f"TAKE PROFIT: {pnl_percent:.2f}% >= {TAKE_PROFIT_THRESHOLD}%"
-                    validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
-                    cprint(f"🚨 {symbol}: TAKE PROFIT TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
-                    add_console_log(f"TAKE PROFIT: Closing {symbol} at +{pnl_percent:.2f}%", "success")
-                    continue
-                elif should_trigger_stop_loss(pnl_percent, STOP_LOSS_THRESHOLD):
-                    reason = f"STOP LOSS: {pnl_percent:.2f}% <= {STOP_LOSS_THRESHOLD}%"
-                    validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
-                    cprint(f"🚨 {symbol}: STOP LOSS TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
-                    add_console_log(f"STOP LOSS: Closing {symbol} at {pnl_percent:.2f}%", "warning")
-                    continue
+            # Force TP/SL using helpers
+            if should_trigger_take_profit(pnl_percent, TAKE_PROFIT_THRESHOLD):
+                reason = f"TAKE PROFIT: {pnl_percent:.2f}% >= {TAKE_PROFIT_THRESHOLD}%"
+                validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
+                cprint(f"🚨 {symbol}: TAKE PROFIT TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
+                add_console_log(f"TAKE PROFIT: Closing {symbol} at +{pnl_percent:.2f}%", "success")
+                continue
+            elif should_trigger_stop_loss(pnl_percent, STOP_LOSS_THRESHOLD):
+                reason = f"STOP LOSS: {pnl_percent:.2f}% <= {STOP_LOSS_THRESHOLD}%"
+                validated_decisions[symbol] = {"action": "CLOSE", "reasoning": reason, "confidence": 100}
+                cprint(f"🚨 {symbol}: STOP LOSS TRIGGERED - {pnl_percent:.2f}%", "red", attrs=["bold"])
+                add_console_log(f"STOP LOSS: Closing {symbol} at {pnl_percent:.2f}%", "warning")
+                continue
 
         # Build position summary for remaining positions
+        # NOTE: positions_data is {symbol: dict} format (aggregated per symbol), not {symbol: [list]}
         position_summary = []
-        for symbol, positions in positions_data.items():
+        for symbol, pos in positions_data.items():
             if symbol in validated_decisions:
                 continue  # Skip positions already handled by TP/SL
-                
-            for pos in positions:
-                position_summary.append({
-                    "symbol": symbol,
-                    "side": "LONG" if pos["is_long"] else "SHORT",
-                    "size": pos["size"],
-                    "entry_price": pos["entry_price"],
-                    "current_pnl": pos["pnl_percent"],
-                    "age_hours": pos["age_hours"],
-                })
+
+            position_summary.append({
+                "symbol": symbol,
+                "side": "LONG" if pos.get("is_long", False) else "SHORT",
+                "size": pos.get("size", 0),
+                "entry_price": pos.get("entry_price", 0),
+                "current_pnl": pos.get("pnl_percent", 0),
+                "age_hours": pos.get("age_hours", 0),
+            })
 
         # Format market conditions
         market_summary = {}
@@ -1135,7 +1135,8 @@ Return ONLY valid JSON with the following structure:
 
                     if action.upper() == "CLOSE":
                         # Get position data for validation
-                        pos_data = positions_data.get(symbol, [{}])[0]
+                        # NOTE: positions_data is {symbol: dict} format, not {symbol: [list]}
+                        pos_data = positions_data.get(symbol, {})
                         pnl_percent = pos_data.get("pnl_percent", 0)
                         age_hours = pos_data.get("age_hours", 0)
 
@@ -2967,6 +2968,8 @@ Return ONLY valid JSON with the following structure:
 
         except Exception as e:
             cprint(f"\n❌ Error in trading cycle: {e}", "white", "on_red")
+            # CRITICAL: Log to frontend so users see the error in the web interface
+            add_console_log(f"❌ CYCLE ERROR: {str(e)[:100]}", "error")
             import traceback
             traceback.print_exc()
 
