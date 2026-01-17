@@ -2548,3 +2548,203 @@ animation-duration: 3.8s;
     color: var(--text-muted);
     font-size: 13px;
 }
+
+/* ============================================================================
+   PULSE GRAPH VISUALIZATION
+   ============================================================================ */
+
+.pulse-graph-container {
+    height: 220px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 0;
+    overflow: hidden;
+}
+
+#pulse-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.pulse-line-active {
+    stroke-width: 2.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.pulse-line-closed {
+    stroke-width: 2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.pulse-label {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-primary);
+}
+
+/* Leverage Badge */
+.leverage-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    margin-left: 6px;
+}
+
+.leverage-badge.low-risk {
+    color: var(--accent-green);
+    border-color: rgba(0, 255, 136, 0.4);
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.leverage-badge.medium-risk {
+    color: var(--accent-yellow);
+    border-color: rgba(255, 165, 2, 0.4);
+    background: rgba(255, 165, 2, 0.1);
+}
+
+.leverage-badge.high-risk {
+    color: var(--accent-red);
+    border-color: rgba(255, 71, 87, 0.4);
+    background: rgba(255, 71, 87, 0.1);
+}
+
+/* Position card header with leverage */
+.position-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.position-symbol-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.position-pnl-display {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* Trade card with price path */
+.trade-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.trade-card:hover {
+    border-color: var(--accent-blue);
+}
+
+.trade-card:last-child {
+    margin-bottom: 0;
+}
+
+.trade-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.trade-card-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.trade-card-symbol {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.trade-card-pnl {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.trade-price-path {
+    height: 36px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 4px 8px;
+    overflow: hidden;
+}
+
+.trade-price-path svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.trade-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.trade-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.trade-duration {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Empty state for pulse graph */
+.pulse-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Responsive adjustments for pulse graph */
+@media (max-width: 768px) {
+    .pulse-graph-container {
+        height: 180px;
+        padding: 10px;
+    }
+
+    .trade-price-path {
+        height: 32px;
+    }
+
+    .position-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .leverage-badge {
+        font-size: 9px;
+        padding: 2px 5px;
+    }
+}

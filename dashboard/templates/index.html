@@ -84,17 +84,17 @@
         <div class="main-content">
             <!-- Left Panel: Positions & Trades -->
             <div class="panel">
-                <!-- Portfolio Evolution -->
+                <!-- Pulse Graph - Trade Visualization -->
                 <div class="card">
                     <div class="card-header">
                         <h2>Pulse Graph</h2>
                         <span class="badge" id="portfolio-change">0%</span>
                     </div>
-                    <div class="portfolio-chart" id="portfolio-chart">
-                        <!-- Chart will be rendered here -->
-                    </div>
-                    <div class="trades-container" id="trades">
-                        <div class="empty-state"></div>
+                    <div class="pulse-graph-container" id="pulse-graph">
+                        <svg id="pulse-svg" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet">
+                            <!-- Pulse lines rendered here by JS -->
+                            <text x="400" y="110" text-anchor="middle" fill="var(--text-muted)" font-size="12">Loading pulse data...</text>
+                        </svg>
                     </div>
                 </div>
                 <!-- Positions -->

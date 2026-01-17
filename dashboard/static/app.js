@@ -5,6 +5,294 @@ let updateInterval;
 let portfolioChart = null;
 let positionEventSource = null;
 
+// ============================================================================
+// PULSE GRAPH VISUALIZATION
+// ============================================================================
+
+// Cache for closed trades and open positions (for pulse graph)
+let closedTradesCache = [];
+let openPositionsCache = [];
+
+// Pulse Graph Configuration
+const PULSE_CONFIG = {
+    maxItems: 10,           // Max total items (active + closed)
+    layerOffset: 5,         // Pixels between layers (Layer 0 at bottom/front)
+    maxPricePoints: 50,     // Max price history points per trade
+    activeStrokeWidth: 2.5,
+    closedStrokeWidth: 2,
+    colors: {
+        profit: '#00ff88',      // var(--accent-green)
+        loss: '#ff4757',        // var(--accent-red)
+        closed: '#6b7280',      // Grey for closed trades
+    }
+};
+
+// Calculate opacity for closed trades (smooth fade from 85% to 10%)
+function getPulseOpacity(layerIndex, activeCount) {
+    // Active positions always 100%
+    if (layerIndex < activeCount) return 1.0;
+
+    // Closed trades fade from 85% to 10%
+    const closedIndex = layerIndex - activeCount;
+    const closedCount = PULSE_CONFIG.maxItems - activeCount;
+    const startOpacity = 0.85;
+    const endOpacity = 0.10;
+
+    if (closedCount <= 1) return startOpacity;
+
+    // EaseOut quad for smooth perceptual fade
+    const progress = closedIndex / (closedCount - 1);
+    const eased = 1 - Math.pow(1 - progress, 2);
+
+    return startOpacity - (eased * (startOpacity - endOpacity));
+}
+
+// Generate bezel path: starts at entry level, follows price, returns to entry level
+function generatePulsePath(priceHistory, entryPrice, svgWidth, svgHeight, yOffset) {
+    if (!priceHistory || priceHistory.length < 2) {
+        // Flat line if no history
+        const y = svgHeight / 2 + yOffset;
+        return {
+            linePath: `M 50 ${y} L ${svgWidth - 50} ${y}`,
+            fillPath: `M 50 ${y} L ${svgWidth - 50} ${y} L ${svgWidth - 50} ${svgHeight} L 50 ${svgHeight} Z`,
+            entryY: y
+        };
+    }
+
+    const padding = { left: 50, right: 50, top: 25, bottom: 25 };
+    const prices = priceHistory.map(p => p.price);
+    const minPrice = Math.min(entryPrice, ...prices) * 0.998;
+    const maxPrice = Math.max(entryPrice, ...prices) * 1.002;
+    const priceRange = maxPrice - minPrice || entryPrice * 0.01;
+
+    // Convert price to Y coordinate (inverted - higher price = lower Y)
+    const priceToY = (price) => {
+        const normalized = (price - minPrice) / priceRange;
+        return padding.top + yOffset + (1 - normalized) * (svgHeight - padding.top - padding.bottom - 60);
+    };
+
+    const entryY = priceToY(entryPrice);
+    const usableWidth = svgWidth - padding.left - padding.right;
+
+    // Generate points along the price path
+    const points = priceHistory.map((point, index) => {
+        const progress = index / (priceHistory.length - 1);
+        const x = padding.left + progress * usableWidth;
+        const y = priceToY(point.price);
+        return { x, y };
+    });
+
+    // Build path: Entry level → Bezel in → Price movement → Bezel out → Entry level
+    let pathD = `M ${padding.left} ${entryY}`;
+
+    // Bezel in from entry to first point (smooth curve)
+    const firstPoint = points[0];
+    pathD += ` C ${padding.left + 25} ${entryY}, ${firstPoint.x - 15} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
+
+    // Smooth curve through all points
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const cpX = (prev.x + curr.x) / 2;
+        pathD += ` Q ${cpX} ${prev.y}, ${curr.x} ${curr.y}`;
+    }
+
+    // Bezel out from last point back to entry level
+    const lastPoint = points[points.length - 1];
+    const endX = svgWidth - padding.right;
+    pathD += ` C ${lastPoint.x + 25} ${lastPoint.y}, ${endX - 25} ${entryY}, ${endX} ${entryY}`;
+
+    // Fill path (for gradient)
+    const fillPath = pathD + ` L ${endX} ${svgHeight} L ${padding.left} ${svgHeight} Z`;
+
+    return { linePath: pathD, fillPath, entryY };
+}
+
+// Generate mock price history if not available
+function generateMockPriceHistory(trade) {
+    const entryPrice = trade.entry_price || trade.entryPrice || 100;
+    const currentPrice = trade.mark_price || trade.exit_price || trade.currentPrice || entryPrice;
+    const points = [];
+    const numPoints = 35;
+
+    for (let i = 0; i <= numPoints; i++) {
+        const progress = i / numPoints;
+        const basePrice = entryPrice + (currentPrice - entryPrice) * progress;
+        // Add organic noise for realistic appearance
+        const noise = (Math.sin(i * 0.6 + Math.random()) * 0.4 + Math.cos(i * 0.3) * 0.3) * entryPrice * 0.008;
+        points.push({ time: i, price: basePrice + noise });
+    }
+
+    return points;
+}
+
+// Render the complete pulse graph
+function renderPulseGraph(openPositions, closedTrades) {
+    const svg = document.getElementById('pulse-svg');
+    if (!svg) return;
+
+    const svgWidth = 800;
+    const svgHeight = 220;
+
+    // Check if we have any data
+    if ((!openPositions || openPositions.length === 0) && (!closedTrades || closedTrades.length === 0)) {
+        svg.innerHTML = `<text x="400" y="110" text-anchor="middle" fill="#666666" font-size="13">No active positions or recent trades</text>`;
+        return;
+    }
+
+    // Limit items (max 10 total)
+    const activeCount = Math.min(openPositions.length, 3);
+    const closedCount = Math.min(closedTrades.length, PULSE_CONFIG.maxItems - activeCount);
+
+    const activeTrades = openPositions.slice(0, activeCount);
+    const closedItems = closedTrades.slice(0, closedCount);
+
+    // Build render list: oldest first for correct z-order (SVG renders first = back, last = front)
+    // Layer 0 = newest active (rendered LAST = in front, at BOTTOM visually)
+    // Layer 9 = oldest closed (rendered FIRST = in back, at TOP visually)
+    const renderList = [];
+
+    // Add closed trades first (they render in back, higher Y offset)
+    for (let i = closedCount - 1; i >= 0; i--) {
+        const layerIdx = activeCount + i;
+        renderList.push({
+            data: closedItems[i],
+            layerIndex: layerIdx,
+            isActive: false
+        });
+    }
+
+    // Add active trades last (they render in front, lower Y offset)
+    for (let i = activeCount - 1; i >= 0; i--) {
+        renderList.push({
+            data: activeTrades[i],
+            layerIndex: i,
+            isActive: true
+        });
+    }
+
+    // Generate SVG content
+    let svgContent = `
+        <defs>
+            <linearGradient id="pulse-grad-profit" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="${PULSE_CONFIG.colors.profit}" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="${PULSE_CONFIG.colors.profit}" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="pulse-grad-loss" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="${PULSE_CONFIG.colors.loss}" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="${PULSE_CONFIG.colors.loss}" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="pulse-grad-closed" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="${PULSE_CONFIG.colors.closed}" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="${PULSE_CONFIG.colors.closed}" stop-opacity="0"/>
+            </linearGradient>
+        </defs>
+    `;
+
+    // Render each trade/position
+    renderList.forEach(item => {
+        const { data, layerIndex, isActive } = item;
+        // Y offset: Layer 0 (newest) at bottom, higher layers pushed up
+        const yOffset = layerIndex * PULSE_CONFIG.layerOffset;
+        const opacity = getPulseOpacity(layerIndex, activeCount);
+
+        // Get price history or generate mock
+        const priceHistory = data.priceHistory || generateMockPriceHistory(data);
+        const entryPrice = data.entry_price || data.entryPrice || 100;
+
+        const { linePath, fillPath, entryY } = generatePulsePath(
+            priceHistory, entryPrice, svgWidth, svgHeight, yOffset
+        );
+
+        // Determine colors based on PnL
+        const pnl = data.pnl_percent || data.pnlPercent || 0;
+        let strokeColor, gradientId;
+
+        if (isActive) {
+            strokeColor = pnl >= 0 ? PULSE_CONFIG.colors.profit : PULSE_CONFIG.colors.loss;
+            gradientId = pnl >= 0 ? 'pulse-grad-profit' : 'pulse-grad-loss';
+        } else {
+            // Closed trades: subtle tint based on outcome
+            strokeColor = pnl >= 0 ? '#7a9a7a' : '#9a7a7a';
+            gradientId = 'pulse-grad-closed';
+        }
+
+        const strokeWidth = isActive ? PULSE_CONFIG.activeStrokeWidth : PULSE_CONFIG.closedStrokeWidth;
+
+        // Add group for this trade
+        svgContent += `
+            <g opacity="${opacity.toFixed(2)}">
+                <path d="${fillPath}" fill="url(#${gradientId})"/>
+                <path d="${linePath}"
+                      fill="none"
+                      stroke="${strokeColor}"
+                      stroke-width="${strokeWidth}"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"/>
+                <circle cx="50" cy="${entryY.toFixed(1)}" r="${isActive ? 3.5 : 2.5}" fill="${strokeColor}"/>
+                <circle cx="${svgWidth - 50}" cy="${entryY.toFixed(1)}" r="${isActive ? 3.5 : 2.5}" fill="${strokeColor}"/>
+                ${isActive ? `
+                    <text x="60" y="${(entryY - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
+                        ${data.symbol || 'N/A'}
+                    </text>
+                    <text x="${svgWidth - 60}" y="${(entryY - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif" text-anchor="end">
+                        ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%
+                    </text>
+                ` : ''}
+            </g>
+        `;
+    });
+
+    svg.innerHTML = svgContent;
+}
+
+// Generate mini price path SVG for trade cards
+function generateMiniPricePath(trade) {
+    const entryPrice = trade.entry_price || 100;
+    const exitPrice = trade.exit_price || trade.current_price || entryPrice;
+    const pnl = trade.pnl || 0;
+    const isProfit = pnl >= 0;
+    const color = isProfit ? '#00ff88' : '#ff4757';
+    const uniqueId = trade.id || Date.now() + Math.random();
+
+    // Generate realistic path
+    const startY = 16;
+    const endY = startY; // Return to entry level (bezel)
+    const peakY = isProfit ? 6 : 26;
+
+    // Create bezier path that returns to entry level
+    const path = `M 8 ${startY} C 40 ${startY}, 60 ${peakY}, 100 ${(startY + peakY) / 2} C 140 ${peakY + (isProfit ? 2 : -2)}, 160 ${startY}, 192 ${endY}`;
+
+    return `
+        <defs>
+            <linearGradient id="mini-grad-${uniqueId}" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+            </linearGradient>
+        </defs>
+        <path d="${path} L 192 32 L 8 32 Z" fill="url(#mini-grad-${uniqueId})"/>
+        <path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="8" cy="${startY}" r="2.5" fill="${color}"/>
+        <circle cx="192" cy="${endY}" r="2.5" fill="${color}"/>
+        <text x="16" y="${startY - 5}" fill="${color}" font-size="7" font-weight="600" font-family="Inter, sans-serif">ENTRY</text>
+        <text x="184" y="${endY - 5}" fill="${color}" font-size="7" font-weight="600" font-family="Inter, sans-serif" text-anchor="end">EXIT</text>
+    `;
+}
+
+// Format trade time
+function formatTradeTime(timestamp) {
+    if (!timestamp) return '--:--';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+}
+
+// Get leverage risk class
+function getLeverageRiskClass(leverage) {
+    if (leverage <= 5) return 'low-risk';
+    if (leverage <= 15) return 'medium-risk';
+    return 'high-risk';
+}
+
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Dashboard initializing...');
@@ -228,34 +516,47 @@ function updateAgentBadge(isRunning, isExecuting = false) {
     }
 }
 
-// Update positions display with headers and inline buttons
+// Update positions display with headers, leverage badge, and inline buttons
 function updatePositions(positions) {
     const container = document.getElementById('positions');
     const badge = document.getElementById('position-count');
     badge.textContent = positions.length;
-    
+
+    // Cache positions for pulse graph
+    openPositionsCache = positions || [];
+
     if (!positions || positions.length === 0) {
         container.innerHTML = '<div class="empty-state">No open positions</div>';
+        // Still render pulse graph (will show closed trades if any)
+        renderPulseGraph([], closedTradesCache);
         return;
     }
-    
+
     container.innerHTML = positions.map(pos => {
         const sideClass = pos.side.toLowerCase();
         // Calculate actual dollar PnL from price difference and position size
-        // Formula: (mark - entry) * size works for both long (size>0) and short (size<0)
         const markPrice = pos.mark_price || pos.entry_price;
         const dollarPnl = (markPrice - pos.entry_price) * pos.size;
         const isProfit = dollarPnl >= 0;
-        // Use ROE (Return on Equity) from HyperLiquid - this is PnL as % of margin, not notional
-        // pnl_percent is already calculated correctly by the backend using returnOnEquity
+        // Use ROE (Return on Equity) from HyperLiquid
         const pctPnl = pos.pnl_percent || 0;
+        // Get leverage (default to 20 if not provided)
+        const leverage = pos.leverage || 20;
+        const leverageClass = getLeverageRiskClass(leverage);
+
         return `
         <div class="position">
-            <div class="position-row">
-                <div class="position-item">
-                    <span class="position-label">Symbol</span>
-                    <span class="position-value symbol-${sideClass}">${pos.symbol}</span>
+            <div class="position-header">
+                <div class="position-symbol-group">
+                    <span class="position-value symbol-${sideClass}" style="font-weight: 600; font-size: 14px;">${pos.symbol}</span>
+                    <span class="side ${sideClass}" style="font-size: 10px;">${pos.side}</span>
+                    <span class="leverage-badge ${leverageClass}">${leverage}x</span>
                 </div>
+                <span class="position-pnl-display pnl ${isProfit ? 'positive' : 'negative'}">
+                    ${isProfit ? '+' : ''}${pctPnl.toFixed(2)}%
+                </span>
+            </div>
+            <div class="position-row">
                 <div class="position-item">
                     <span class="position-label">Size</span>
                     <span class="position-value">${Math.abs(pos.size).toFixed(4)}</span>
@@ -265,36 +566,34 @@ function updatePositions(positions) {
                     <span class="position-value">$${pos.position_value ? pos.position_value.toFixed(2) : '0.00'}</span>
                 </div>
                 <div class="position-item">
-                    <span class="position-label">Entry Price</span>
+                    <span class="position-label">Entry</span>
                     <span class="position-value">$${pos.entry_price.toFixed(2)}</span>
                 </div>
                 <div class="position-item">
-                    <span class="position-label">Mark Price</span>
+                    <span class="position-label">Mark</span>
                     <span class="position-value">$${markPrice.toFixed(2)}</span>
                 </div>
                 <div class="position-item">
                     <span class="position-label">P&L</span>
                     <span class="position-value pnl ${isProfit ? 'positive' : 'negative'}">
                         ${isProfit ? '+' : ''}$${dollarPnl.toFixed(2)}
-                        <span style="font-size: 9px; opacity: 0.7; margin-left: 4px;">
-                            (${isProfit ? '+' : ''}${pctPnl.toFixed(2)}%)
-                        </span>
                     </span>
                 </div>
             </div>
             <div class="position-actions-row">
                 <button class="btn-position-action btn-close-position" onclick="closePosition('${pos.symbol}')" title="Close Position">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    
                 </button>
                 <a href="https://app.hyperliquid.xyz/trade/${pos.symbol}" target="_blank" class="btn-position-action btn-chart" title="View Chart on Exchange">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
-                    
                 </a>
             </div>
         </div>
         `;
     }).join('');
+
+    // Render pulse graph with current positions and cached trades
+    renderPulseGraph(openPositionsCache, closedTradesCache);
 }
 
 // Close a single position
@@ -350,21 +649,24 @@ async function closeAllPositions() {
     }
 }
 
-// Update trades history (simplified plain text)
+// Update trades history with price path visualization
 
 function updateTrades(trades) {
-    const container = document.getElementById('trades');
     const recentContainer = document.getElementById('recent-trades');
     const tradesCountEl = document.getElementById('trades-count');
 
+    // Cache closed trades for pulse graph (max 10)
+    closedTradesCache = (trades || []).slice(0, 10);
+
     if (!trades || trades.length === 0) {
-        container.innerHTML = '<div class="empty-state"></div>';
         if (recentContainer) {
             recentContainer.innerHTML = '<div class="empty-state">No recent trades</div>';
         }
         if (tradesCountEl) {
             tradesCountEl.textContent = '0';
         }
+        // Render pulse graph with positions only
+        renderPulseGraph(openPositionsCache, []);
         return;
     }
 
@@ -373,37 +675,54 @@ function updateTrades(trades) {
         tradesCountEl.textContent = trades.length.toString();
     }
 
-    // Helper function to render a trade row
-    const renderTrade = (trade) => {
-        const time = new Date(trade.timestamp).toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    // Helper function to render a trade card with price path
+    const renderTradeCard = (trade, index) => {
+        const time = formatTradeTime(trade.timestamp);
         const pnl = trade.pnl || 0;
         const pnlStr = pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
         const pnlClass = pnl >= 0 ? 'positive' : 'negative';
         const side = trade.side || 'LONG';
-        const action = trade.action || 'CLOSE';
+        const leverage = trade.leverage || 20;
+        const leverageClass = getLeverageRiskClass(leverage);
+        const duration = trade.duration || '--';
+
+        // Calculate percentage PnL if entry value available
+        const entryValue = trade.entry_value || trade.entry_price * Math.abs(trade.size || 1);
+        const pctPnl = entryValue > 0 ? (pnl / entryValue) * 100 : 0;
 
         return `
-            <div class="trade-line">
-                <span class="trade-time">${time}</span>
-                <span class="trade-symbol">${trade.symbol}</span>
-                <span class="side ${side.toLowerCase()}">${side}</span>
-                <span class="trade-action">${action}</span>
-                <span class="trade-pnl pnl ${pnlClass}">${pnlStr}</span>
+            <div class="trade-card">
+                <div class="trade-card-header">
+                    <div class="trade-card-left">
+                        <span class="trade-card-symbol">${trade.symbol}</span>
+                        <span class="side ${side.toLowerCase()}">${side}</span>
+                        <span class="leverage-badge ${leverageClass}">${leverage}x</span>
+                    </div>
+                    <span class="trade-card-pnl pnl ${pnlClass}">${pnlStr}</span>
+                </div>
+                <div class="trade-price-path">
+                    <svg viewBox="0 0 200 32" preserveAspectRatio="xMidYMid meet">
+                        ${generateMiniPricePath(trade)}
+                    </svg>
+                </div>
+                <div class="trade-meta">
+                    <div class="trade-meta-left">
+                        <span>${time}</span>
+                        <span class="trade-duration">(${duration})</span>
+                    </div>
+                    <span class="pnl ${pnlClass}">${pctPnl >= 0 ? '+' : ''}${pctPnl.toFixed(1)}%</span>
+                </div>
             </div>
         `;
     };
 
-    // Update Pulse Graph trades container (last 10)
-    container.innerHTML = trades.slice(0, 10).map(renderTrade).join('');
-
-    // Update Recent Trades card (last 20)
+    // Update Recent Trades card (last 10 with price paths)
     if (recentContainer) {
-        recentContainer.innerHTML = trades.slice(0, 20).map(renderTrade).join('');
+        recentContainer.innerHTML = trades.slice(0, 10).map((trade, i) => renderTradeCard(trade, i)).join('');
     }
+
+    // Render pulse graph with current data
+    renderPulseGraph(openPositionsCache, closedTradesCache);
 }
 
 // Update console logs
