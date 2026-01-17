@@ -42,17 +42,18 @@ MARGIN_REQUIRED_ACTIONS = ["OPEN_LONG", "OPEN_SHORT", "INCREASE"]
 # Action types that reduce positions
 POSITION_REDUCE_ACTIONS = ["CLOSE", "REDUCE"]
 
-# Trades file path - stored in project root data/ folder
-# This ensures trades are visible to the web dashboard
+# Trades file path - stored in src/data/ folder
+# This matches where trading_app.py reads from
 _TRADES_FILE = None
 
 def _get_trades_file():
     """Get the trades file path, creating the data directory if needed."""
     global _TRADES_FILE
     if _TRADES_FILE is None:
-        # Navigate from src/agents/trading/ to project root
-        project_root = Path(__file__).parent.parent.parent.parent
-        data_dir = project_root / "data"
+        # Navigate from src/agents/trading/ to src/data/
+        # Path: src/agents/trading/ -> src/agents/ -> src/ -> src/data/
+        src_dir = Path(__file__).parent.parent.parent
+        data_dir = src_dir / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         _TRADES_FILE = data_dir / "trades.json"
     return _TRADES_FILE

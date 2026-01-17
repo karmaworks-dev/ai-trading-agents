@@ -1437,11 +1437,37 @@ def close_position_api(symbol):
 
         account = Account.from_key(private_key)
 
+        # Get position data BEFORE closing (for trade record)
+        pos_data = n.get_position(symbol, account)
+        pos_side = "LONG"
+        pos_notional = 0
+        if pos_data and isinstance(pos_data, tuple) and len(pos_data) >= 7:
+            _, im_in_pos, pos_size, _, entry_px, pnl_pct, is_long = pos_data
+            if im_in_pos:
+                pos_side = "LONG" if is_long else "SHORT"
+                pos_notional = abs(float(pos_size) * float(entry_px))
+
         # Close the position using kill_switch
         add_console_log(f"Closing {symbol} position manually...", "info")
         result = n.kill_switch(symbol, account)
 
         add_console_log(f"Closed {symbol} position", "trade")
+
+        # Save trade to Recent Trades
+        try:
+            from src.agents.trading import save_trade
+            save_trade(
+                symbol=symbol,
+                side=pos_side,
+                action="CLOSE",
+                notional=pos_notional,
+                reason="Manual close"
+            )
+        except Exception as save_err:
+            print(f"⚠️ Could not save trade: {save_err}")
+
+        # Mark trade executed to refresh positions
+        mark_trade_executed()
 
         return jsonify({
             'success': True,
@@ -1489,18 +1515,44 @@ def close_all_positions_api():
 
         add_console_log("PANIC CLOSE ALL - Closing all positions...", "warning")
 
+        # Import save_trade for recording
+        try:
+            from src.agents.trading import save_trade
+            can_save_trades = True
+        except ImportError:
+            can_save_trades = False
+
         closed_count = 0
         errors = []
 
         for pos in positions:
             symbol = pos['symbol']
+            pos_side = pos.get('side', 'LONG')
+            pos_notional = pos.get('position_value', 0)
             try:
                 n.kill_switch(symbol, account)
                 closed_count += 1
                 add_console_log(f"Closed {symbol} position", "trade")
+
+                # Save trade record
+                if can_save_trades:
+                    try:
+                        save_trade(
+                            symbol=symbol,
+                            side=pos_side,
+                            action="CLOSE",
+                            notional=pos_notional,
+                            reason="Panic close all"
+                        )
+                    except Exception:
+                        pass
+
             except Exception as e:
                 errors.append(f"{symbol}: {str(e)}")
                 add_console_log(f"Error closing {symbol}: {str(e)}", "error")
+
+        # Mark trade executed to refresh positions
+        mark_trade_executed()
 
         if errors:
             return jsonify({
