@@ -503,30 +503,47 @@ function updatePositions(positions) {
         const leverageClass = getLeverageRiskClass(leverage);
 
         return `
-        <div class="position-row-hl">
-            <div class="position-coin">
-                <span class="coin-name ${sideClass}">${pos.symbol}</span>
-                <span class="leverage-badge ${leverageClass}">${leverage}x</span>
+        <div class="position">
+            <div class="position-header">
+                <div class="position-symbol-group">
+                    <span class="position-value symbol-${sideClass}" style="font-weight: 600; font-size: 14px;">${pos.symbol}</span>
+                    <span class="side ${sideClass}" style="font-size: 10px;">${pos.side}</span>
+                    <span class="leverage-badge ${leverageClass}">${leverage}x</span>
+                </div>
+                <span class="position-pnl-display pnl ${isProfit ? 'positive' : 'negative'}">
+                    ${isProfit ? '+' : ''}${pctPnl.toFixed(2)}%
+                </span>
             </div>
-            <div class="position-size">
-                <span class="size-value">${Math.abs(pos.size).toFixed(4)} ${pos.symbol}</span>
+            <div class="position-row">
+                <div class="position-item">
+                    <span class="position-label">Size</span>
+                    <span class="position-value">${Math.abs(pos.size).toFixed(4)}</span>
+                </div>
+                <div class="position-item">
+                    <span class="position-label">Value</span>
+                    <span class="position-value">$${pos.position_value ? pos.position_value.toFixed(2) : '0.00'}</span>
+                </div>
+                <div class="position-item">
+                    <span class="position-label">Entry</span>
+                    <span class="position-value">$${pos.entry_price.toFixed(2)}</span>
+                </div>
+                <div class="position-item">
+                    <span class="position-label">Mark</span>
+                    <span class="position-value">$${markPrice.toFixed(2)}</span>
+                </div>
+                <div class="position-item">
+                    <span class="position-label">P&L</span>
+                    <span class="position-value pnl ${isProfit ? 'positive' : 'negative'}">
+                        ${isProfit ? '+' : ''}$${dollarPnl.toFixed(2)}
+                    </span>
+                </div>
             </div>
-            <div class="position-entry">
-                <span class="entry-value">$${pos.entry_price.toFixed(2)}</span>
-            </div>
-            <div class="position-mark">
-                <span class="mark-value">$${markPrice.toFixed(2)}</span>
-            </div>
-            <div class="position-pnl">
-                <span class="pnl-value ${isProfit ? 'positive' : 'negative'}">${isProfit ? '+' : ''}$${dollarPnl.toFixed(2)}</span>
-                <span class="pnl-percent ${isProfit ? 'positive' : 'negative'}">${isProfit ? '+' : ''}${pctPnl.toFixed(2)}%</span>
-            </div>
-            <div class="position-actions">
-                <button class="btn-position-action btn-close-position" onclick="closePosition('${pos.symbol}')" title="Close">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <div class="position-actions-row">
+                <button class="btn-position-action btn-close-position" onclick="closePosition('${pos.symbol}')" title="Close Position">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
-                <a href="https://app.hyperliquid.xyz/trade/${pos.symbol}" target="_blank" class="btn-position-action btn-chart" title="Chart">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
+                <a href="https://app.hyperliquid.xyz/trade/${pos.symbol}" target="_blank" class="btn-position-action btn-chart" title="View Chart on Exchange">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
                 </a>
             </div>
         </div>
