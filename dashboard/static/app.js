@@ -464,12 +464,26 @@ function updateAgentBadge(isRunning, isExecuting = false) {
 function updatePositions(positions) {
     const container = document.getElementById('positions');
     const badge = document.getElementById('position-count');
-    badge.textContent = positions.length;
+
+    // Ensure positions is an array
+    if (!Array.isArray(positions)) {
+        positions = [];
+    }
+
+    // Update badge
+    if (badge) {
+        badge.textContent = positions.length;
+    }
 
     // Cache positions for pulse graph
-    openPositionsCache = positions || [];
+    openPositionsCache = positions;
 
-    if (!positions || positions.length === 0) {
+    if (!container) {
+        console.error('Positions container not found');
+        return;
+    }
+
+    if (positions.length === 0) {
         container.innerHTML = '<div class="empty-state">No open positions</div>';
         // Still render pulse graph (will show closed trades if any)
         renderPulseGraph([], closedTradesCache);
@@ -599,10 +613,15 @@ function updateTrades(trades) {
     const recentContainer = document.getElementById('recent-trades');
     const tradesCountEl = document.getElementById('trades-count');
 
-    // Cache closed trades for pulse graph (max 10)
-    closedTradesCache = (trades || []).slice(0, 10);
+    // Ensure trades is an array
+    if (!Array.isArray(trades)) {
+        trades = [];
+    }
 
-    if (!trades || trades.length === 0) {
+    // Cache closed trades for pulse graph (max 10)
+    closedTradesCache = trades.slice(0, 10);
+
+    if (trades.length === 0) {
         if (recentContainer) {
             recentContainer.innerHTML = '<div class="empty-state">No recent trades</div>';
         }
