@@ -6,7 +6,7 @@ let portfolioChart = null;
 let positionEventSource = null;
 
 // ============================================================================
-// PULSE GRAPH VISUALIZATION
+// PULSE GRAPH VISUALIZATION - Joy Division / Pulsar Style
 // ============================================================================
 
 // Cache for closed trades and open positions (for pulse graph)
@@ -15,277 +15,192 @@ let openPositionsCache = [];
 
 // Pulse Graph Configuration
 const PULSE_CONFIG = {
-    maxItems: 10,           // Max total items (active + closed)
-    layerOffset: 5,         // Pixels between layers (Layer 0 at bottom/front)
-    maxPricePoints: 50,     // Max price history points per trade
-    activeStrokeWidth: 2.5,
-    closedStrokeWidth: 2,
+    maxItems: 10,
+    lineHeight: 20,         // Vertical spacing between lines
+    strokeWidth: 2,         // Thick solid lines
+    activeStrokeWidth: 2.5, // Slightly thicker for active
     colors: {
-        profit: '#00ff88',      // var(--accent-green)
-        loss: '#ff4757',        // var(--accent-red)
-        closed: '#6b7280',      // Grey for closed trades
+        line: '#666666',        // Grey for closed trades
+        activeLine: '#00ff88',  // Green for active profit
+        activeLoss: '#ff4757',  // Red for active loss
+        fill: '#1e1e1e',        // Background fill (matches --bg-tertiary)
     }
 };
 
-// Calculate opacity for closed trades (smooth fade from 85% to 10%)
-function getPulseOpacity(layerIndex, activeCount) {
-    // Active positions always 100%
-    if (layerIndex < activeCount) return 1.0;
-
-    // Closed trades fade from 85% to 10%
-    const closedIndex = layerIndex - activeCount;
-    const closedCount = PULSE_CONFIG.maxItems - activeCount;
-    const startOpacity = 0.85;
-    const endOpacity = 0.10;
-
-    if (closedCount <= 1) return startOpacity;
-
-    // EaseOut quad for smooth perceptual fade
-    const progress = closedIndex / (closedCount - 1);
-    const eased = 1 - Math.pow(1 - progress, 2);
-
-    return startOpacity - (eased * (startOpacity - endOpacity));
-}
-
-// Generate bezel path: flat entry → price curve → dot at ~80% → bezel out → flat end
-function generatePulsePath(priceHistory, entryPrice, currentPrice, svgWidth, svgHeight, yOffset) {
-    // Edge positions with minimal padding
-    const startX = 12;
-    const endX = svgWidth - 12;
-    const totalWidth = endX - startX;
-
-    // Zone widths for clean structure
-    const flatStartWidth = 30;      // Visible flat section at start
-    const flatEndWidth = 25;        // Visible flat section at end
-    const bezelInWidth = 55;        // Smooth gradual bezel in
-    const dotPosition = 0.80;       // Dot at 80% of width
-
-    // Key X coordinates
-    const flatStartEnd = startX + flatStartWidth;
-    const bezelInEnd = flatStartEnd + bezelInWidth;
-    const flatEndStart = endX - flatEndWidth;
-    const dotX = startX + totalWidth * dotPosition;
+// Generate smooth mountain curve for price movement
+function generatePulseCurve(priceHistory, baseY, svgWidth, amplitude) {
+    const startX = 0;
+    const endX = svgWidth;
 
     if (!priceHistory || priceHistory.length < 2) {
-        const y = svgHeight / 2 + yOffset;
+        // Flat line if no data
         return {
-            linePath: `M ${startX} ${y} L ${endX} ${y}`,
-            fillPath: `M ${startX} ${y} L ${endX} ${y} L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`,
-            entryY: y,
-            startX: startX,
-            currentDot: null
+            linePath: `M ${startX} ${baseY} L ${endX} ${baseY}`,
+            fillPath: `M ${startX} ${baseY} L ${endX} ${baseY} L ${endX} ${baseY + 50} L ${startX} ${baseY + 50} Z`
         };
     }
 
     const prices = priceHistory.map(p => p.price);
-    const minPrice = Math.min(entryPrice, currentPrice, ...prices) * 0.99;
-    const maxPrice = Math.max(entryPrice, currentPrice, ...prices) * 1.01;
-    const priceRange = maxPrice - minPrice || entryPrice * 0.01;
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
 
-    // Convert price to Y (higher price = lower Y)
-    const priceToY = (price) => {
+    // Create smooth path points
+    const points = [];
+    const numPoints = Math.min(priceHistory.length, 50);
+
+    for (let i = 0; i < numPoints; i++) {
+        const progress = i / (numPoints - 1);
+        const x = startX + progress * (endX - startX);
+        const priceIdx = Math.floor(progress * (priceHistory.length - 1));
+        const price = priceHistory[priceIdx].price;
         const normalized = (price - minPrice) / priceRange;
-        return 40 + yOffset + (1 - normalized) * (svgHeight - 100);
-    };
+        // Invert: higher price = curve goes UP (lower Y)
+        const y = baseY - (normalized * amplitude);
+        points.push({ x, y });
+    }
 
-    const entryY = priceToY(entryPrice);
-    const currentY = priceToY(currentPrice);
+    // Build smooth SVG path using cubic bezier curves
+    let linePath = `M ${points[0].x} ${points[0].y}`;
 
-    // Price curve: from bezel-in-end to dot position
-    const priceZoneStart = bezelInEnd;
-    const priceZoneWidth = dotX - priceZoneStart;
-
-    // Generate smooth price points
-    const points = priceHistory.map((point, index) => {
-        const progress = index / (priceHistory.length - 1);
-        return {
-            x: priceZoneStart + progress * priceZoneWidth,
-            y: priceToY(point.price)
-        };
-    });
-
-    // Build clean SVG path:
-    // 1. Flat start at entry level
-    let pathD = `M ${startX} ${entryY} L ${flatStartEnd} ${entryY}`;
-
-    // 2. Smooth bezel in - gentle S-curve from entry to first price point
-    const firstPoint = points[0];
-    pathD += ` C ${flatStartEnd + bezelInWidth * 0.7} ${entryY}, ${firstPoint.x - bezelInWidth * 0.2} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
-
-    // 3. Smooth curve through price points
     for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1];
         const curr = points[i];
-        pathD += ` Q ${(prev.x + curr.x) / 2} ${prev.y}, ${curr.x} ${curr.y}`;
+        const cpX = (prev.x + curr.x) / 2;
+        linePath += ` Q ${cpX} ${prev.y}, ${curr.x} ${curr.y}`;
     }
 
-    // 4. Connect to current price dot position
-    const lastPoint = points[points.length - 1];
-    pathD += ` Q ${(lastPoint.x + dotX) / 2} ${lastPoint.y}, ${dotX} ${currentY}`;
+    // Fill path: close the shape below the line
+    const fillPath = linePath + ` L ${endX} ${baseY + 50} L ${startX} ${baseY + 50} Z`;
 
-    // 5. Smooth bezel out - gentle curve from dot back down to entry level
-    const bezelOutLen = flatEndStart - dotX;
-    pathD += ` C ${dotX + bezelOutLen * 0.4} ${currentY}, ${flatEndStart - bezelOutLen * 0.2} ${entryY}, ${flatEndStart} ${entryY}`;
-
-    // 6. Flat end at entry level
-    pathD += ` L ${endX} ${entryY}`;
-
-    // Fill path for gradient
-    const fillPath = pathD + ` L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`;
-
-    return { linePath: pathD, fillPath, entryY, startX, currentDot: { x: dotX, y: currentY } };
+    return { linePath, fillPath };
 }
 
-// Generate mock price history if not available
+// Generate mock price history for demo
 function generateMockPriceHistory(trade) {
     const entryPrice = trade.entry_price || trade.entryPrice || 100;
     const currentPrice = trade.mark_price || trade.exit_price || trade.currentPrice || entryPrice;
     const points = [];
-    const numPoints = 35;
+    const numPoints = 40;
 
+    // Create organic wave pattern
     for (let i = 0; i <= numPoints; i++) {
         const progress = i / numPoints;
         const basePrice = entryPrice + (currentPrice - entryPrice) * progress;
-        // Add organic noise for realistic appearance
-        const noise = (Math.sin(i * 0.6 + Math.random()) * 0.4 + Math.cos(i * 0.3) * 0.3) * entryPrice * 0.008;
+        // Organic noise using multiple sine waves
+        const noise = (
+            Math.sin(i * 0.5) * 0.3 +
+            Math.sin(i * 0.8 + 1) * 0.2 +
+            Math.sin(i * 0.3 + 2) * 0.15
+        ) * Math.abs(currentPrice - entryPrice) * 0.5;
         points.push({ time: i, price: basePrice + noise });
     }
-
     return points;
 }
 
-// Render the complete pulse graph
+// Main render function - Joy Division style
 function renderPulseGraph(openPositions, closedTrades) {
     const svg = document.getElementById('pulse-svg');
     if (!svg) return;
 
     const svgWidth = 800;
     const svgHeight = 220;
+    const labelWidth = 60;  // Space for symbol label
+    const graphWidth = svgWidth - labelWidth;
 
-    // Check if we have any data
-    if ((!openPositions || openPositions.length === 0) && (!closedTrades || closedTrades.length === 0)) {
-        svg.innerHTML = `<text x="400" y="110" text-anchor="middle" fill="#666666" font-size="13">No active positions or recent trades</text>`;
+    // Combine and limit items
+    const allItems = [];
+
+    // Add active positions first (rendered last = on top)
+    openPositions.slice(0, 3).forEach((pos, i) => {
+        allItems.push({ data: pos, isActive: true, index: i });
+    });
+
+    // Add closed trades
+    const closedSlots = PULSE_CONFIG.maxItems - allItems.length;
+    closedTrades.slice(0, closedSlots).forEach((trade, i) => {
+        allItems.push({ data: trade, isActive: false, index: allItems.length });
+    });
+
+    if (allItems.length === 0) {
+        svg.innerHTML = `<text x="400" y="110" text-anchor="middle" fill="#444" font-size="13" font-family="Inter, sans-serif">No positions or trades</text>`;
         return;
     }
 
-    // Limit items (max 10 total)
-    const activeCount = Math.min(openPositions.length, 3);
-    const closedCount = Math.min(closedTrades.length, PULSE_CONFIG.maxItems - activeCount);
+    // Calculate base Y positions (bottom to top stacking)
+    const totalHeight = svgHeight - 40;
+    const startY = svgHeight - 30;
 
-    const activeTrades = openPositions.slice(0, activeCount);
-    const closedItems = closedTrades.slice(0, closedCount);
-
-    // Build render list: oldest first for correct z-order (SVG renders first = back, last = front)
-    // Layer 0 = newest active (rendered LAST = in front, at BOTTOM visually)
-    // Layer 9 = oldest closed (rendered FIRST = in back, at TOP visually)
-    const renderList = [];
-
-    // Add closed trades first (they render in back, higher Y offset)
-    for (let i = closedCount - 1; i >= 0; i--) {
-        const layerIdx = activeCount + i;
-        renderList.push({
-            data: closedItems[i],
-            layerIndex: layerIdx,
-            isActive: false
-        });
-    }
-
-    // Add active trades last (they render in front, lower Y offset)
-    for (let i = activeCount - 1; i >= 0; i--) {
-        renderList.push({
-            data: activeTrades[i],
-            layerIndex: i,
-            isActive: true
-        });
-    }
-
-    // Generate SVG content with pulsing animation
+    // Build SVG content
     let svgContent = `
         <defs>
-            <linearGradient id="pulse-grad-profit" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="${PULSE_CONFIG.colors.profit}" stop-opacity="0.25"/>
-                <stop offset="100%" stop-color="${PULSE_CONFIG.colors.profit}" stop-opacity="0"/>
-            </linearGradient>
-            <linearGradient id="pulse-grad-loss" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="${PULSE_CONFIG.colors.loss}" stop-opacity="0.25"/>
-                <stop offset="100%" stop-color="${PULSE_CONFIG.colors.loss}" stop-opacity="0"/>
-            </linearGradient>
-            <linearGradient id="pulse-grad-closed" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="${PULSE_CONFIG.colors.closed}" stop-opacity="0.15"/>
-                <stop offset="100%" stop-color="${PULSE_CONFIG.colors.closed}" stop-opacity="0"/>
-            </linearGradient>
+            <clipPath id="graph-clip">
+                <rect x="${labelWidth}" y="0" width="${graphWidth}" height="${svgHeight}"/>
+            </clipPath>
         </defs>
-        <style>
-            @keyframes pulse-dot {
-                0%, 100% { r: 4; opacity: 1; }
-                50% { r: 6; opacity: 0.8; }
-            }
-            .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
-        </style>
     `;
 
-    // Render each trade/position
-    renderList.forEach(item => {
-        const { data, layerIndex, isActive } = item;
-        // Y offset: Layer 0 (newest) at bottom, higher layers pushed up
-        const yOffset = layerIndex * PULSE_CONFIG.layerOffset;
-        const opacity = getPulseOpacity(layerIndex, activeCount);
+    // Render from back to front (oldest closed first, active last)
+    const renderOrder = [...allItems].reverse();
 
-        // Get price history or generate mock
+    renderOrder.forEach((item, renderIdx) => {
+        const { data, isActive, index } = item;
+        const layerFromBottom = allItems.length - 1 - index;
+        const baseY = startY - (layerFromBottom * PULSE_CONFIG.lineHeight);
+
+        // Get price data
         const priceHistory = data.priceHistory || generateMockPriceHistory(data);
-        const entryPrice = data.entry_price || data.entryPrice || 100;
-        const currentPrice = data.mark_price || data.exit_price || data.currentPrice || entryPrice;
-
-        const { linePath, fillPath, entryY, startX, currentDot } = generatePulsePath(
-            priceHistory, entryPrice, currentPrice, svgWidth, svgHeight, yOffset
-        );
-
-        // Determine colors based on PnL
         const pnl = data.pnl_percent || data.pnlPercent || 0;
-        let strokeColor, gradientId;
+
+        // Determine amplitude based on PnL magnitude
+        const amplitude = Math.min(Math.abs(pnl) * 2 + 15, 45);
+
+        // Generate curve
+        const { linePath, fillPath } = generatePulseCurve(priceHistory, baseY, graphWidth, amplitude);
+
+        // Colors
+        let strokeColor = '#666666';  // Default grey for closed
+        let opacity = 0.4 + (renderIdx * 0.06);  // Fade older lines
 
         if (isActive) {
-            strokeColor = pnl >= 0 ? PULSE_CONFIG.colors.profit : PULSE_CONFIG.colors.loss;
-            gradientId = pnl >= 0 ? 'pulse-grad-profit' : 'pulse-grad-loss';
-        } else {
-            // Closed trades: subtle tint based on outcome
-            strokeColor = pnl >= 0 ? '#7a9a7a' : '#9a7a7a';
-            gradientId = 'pulse-grad-closed';
+            strokeColor = pnl >= 0 ? PULSE_CONFIG.colors.activeLine : PULSE_CONFIG.colors.activeLoss;
+            opacity = 1;
         }
 
-        const strokeWidth = isActive ? PULSE_CONFIG.activeStrokeWidth : PULSE_CONFIG.closedStrokeWidth;
+        const strokeWidth = isActive ? PULSE_CONFIG.activeStrokeWidth : PULSE_CONFIG.strokeWidth;
 
-        // Label position: symbol at start of flat section
-        const labelStartX = startX + 8;
+        // Symbol label (only for active positions)
+        const symbol = data.symbol || '';
+        const labelY = baseY + 4;
 
-        // Add group for this trade
         svgContent += `
-            <g opacity="${opacity.toFixed(2)}">
-                <path d="${fillPath}" fill="url(#${gradientId})"/>
+            <g transform="translate(${labelWidth}, 0)" clip-path="url(#graph-clip)" opacity="${opacity.toFixed(2)}">
+                <!-- Fill to hide lines behind (Joy Division effect) -->
+                <path d="${fillPath}" fill="${PULSE_CONFIG.colors.fill}" stroke="none"/>
+                <!-- Main line -->
                 <path d="${linePath}"
                       fill="none"
                       stroke="${strokeColor}"
                       stroke-width="${strokeWidth}"
                       stroke-linecap="round"
                       stroke-linejoin="round"/>
-                ${isActive && currentDot ? `
-                    <!-- Pulsing dot at current price (75% width) -->
-                    <circle class="pulse-dot" cx="${currentDot.x.toFixed(1)}" cy="${currentDot.y.toFixed(1)}" r="4" fill="${strokeColor}"/>
-                    <!-- Symbol label at left flat section -->
-                    <text x="${labelStartX}" y="${(entryY - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
-                        ${data.symbol || 'N/A'}
-                    </text>
-                    <!-- PnL percentage near the dot -->
-                    <text x="${(currentDot.x + 12).toFixed(1)}" y="${(currentDot.y - 8).toFixed(1)}" fill="${strokeColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">
-                        ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%
-                    </text>
-                ` : ''}
             </g>
+            ${isActive ? `
+                <text x="8" y="${labelY}"
+                      fill="${strokeColor}"
+                      font-size="10"
+                      font-weight="600"
+                      font-family="Inter, monospace"
+                      opacity="0.9">
+                    ${symbol}
+                </text>
+            ` : ''}
         `;
     });
 
     svg.innerHTML = svgContent;
 }
+
 
 // Generate mini price path SVG for trade cards
 function generateMiniPricePath(trade) {
