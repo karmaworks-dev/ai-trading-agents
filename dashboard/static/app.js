@@ -15,87 +15,63 @@ let openPositionsCache = [];
 
 // Pulse Graph Configuration
 const PULSE_CONFIG = {
-    maxItems: 10,
-    lineHeight: 20,         // Vertical spacing between lines
-    strokeWidth: 2,         // Thick solid lines
-    activeStrokeWidth: 2.5, // Slightly thicker for active
+    maxItems: 8,
+    strokeWidth: 1.8,
+    activeStrokeWidth: 2.2,
     colors: {
-        line: '#666666',        // Grey for closed trades
-        activeLine: '#00ff88',  // Green for active profit
-        activeLoss: '#ff4757',  // Red for active loss
-        fill: '#1e1e1e',        // Background fill (matches --bg-tertiary)
+        activeLine: '#00ff88',
+        activeLoss: '#ff4757',
+        closedLine: '#555555',
+        fill: '#1e1e1e',
     }
 };
 
-// Generate smooth mountain curve for price movement
-function generatePulseCurve(priceHistory, baseY, svgWidth, amplitude) {
-    const startX = 0;
-    const endX = svgWidth;
-
-    if (!priceHistory || priceHistory.length < 2) {
-        // Flat line if no data
-        return {
-            linePath: `M ${startX} ${baseY} L ${endX} ${baseY}`,
-            fillPath: `M ${startX} ${baseY} L ${endX} ${baseY} L ${endX} ${baseY + 50} L ${startX} ${baseY + 50} Z`
-        };
-    }
-
-    const prices = priceHistory.map(p => p.price);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice || 1;
-
-    // Create smooth path points
+// Generate Joy Division style wave - always visible, organic pattern
+function generateWavePath(baseY, width, amplitude, seed) {
     const points = [];
-    const numPoints = Math.min(priceHistory.length, 50);
+    const numPoints = 80;
 
-    for (let i = 0; i < numPoints; i++) {
-        const progress = i / (numPoints - 1);
-        const x = startX + progress * (endX - startX);
-        const priceIdx = Math.floor(progress * (priceHistory.length - 1));
-        const price = priceHistory[priceIdx].price;
-        const normalized = (price - minPrice) / priceRange;
-        // Invert: higher price = curve goes UP (lower Y)
-        const y = baseY - (normalized * amplitude);
+    // Create organic wave using multiple sine waves with seed for variety
+    for (let i = 0; i <= numPoints; i++) {
+        const x = (i / numPoints) * width;
+        const t = i / numPoints;
+
+        // Multiple harmonics for organic look
+        const wave1 = Math.sin(t * Math.PI * 4 + seed) * 0.4;
+        const wave2 = Math.sin(t * Math.PI * 7 + seed * 1.3) * 0.25;
+        const wave3 = Math.sin(t * Math.PI * 11 + seed * 0.7) * 0.15;
+        const wave4 = Math.sin(t * Math.PI * 2 + seed * 2) * 0.2;
+
+        // Envelope - peaks in the middle, flat at edges
+        const envelope = Math.sin(t * Math.PI) * Math.sin(t * Math.PI);
+
+        // Combine waves with envelope
+        const waveHeight = (wave1 + wave2 + wave3 + wave4) * envelope * amplitude;
+        const y = baseY - Math.max(0, waveHeight); // Only go UP from baseline
+
         points.push({ x, y });
     }
 
-    // Build smooth SVG path using cubic bezier curves
-    let linePath = `M ${points[0].x} ${points[0].y}`;
+    // Build smooth path
+    let linePath = `M 0 ${baseY}`;
 
-    for (let i = 1; i < points.length; i++) {
-        const prev = points[i - 1];
-        const curr = points[i];
-        const cpX = (prev.x + curr.x) / 2;
-        linePath += ` Q ${cpX} ${prev.y}, ${curr.x} ${curr.y}`;
+    for (let i = 0; i < points.length; i++) {
+        if (i === 0) {
+            linePath += ` L ${points[i].x} ${points[i].y}`;
+        } else {
+            const prev = points[i - 1];
+            const curr = points[i];
+            const cpX = (prev.x + curr.x) / 2;
+            linePath += ` Q ${cpX} ${prev.y}, ${curr.x} ${curr.y}`;
+        }
     }
 
-    // Fill path: close the shape below the line
-    const fillPath = linePath + ` L ${endX} ${baseY + 50} L ${startX} ${baseY + 50} Z`;
+    linePath += ` L ${width} ${baseY}`;
+
+    // Fill path closes below the line
+    const fillPath = linePath + ` L ${width} ${baseY + 100} L 0 ${baseY + 100} Z`;
 
     return { linePath, fillPath };
-}
-
-// Generate mock price history for demo
-function generateMockPriceHistory(trade) {
-    const entryPrice = trade.entry_price || trade.entryPrice || 100;
-    const currentPrice = trade.mark_price || trade.exit_price || trade.currentPrice || entryPrice;
-    const points = [];
-    const numPoints = 40;
-
-    // Create organic wave pattern
-    for (let i = 0; i <= numPoints; i++) {
-        const progress = i / numPoints;
-        const basePrice = entryPrice + (currentPrice - entryPrice) * progress;
-        // Organic noise using multiple sine waves
-        const noise = (
-            Math.sin(i * 0.5) * 0.3 +
-            Math.sin(i * 0.8 + 1) * 0.2 +
-            Math.sin(i * 0.3 + 2) * 0.15
-        ) * Math.abs(currentPrice - entryPrice) * 0.5;
-        points.push({ time: i, price: basePrice + noise });
-    }
-    return points;
 }
 
 // Main render function - Joy Division style
@@ -105,95 +81,76 @@ function renderPulseGraph(openPositions, closedTrades) {
 
     const svgWidth = 800;
     const svgHeight = 220;
-    const labelWidth = 60;  // Space for symbol label
-    const graphWidth = svgWidth - labelWidth;
+    const marginLeft = 50;
+    const graphWidth = svgWidth - marginLeft - 10;
 
-    // Combine and limit items
+    // Combine items: active first, then closed
     const allItems = [];
 
-    // Add active positions first (rendered last = on top)
     openPositions.slice(0, 3).forEach((pos, i) => {
-        allItems.push({ data: pos, isActive: true, index: i });
+        allItems.push({ data: pos, isActive: true });
     });
 
-    // Add closed trades
     const closedSlots = PULSE_CONFIG.maxItems - allItems.length;
     closedTrades.slice(0, closedSlots).forEach((trade, i) => {
-        allItems.push({ data: trade, isActive: false, index: allItems.length });
+        allItems.push({ data: trade, isActive: false });
     });
 
     if (allItems.length === 0) {
-        svg.innerHTML = `<text x="400" y="110" text-anchor="middle" fill="#444" font-size="13" font-family="Inter, sans-serif">No positions or trades</text>`;
+        svg.innerHTML = `<text x="400" y="110" text-anchor="middle" fill="#444" font-size="13">No positions or trades</text>`;
         return;
     }
 
-    // Calculate base Y positions (bottom to top stacking)
-    const totalHeight = svgHeight - 40;
-    const startY = svgHeight - 30;
+    // Calculate vertical spacing - distribute lines evenly
+    const topPadding = 35;
+    const bottomPadding = 25;
+    const availableHeight = svgHeight - topPadding - bottomPadding;
+    const lineSpacing = Math.min(availableHeight / Math.max(allItems.length, 1), 28);
 
-    // Build SVG content
-    let svgContent = `
-        <defs>
-            <clipPath id="graph-clip">
-                <rect x="${labelWidth}" y="0" width="${graphWidth}" height="${svgHeight}"/>
-            </clipPath>
-        </defs>
-    `;
+    let svgContent = '';
 
-    // Render from back to front (oldest closed first, active last)
+    // Render from back (top, oldest) to front (bottom, newest)
+    // Reverse so newest active is rendered LAST (on top visually, at bottom of stack)
     const renderOrder = [...allItems].reverse();
 
     renderOrder.forEach((item, renderIdx) => {
-        const { data, isActive, index } = item;
-        const layerFromBottom = allItems.length - 1 - index;
-        const baseY = startY - (layerFromBottom * PULSE_CONFIG.lineHeight);
+        const { data, isActive } = item;
+        const itemIndex = allItems.length - 1 - renderIdx; // Original index
 
-        // Get price data
-        const priceHistory = data.priceHistory || generateMockPriceHistory(data);
+        // Y position: first item at bottom, last at top
+        const baseY = svgHeight - bottomPadding - (itemIndex * lineSpacing);
+
+        // Generate unique wave pattern using index as seed
+        const seed = (data.symbol ? data.symbol.charCodeAt(0) : renderIdx) + renderIdx * 2.5;
         const pnl = data.pnl_percent || data.pnlPercent || 0;
 
-        // Determine amplitude based on PnL magnitude
-        const amplitude = Math.min(Math.abs(pnl) * 2 + 15, 45);
+        // Amplitude: base of 35px, scales slightly with PnL
+        const amplitude = 30 + Math.min(Math.abs(pnl) * 1.5, 25);
 
-        // Generate curve
-        const { linePath, fillPath } = generatePulseCurve(priceHistory, baseY, graphWidth, amplitude);
+        const { linePath, fillPath } = generateWavePath(baseY, graphWidth, amplitude, seed);
 
-        // Colors
-        let strokeColor = '#666666';  // Default grey for closed
-        let opacity = 0.4 + (renderIdx * 0.06);  // Fade older lines
-
+        // Colors and opacity
+        let strokeColor, opacity;
         if (isActive) {
             strokeColor = pnl >= 0 ? PULSE_CONFIG.colors.activeLine : PULSE_CONFIG.colors.activeLoss;
             opacity = 1;
+        } else {
+            strokeColor = PULSE_CONFIG.colors.closedLine;
+            opacity = 0.3 + (renderIdx * 0.08); // Older = more faded
         }
 
         const strokeWidth = isActive ? PULSE_CONFIG.activeStrokeWidth : PULSE_CONFIG.strokeWidth;
-
-        // Symbol label (only for active positions)
         const symbol = data.symbol || '';
-        const labelY = baseY + 4;
 
         svgContent += `
-            <g transform="translate(${labelWidth}, 0)" clip-path="url(#graph-clip)" opacity="${opacity.toFixed(2)}">
-                <!-- Fill to hide lines behind (Joy Division effect) -->
+            <g transform="translate(${marginLeft}, 0)" opacity="${opacity.toFixed(2)}">
                 <path d="${fillPath}" fill="${PULSE_CONFIG.colors.fill}" stroke="none"/>
-                <!-- Main line -->
-                <path d="${linePath}"
-                      fill="none"
-                      stroke="${strokeColor}"
-                      stroke-width="${strokeWidth}"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"/>
+                <path d="${linePath}" fill="none" stroke="${strokeColor}"
+                      stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>
             </g>
             ${isActive ? `
-                <text x="8" y="${labelY}"
-                      fill="${strokeColor}"
-                      font-size="10"
-                      font-weight="600"
-                      font-family="Inter, monospace"
-                      opacity="0.9">
-                    ${symbol}
-                </text>
+                <text x="6" y="${baseY + 4}" fill="${strokeColor}" font-size="9"
+                      font-weight="600" font-family="monospace">${symbol}</text>
             ` : ''}
         `;
     });
