@@ -105,7 +105,7 @@ function renderPulseGraph(openPositions, closedTrades) {
     const svgWidth = 800;
     const svgHeight = 220;
     const marginLeft = 55;
-    const marginRight = 10;
+    const marginRight = 60; // Space for PnL label after dot
     const graphWidth = svgWidth - marginLeft - marginRight;
 
     // Use only open positions for this visualization
@@ -177,9 +177,9 @@ function renderPulseGraph(openPositions, closedTrades) {
                 <!-- Symbol label -->
                 <text x="6" y="${lineCenterY + 4}" fill="${strokeColor}" font-size="10"
                       font-weight="600" font-family="monospace">${symbol}</text>
-                <!-- PnL label -->
-                <text x="${svgWidth - 8}" y="${lineCenterY + 4}" fill="${strokeColor}" font-size="9"
-                      font-weight="500" font-family="monospace" text-anchor="end">
+                <!-- PnL label (positioned after end dot) -->
+                <text x="${xCoords[xCoords.length - 1] + 8}" y="${yOffseted[yOffseted.length - 1] + 3}"
+                      fill="${strokeColor}" font-size="9" font-weight="500" font-family="monospace">
                     ${isProfit ? '+' : ''}${pnl.toFixed(2)}%
                 </text>
             </g>
