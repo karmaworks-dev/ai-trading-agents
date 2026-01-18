@@ -968,19 +968,24 @@ class TradingAgent:
         cprint("=" * 60, "yellow")
 
         # Log each position being analyzed
-        for symbol, positions in positions_data.items():
-            for pos in positions:
-                side = "LONG" if pos["is_long"] else "SHORT"
-                entry = pos["entry_price"]
-                pnl = pos["pnl_percent"]
+        # Handle both dict format {symbol: position_dict} and list format {symbol: [positions]}
+        for symbol, pos_data in positions_data.items():
+            # Normalize to list format for iteration
+            positions_list = pos_data if isinstance(pos_data, list) else [pos_data]
+            for pos in positions_list:
+                side = "LONG" if pos.get("is_long") else "SHORT"
+                entry = pos.get("entry_price", 0)
+                pnl = pos.get("pnl_percent", 0)
                 pnl_emoji = "🟢" if pnl >= 0 else "🔴"
                 add_console_log(f"   {pnl_emoji} {symbol} ({side}) | Entry: ${entry:.2f} | PnL: {pnl:+.2f}%", "info")
 
         # CRITICAL: Check TP/SL thresholds FIRST - force close regardless of AI analysis
         validated_decisions = {}
-        for symbol, positions in positions_data.items():
-            for pos in positions:
-                pnl_percent = pos["pnl_percent"]
+        for symbol, pos_data in positions_data.items():
+            # Normalize to list format
+            positions_list = pos_data if isinstance(pos_data, list) else [pos_data]
+            for pos in positions_list:
+                pnl_percent = pos.get("pnl_percent", 0)
 
                 # Force TP/SL using helpers
                 if should_trigger_take_profit(pnl_percent, TAKE_PROFIT_THRESHOLD):
@@ -998,18 +1003,20 @@ class TradingAgent:
 
         # Build position summary for remaining positions
         position_summary = []
-        for symbol, positions in positions_data.items():
+        for symbol, pos_data in positions_data.items():
             if symbol in validated_decisions:
                 continue  # Skip positions already handled by TP/SL
-                
-            for pos in positions:
+
+            # Normalize to list format
+            positions_list = pos_data if isinstance(pos_data, list) else [pos_data]
+            for pos in positions_list:
                 position_summary.append({
                     "symbol": symbol,
-                    "side": "LONG" if pos["is_long"] else "SHORT",
-                    "size": pos["size"],
-                    "entry_price": pos["entry_price"],
-                    "current_pnl": pos["pnl_percent"],
-                    "age_hours": pos["age_hours"],
+                    "side": "LONG" if pos.get("is_long") else "SHORT",
+                    "size": pos.get("size", 0),
+                    "entry_price": pos.get("entry_price", 0),
+                    "current_pnl": pos.get("pnl_percent", 0),
+                    "age_hours": pos.get("age_hours", 0),
                 })
 
         # Format market conditions
@@ -1135,7 +1142,9 @@ Return ONLY valid JSON with the following structure:
 
                     if action.upper() == "CLOSE":
                         # Get position data for validation
-                        pos_data = positions_data.get(symbol, [{}])[0]
+                        # Handle both dict and list formats
+                        raw_pos = positions_data.get(symbol, {})
+                        pos_data = raw_pos[0] if isinstance(raw_pos, list) else raw_pos
                         pnl_percent = pos_data.get("pnl_percent", 0)
                         age_hours = pos_data.get("age_hours", 0)
 
