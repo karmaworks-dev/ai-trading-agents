@@ -505,10 +505,9 @@ function updatePositions(positions) {
         return `
         <div class="position">
             <div class="position-header">
-                <div class="position-symbol-group">
-                    <span class="position-value symbol-${sideClass}" style="font-weight: 600; font-size: 14px;">${pos.symbol}</span>
-                    <span class="side ${sideClass}" style="font-size: 10px;">${pos.side}</span>
-                    <span class="leverage-badge ${leverageClass}">${leverage}x</span>
+                <div class="position-symbol-group symbol-${sideClass}">
+                    <span style="font-weight: 600; font-size: 13px;">${pos.symbol}</span>
+                    <span style="font-size: 11px; opacity: 0.7; margin-left: 8px;">${leverage}x</span>
                 </div>
                 <span class="position-pnl-display pnl ${isProfit ? 'positive' : 'negative'}">
                     ${isProfit ? '+' : ''}${pctPnl.toFixed(2)}%
