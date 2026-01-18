@@ -47,15 +47,24 @@ function getPulseOpacity(layerIndex, activeCount) {
     return startOpacity - (eased * (startOpacity - endOpacity));
 }
 
-// Generate bezel path: flat entry → price curve → dot at 75% → bezel out → flat end
+// Generate bezel path: flat entry → price curve → dot at ~80% → bezel out → flat end
 function generatePulsePath(priceHistory, entryPrice, currentPrice, svgWidth, svgHeight, yOffset) {
-    // Near edge-to-edge: 20px padding each side
-    const padding = { left: 20, right: 20, top: 30, bottom: 30 };
-    const flatSectionWidth = 18;  // Flat horizontal section at start/end
-    const bezelWidth = 35;        // Width of bezel curve transition
+    // Edge positions with minimal padding
+    const startX = 12;
+    const endX = svgWidth - 12;
+    const totalWidth = endX - startX;
 
-    const startX = padding.left;
-    const endX = svgWidth - padding.right;
+    // Zone widths for clean structure
+    const flatStartWidth = 30;      // Visible flat section at start
+    const flatEndWidth = 25;        // Visible flat section at end
+    const bezelInWidth = 55;        // Smooth gradual bezel in
+    const dotPosition = 0.80;       // Dot at 80% of width
+
+    // Key X coordinates
+    const flatStartEnd = startX + flatStartWidth;
+    const bezelInEnd = flatStartEnd + bezelInWidth;
+    const flatEndStart = endX - flatEndWidth;
+    const dotX = startX + totalWidth * dotPosition;
 
     if (!priceHistory || priceHistory.length < 2) {
         const y = svgHeight / 2 + yOffset;
@@ -69,74 +78,62 @@ function generatePulsePath(priceHistory, entryPrice, currentPrice, svgWidth, svg
     }
 
     const prices = priceHistory.map(p => p.price);
-    const minPrice = Math.min(entryPrice, currentPrice, ...prices) * 0.995;
-    const maxPrice = Math.max(entryPrice, currentPrice, ...prices) * 1.005;
+    const minPrice = Math.min(entryPrice, currentPrice, ...prices) * 0.99;
+    const maxPrice = Math.max(entryPrice, currentPrice, ...prices) * 1.01;
     const priceRange = maxPrice - minPrice || entryPrice * 0.01;
 
-    // Convert price to Y coordinate (inverted - higher price = lower Y)
+    // Convert price to Y (higher price = lower Y)
     const priceToY = (price) => {
         const normalized = (price - minPrice) / priceRange;
-        return padding.top + yOffset + (1 - normalized) * (svgHeight - padding.top - padding.bottom - 50);
+        return 40 + yOffset + (1 - normalized) * (svgHeight - 100);
     };
 
     const entryY = priceToY(entryPrice);
     const currentY = priceToY(currentPrice);
 
-    // Zones: [flat 18px] [bezel in 35px] [price curve to 75%] [DOT] [bezel out] [flat 18px]
-    const flatStartEnd = startX + flatSectionWidth;
-    const bezelInEnd = flatStartEnd + bezelWidth;
-    const flatEndStart = endX - flatSectionWidth;
-
-    // Current price dot at ~75% of total width
-    const totalWidth = endX - startX;
-    const dotX = startX + totalWidth * 0.75;
-
-    // Price curve spans from bezel-in-end to dot position
+    // Price curve: from bezel-in-end to dot position
     const priceZoneStart = bezelInEnd;
     const priceZoneWidth = dotX - priceZoneStart;
 
-    // Generate points along the price path (up to the dot)
+    // Generate smooth price points
     const points = priceHistory.map((point, index) => {
         const progress = index / (priceHistory.length - 1);
-        const x = priceZoneStart + progress * priceZoneWidth;
-        const y = priceToY(point.price);
-        return { x, y };
+        return {
+            x: priceZoneStart + progress * priceZoneWidth,
+            y: priceToY(point.price)
+        };
     });
 
-    // Build path:
-    // 1. Flat start section at entry level
+    // Build clean SVG path:
+    // 1. Flat start at entry level
     let pathD = `M ${startX} ${entryY} L ${flatStartEnd} ${entryY}`;
 
-    // 2. Bezel in: curve from entry level to first price point
+    // 2. Smooth bezel in - gentle S-curve from entry to first price point
     const firstPoint = points[0];
-    pathD += ` C ${flatStartEnd + bezelWidth * 0.5} ${entryY}, ${firstPoint.x - bezelWidth * 0.4} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
+    pathD += ` C ${flatStartEnd + bezelInWidth * 0.7} ${entryY}, ${firstPoint.x - bezelInWidth * 0.2} ${firstPoint.y}, ${firstPoint.x} ${firstPoint.y}`;
 
     // 3. Smooth curve through price points
     for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1];
         const curr = points[i];
-        const cpX = (prev.x + curr.x) / 2;
-        pathD += ` Q ${cpX} ${prev.y}, ${curr.x} ${curr.y}`;
+        pathD += ` Q ${(prev.x + curr.x) / 2} ${prev.y}, ${curr.x} ${curr.y}`;
     }
 
-    // 4. Continue to current price dot position
+    // 4. Connect to current price dot position
     const lastPoint = points[points.length - 1];
     pathD += ` Q ${(lastPoint.x + dotX) / 2} ${lastPoint.y}, ${dotX} ${currentY}`;
 
-    // 5. Bezel out: curve from current price back to entry level
-    const bezelOutWidth = flatEndStart - dotX;
-    pathD += ` C ${dotX + bezelOutWidth * 0.4} ${currentY}, ${flatEndStart - bezelOutWidth * 0.3} ${entryY}, ${flatEndStart} ${entryY}`;
+    // 5. Smooth bezel out - gentle curve from dot back down to entry level
+    const bezelOutLen = flatEndStart - dotX;
+    pathD += ` C ${dotX + bezelOutLen * 0.4} ${currentY}, ${flatEndStart - bezelOutLen * 0.2} ${entryY}, ${flatEndStart} ${entryY}`;
 
-    // 6. Flat end section at entry level
+    // 6. Flat end at entry level
     pathD += ` L ${endX} ${entryY}`;
 
     // Fill path for gradient
     const fillPath = pathD + ` L ${endX} ${svgHeight} L ${startX} ${svgHeight} Z`;
 
-    // Return dot position for rendering
-    const currentDot = { x: dotX, y: currentY };
-
-    return { linePath: pathD, fillPath, entryY, startX, currentDot };
+    return { linePath: pathD, fillPath, entryY, startX, currentDot: { x: dotX, y: currentY } };
 }
 
 // Generate mock price history if not available
