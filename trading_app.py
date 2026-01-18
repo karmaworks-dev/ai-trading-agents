@@ -1416,11 +1416,47 @@ def close_position_api(symbol):
 
         account = Account.from_key(private_key)
 
+        # Get position data BEFORE closing (for trade record)
+        positions = get_positions_data()
+        position_data = None
+        for pos in positions:
+            if pos.get('symbol') == symbol:
+                position_data = pos
+                break
+
         # Close the position using kill_switch
         add_console_log(f"Closing {symbol} position manually...", "info")
         result = n.kill_switch(symbol, account)
 
-        add_console_log(f"Closed {symbol} position", "trade")
+        # Save trade record if we had position data
+        if position_data:
+            from datetime import datetime
+            trade_record = {
+                'symbol': symbol,
+                'side': position_data.get('side', 'LONG'),
+                'size': abs(position_data.get('size', 0)),
+                'entry_price': position_data.get('entry_price', 0),
+                'exit_price': position_data.get('mark_price', position_data.get('entry_price', 0)),
+                'pnl': position_data.get('pnl_value', 0),
+                'pnl_percent': position_data.get('pnl_percent', 0),
+                'leverage': position_data.get('leverage', 20),
+                'timestamp': datetime.now().isoformat(),
+                'action': 'CLOSE',
+                'reason': 'manual'
+            }
+            save_trade(trade_record)
+
+        # Broadcast updated positions to SSE clients
+        try:
+            updated_positions = get_positions_data()
+            positions_json = json.dumps(updated_positions)
+            for client_queue in sse_clients[:]:
+                try:
+                    client_queue.put(f"data: {positions_json}\n\n", block=False)
+                except:
+                    pass
+        except Exception as broadcast_err:
+            print(f"⚠️ SSE broadcast error: {broadcast_err}")
 
         return jsonify({
             'success': True,
@@ -1471,15 +1507,42 @@ def close_all_positions_api():
         closed_count = 0
         errors = []
 
+        from datetime import datetime
         for pos in positions:
             symbol = pos['symbol']
             try:
                 n.kill_switch(symbol, account)
                 closed_count += 1
-                add_console_log(f"Closed {symbol} position", "trade")
+                # Save trade record
+                trade_record = {
+                    'symbol': symbol,
+                    'side': pos.get('side', 'LONG'),
+                    'size': abs(pos.get('size', 0)),
+                    'entry_price': pos.get('entry_price', 0),
+                    'exit_price': pos.get('mark_price', pos.get('entry_price', 0)),
+                    'pnl': pos.get('pnl_value', 0),
+                    'pnl_percent': pos.get('pnl_percent', 0),
+                    'leverage': pos.get('leverage', 20),
+                    'timestamp': datetime.now().isoformat(),
+                    'action': 'CLOSE',
+                    'reason': 'panic'
+                }
+                save_trade(trade_record)
             except Exception as e:
                 errors.append(f"{symbol}: {str(e)}")
                 add_console_log(f"Error closing {symbol}: {str(e)}", "error")
+
+        # Broadcast updated positions to SSE clients
+        try:
+            updated_positions = get_positions_data()
+            positions_json = json.dumps(updated_positions)
+            for client_queue in sse_clients[:]:
+                try:
+                    client_queue.put(f"data: {positions_json}\n\n", block=False)
+                except:
+                    pass
+        except Exception as broadcast_err:
+            print(f"⚠️ SSE broadcast error: {broadcast_err}")
 
         if errors:
             return jsonify({
