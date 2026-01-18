@@ -89,7 +89,7 @@ function createSmoothPath(xCoords, yCoords) {
     return path;
 }
 
-// Main render function - Joy Division style
+// Main render function - Joy Division style with gradients and glow
 function renderPulseGraph(openPositions, closedTrades) {
     const svg = document.getElementById('pulse-svg');
     if (!svg) return;
@@ -112,10 +112,43 @@ function renderPulseGraph(openPositions, closedTrades) {
         return;
     }
 
+    // Calculate max position value for line thickness scaling
+    const positionValues = positions.map(p => p.position_value || 0);
+    const maxValue = Math.max(...positionValues, 1);
+    const minValue = Math.min(...positionValues, 0);
+
     // Layout: stack lines vertically with good spacing
     const lineSpacing = Math.min(160 / Math.max(positions.length, 1), 55);
-    const waveHeight = 40; // Maximum wave height
+    const waveHeight = 45;
     const numPoints = 80;
+
+    // SVG Definitions for gradients and glow effects
+    let svgDefs = `
+        <defs>
+            <linearGradient id="grad-profit" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#00ff88" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#00ff88" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="grad-loss" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ff4757" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#ff4757" stop-opacity="0"/>
+            </linearGradient>
+            <filter id="glow-profit" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            <filter id="glow-loss" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+    `;
 
     let svgContent = '';
 
@@ -127,6 +160,13 @@ function renderPulseGraph(openPositions, closedTrades) {
         const pnl = pos.pnl_percent || 0;
         const isProfit = pnl >= 0;
         const strokeColor = isProfit ? PULSE_CONFIG.colors.profit : PULSE_CONFIG.colors.loss;
+        const gradientId = isProfit ? 'grad-profit' : 'grad-loss';
+        const glowId = isProfit ? 'glow-profit' : 'glow-loss';
+
+        // Line thickness based on position value (1.5 to 4px)
+        const posValue = pos.position_value || 0;
+        const valueRatio = maxValue > minValue ? (posValue - minValue) / (maxValue - minValue) : 0.5;
+        const strokeWidth = 1.5 + (valueRatio * 2.5);
 
         // Baseline Y for this line
         const baseY = svgHeight - 30 - (index * lineSpacing);
@@ -136,21 +176,18 @@ function renderPulseGraph(openPositions, closedTrades) {
         const history = priceHistoryCache[symbol];
 
         if (history && history.length >= 2) {
-            // Use real price history
             prices = history.map(h => h.price);
         } else {
-            // Generate initial wave based on entry/mark prices
             const entry = pos.entry_price || 100;
             const mark = pos.mark_price || entry;
             const diff = mark - entry;
 
             for (let i = 0; i < numPoints; i++) {
                 const t = i / (numPoints - 1);
-                // Interpolate with some organic variation
                 const seed = symbol.charCodeAt(0) + i * 0.1;
                 const noise = Math.sin(t * Math.PI * 6 + seed) * 0.3 +
                               Math.sin(t * Math.PI * 10 + seed * 1.5) * 0.2;
-                const envelope = Math.sin(t * Math.PI); // Peak in middle
+                const envelope = Math.sin(t * Math.PI);
                 prices.push(entry + (diff * t) + (diff * noise * envelope * 0.5) + (Math.abs(diff) * 0.1 * envelope));
             }
         }
@@ -180,30 +217,44 @@ function renderPulseGraph(openPositions, closedTrades) {
         // Create path
         const linePath = createSmoothPath(xCoords, yCoords);
 
-        // Fill path for occlusion effect
-        const fillPath = linePath +
-            ` L ${xCoords[numPoints - 1]} ${baseY + 60}` +
-            ` L ${xCoords[0]} ${baseY + 60} Z`;
+        // Gradient fill path
+        const gradientFillPath = linePath +
+            ` L ${xCoords[numPoints - 1]} ${baseY}` +
+            ` L ${xCoords[0]} ${baseY} Z`;
+
+        // Occlusion fill path (solid background below)
+        const occlusionPath = linePath +
+            ` L ${xCoords[numPoints - 1]} ${baseY + 70}` +
+            ` L ${xCoords[0]} ${baseY + 70} Z`;
 
         const endX = xCoords[numPoints - 1];
         const endY = yCoords[numPoints - 1];
 
         svgContent += `
             <g>
-                <path d="${fillPath}" fill="${PULSE_CONFIG.colors.fill}" stroke="none"/>
+                <!-- Solid occlusion fill -->
+                <path d="${occlusionPath}" fill="${PULSE_CONFIG.colors.fill}" stroke="none"/>
+                <!-- Gradient fill under line -->
+                <path d="${gradientFillPath}" fill="url(#${gradientId})" stroke="none"/>
+                <!-- Main line with glow -->
                 <path d="${linePath}" fill="none" stroke="${strokeColor}"
-                      stroke-width="${PULSE_CONFIG.strokeWidth}"
-                      stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="${endX}" cy="${endY}" r="3.5" fill="${strokeColor}"/>
+                      stroke-width="${strokeWidth.toFixed(1)}"
+                      stroke-linecap="round" stroke-linejoin="round"
+                      filter="url(#${glowId})" opacity="0.95"/>
+                <!-- End point with glow -->
+                <circle cx="${endX}" cy="${endY}" r="${(strokeWidth * 1.2).toFixed(1)}"
+                        fill="${strokeColor}" filter="url(#${glowId})"/>
+                <!-- Symbol label -->
                 <text x="8" y="${baseY + 4}" fill="${strokeColor}" font-size="11"
-                      font-weight="600" font-family="monospace">${symbol}</text>
-                <text x="${endX + 10}" y="${endY + 4}" fill="${strokeColor}" font-size="10"
-                      font-weight="500" font-family="monospace">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%</text>
+                      font-weight="600" font-family="monospace" filter="url(#${glowId})">${symbol}</text>
+                <!-- PnL label -->
+                <text x="${endX + 12}" y="${endY + 4}" fill="${strokeColor}" font-size="10"
+                      font-weight="600" font-family="monospace">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%</text>
             </g>
         `;
     });
 
-    svg.innerHTML = svgContent;
+    svg.innerHTML = svgDefs + svgContent;
 }
 
 
