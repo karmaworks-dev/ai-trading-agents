@@ -352,10 +352,15 @@ function startPositionStream() {
 
         positionEventSource.onmessage = (event) => {
             try {
-                const positions = JSON.parse(event.data);
-                if (!positions.error) {
-                    updatePositions(positions);
-                    console.log('[SSE] Position update received:', positions.length, 'positions');
+                const data = JSON.parse(event.data);
+                // Skip heartbeats and error messages
+                if (data.heartbeat || data.error) {
+                    return;
+                }
+                // Only update if we received an array of positions
+                if (Array.isArray(data)) {
+                    updatePositions(data);
+                    console.log('[SSE] Position update received:', data.length, 'positions');
                 }
             } catch (e) {
                 console.error('[SSE] Parse error:', e);
