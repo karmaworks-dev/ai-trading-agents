@@ -66,25 +66,31 @@ function mapPricesToY(prices, baseY, maxHeight) {
     });
 }
 
-// Create smooth SVG path with quadratic bezier curves
+// Create smooth SVG path using Catmull-Rom to Cubic Bezier conversion
+// This produces much smoother curves than simple quadratic beziers
 function createSmoothPath(xCoords, yCoords) {
     if (xCoords.length < 2) return '';
-
-    let path = `M ${xCoords[0].toFixed(1)} ${yCoords[0].toFixed(1)}`;
-
-    for (let i = 1; i < xCoords.length; i++) {
-        const x0 = xCoords[i - 1];
-        const y0 = yCoords[i - 1];
-        const x1 = xCoords[i];
-        const y1 = yCoords[i];
-        const cpX = (x0 + x1) / 2;
-        path += ` Q ${x0.toFixed(1)} ${y0.toFixed(1)}, ${cpX.toFixed(1)} ${((y0 + y1) / 2).toFixed(1)}`;
+    if (xCoords.length === 2) {
+        return `M ${xCoords[0].toFixed(1)} ${yCoords[0].toFixed(1)} L ${xCoords[1].toFixed(1)} ${yCoords[1].toFixed(1)}`;
     }
 
-    // Final point
-    const lastX = xCoords[xCoords.length - 1];
-    const lastY = yCoords[yCoords.length - 1];
-    path += ` L ${lastX.toFixed(1)} ${lastY.toFixed(1)}`;
+    const tension = 0.3; // Lower = smoother curves (0.0 to 1.0)
+    let path = `M ${xCoords[0].toFixed(1)} ${yCoords[0].toFixed(1)}`;
+
+    for (let i = 0; i < xCoords.length - 1; i++) {
+        const p0 = { x: xCoords[Math.max(0, i - 1)], y: yCoords[Math.max(0, i - 1)] };
+        const p1 = { x: xCoords[i], y: yCoords[i] };
+        const p2 = { x: xCoords[i + 1], y: yCoords[i + 1] };
+        const p3 = { x: xCoords[Math.min(xCoords.length - 1, i + 2)], y: yCoords[Math.min(yCoords.length - 1, i + 2)] };
+
+        // Calculate control points using Catmull-Rom to Bezier conversion
+        const cp1x = p1.x + (p2.x - p0.x) * tension;
+        const cp1y = p1.y + (p2.y - p0.y) * tension;
+        const cp2x = p2.x - (p3.x - p1.x) * tension;
+        const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+        path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
 
     return path;
 }
