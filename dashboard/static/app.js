@@ -6,18 +6,21 @@ let portfolioChart = null;
 let positionEventSource = null;
 
 // ============================================================================
-// PULSE GRAPH VISUALIZATION - Open Positions Price Lines
-// Uses same mapping technique as portfolio chart from main branch
+// PULSE GRAPH - Joy Division Style (Unknown Pleasures)
 // ============================================================================
 
-// Cache for open positions and closed trades
+// Price history cache for real-time updates
+const priceHistoryCache = {};
+const HISTORY_LENGTH = 100;
+
+// Cache for positions and trades
 let openPositionsCache = [];
 let closedTradesCache = [];
 
 // Pulse Graph Configuration
 const PULSE_CONFIG = {
     maxItems: 6,
-    strokeWidth: 2,
+    strokeWidth: 2.5,
     colors: {
         profit: '#00ff88',
         loss: '#ff4757',
@@ -25,63 +28,82 @@ const PULSE_CONFIG = {
     }
 };
 
-// Generate wave path with guaranteed visible amplitude
-// Creates Joy Division style waves that are always prominent
-function generateWaveY(baseY, amplitude, numPoints, seed) {
-    const points = [];
-
-    for (let i = 0; i <= numPoints; i++) {
-        const t = i / numPoints;
-
-        // Multiple sine waves for organic look
-        const wave1 = Math.sin(t * Math.PI * 4 + seed) * 0.5;
-        const wave2 = Math.sin(t * Math.PI * 7 + seed * 1.3) * 0.3;
-        const wave3 = Math.sin(t * Math.PI * 2 + seed * 2.1) * 0.2;
-
-        // Envelope - peaks in middle, flat at edges (Joy Division style)
-        const envelope = Math.sin(t * Math.PI);
-
-        // Combined wave with envelope
-        const waveValue = (wave1 + wave2 + wave3) * envelope;
-
-        // Y goes UP (negative) from baseline for waves
-        const y = baseY - (waveValue * amplitude);
-        points.push(y);
-    }
-
-    return points;
+// Update price history when new position data arrives
+function updatePriceHistory(positions) {
+    const now = Date.now();
+    positions.forEach(pos => {
+        const symbol = pos.symbol;
+        if (!priceHistoryCache[symbol]) {
+            priceHistoryCache[symbol] = [];
+        }
+        priceHistoryCache[symbol].push({
+            time: now,
+            price: pos.mark_price || pos.entry_price
+        });
+        // Keep only last N points
+        if (priceHistoryCache[symbol].length > HISTORY_LENGTH) {
+            priceHistoryCache[symbol] = priceHistoryCache[symbol].slice(-HISTORY_LENGTH);
+        }
+    });
 }
 
-// Create smooth SVG path using quadratic bezier curves (from portfolio chart)
+// Map price array to Y coordinates with proper scaling
+function mapPricesToY(prices, baseY, maxHeight) {
+    if (prices.length < 2) return prices.map(() => baseY);
+
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min;
+
+    // If no range, create slight variation
+    if (range === 0) {
+        return prices.map(() => baseY);
+    }
+
+    return prices.map(price => {
+        const normalized = (price - min) / range; // 0 to 1
+        return baseY - (normalized * maxHeight);
+    });
+}
+
+// Create smooth SVG path with quadratic bezier curves
 function createSmoothPath(xCoords, yCoords) {
     if (xCoords.length < 2) return '';
 
-    let pathD = `M ${xCoords[0]} ${yCoords[0]}`;
+    let path = `M ${xCoords[0].toFixed(1)} ${yCoords[0].toFixed(1)}`;
 
     for (let i = 1; i < xCoords.length; i++) {
-        const prev = { x: xCoords[i - 1], y: yCoords[i - 1] };
-        const curr = { x: xCoords[i], y: yCoords[i] };
-        const cpx = (prev.x + curr.x) / 2;
-        const cpy = (prev.y + curr.y) / 2;
-        pathD += ` Q ${prev.x} ${prev.y} ${cpx} ${cpy}`;
+        const x0 = xCoords[i - 1];
+        const y0 = yCoords[i - 1];
+        const x1 = xCoords[i];
+        const y1 = yCoords[i];
+        const cpX = (x0 + x1) / 2;
+        path += ` Q ${x0.toFixed(1)} ${y0.toFixed(1)}, ${cpX.toFixed(1)} ${((y0 + y1) / 2).toFixed(1)}`;
     }
 
-    // Final segment to last point
-    pathD += ` L ${xCoords[xCoords.length - 1]} ${yCoords[yCoords.length - 1]}`;
+    // Final point
+    const lastX = xCoords[xCoords.length - 1];
+    const lastY = yCoords[yCoords.length - 1];
+    path += ` L ${lastX.toFixed(1)} ${lastY.toFixed(1)}`;
 
-    return pathD;
+    return path;
 }
 
-// Main render function - Joy Division style waves for each position
+// Main render function - Joy Division style
 function renderPulseGraph(openPositions, closedTrades) {
     const svg = document.getElementById('pulse-svg');
     if (!svg) return;
 
     const svgWidth = 800;
     const svgHeight = 220;
-    const marginLeft = 55;
-    const marginRight = 60;
+    const marginLeft = 50;
+    const marginRight = 55;
     const graphWidth = svgWidth - marginLeft - marginRight;
+
+    // Update price history
+    if (openPositions.length > 0) {
+        updatePriceHistory(openPositions);
+    }
 
     const positions = openPositions.slice(0, PULSE_CONFIG.maxItems);
 
@@ -90,41 +112,81 @@ function renderPulseGraph(openPositions, closedTrades) {
         return;
     }
 
-    // Fixed wave amplitude - always visible
-    const waveAmplitude = 35;
-    const lineSpacing = Math.min((svgHeight - 60) / positions.length, 50);
-    const numPoints = 60;
+    // Layout: stack lines vertically with good spacing
+    const lineSpacing = Math.min(160 / Math.max(positions.length, 1), 55);
+    const waveHeight = 40; // Maximum wave height
+    const numPoints = 80;
 
     let svgContent = '';
 
-    // Render from bottom to top for proper layering (last position at bottom)
-    positions.forEach((pos, index) => {
-        const pnl = pos.pnl_percent || 0;
+    // Render each position (bottom to top for proper layering)
+    const reversed = [...positions].reverse();
+    reversed.forEach((pos, revIndex) => {
+        const index = positions.length - 1 - revIndex;
         const symbol = pos.symbol || 'UNKNOWN';
+        const pnl = pos.pnl_percent || 0;
         const isProfit = pnl >= 0;
+        const strokeColor = isProfit ? PULSE_CONFIG.colors.profit : PULSE_CONFIG.colors.loss;
 
-        // Baseline Y - positions stacked from top
-        const baseY = 50 + (index * lineSpacing);
+        // Baseline Y for this line
+        const baseY = svgHeight - 30 - (index * lineSpacing);
 
-        // Generate unique wave pattern
-        const seed = symbol.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + index * 2.7;
-        const yCoords = generateWaveY(baseY, waveAmplitude, numPoints, seed);
+        // Get price history or generate initial data
+        let prices = [];
+        const history = priceHistoryCache[symbol];
 
-        // X coordinates across the graph
-        const xCoords = [];
-        for (let i = 0; i <= numPoints; i++) {
-            xCoords.push(marginLeft + (i / numPoints) * graphWidth);
+        if (history && history.length >= 2) {
+            // Use real price history
+            prices = history.map(h => h.price);
+        } else {
+            // Generate initial wave based on entry/mark prices
+            const entry = pos.entry_price || 100;
+            const mark = pos.mark_price || entry;
+            const diff = mark - entry;
+
+            for (let i = 0; i < numPoints; i++) {
+                const t = i / (numPoints - 1);
+                // Interpolate with some organic variation
+                const seed = symbol.charCodeAt(0) + i * 0.1;
+                const noise = Math.sin(t * Math.PI * 6 + seed) * 0.3 +
+                              Math.sin(t * Math.PI * 10 + seed * 1.5) * 0.2;
+                const envelope = Math.sin(t * Math.PI); // Peak in middle
+                prices.push(entry + (diff * t) + (diff * noise * envelope * 0.5) + (Math.abs(diff) * 0.1 * envelope));
+            }
         }
 
-        // Build smooth bezier path
+        // Resample to numPoints if needed
+        if (prices.length !== numPoints) {
+            const resampled = [];
+            for (let i = 0; i < numPoints; i++) {
+                const srcIdx = (i / (numPoints - 1)) * (prices.length - 1);
+                const low = Math.floor(srcIdx);
+                const high = Math.min(low + 1, prices.length - 1);
+                const frac = srcIdx - low;
+                resampled.push(prices[low] * (1 - frac) + prices[high] * frac);
+            }
+            prices = resampled;
+        }
+
+        // Map prices to Y coordinates
+        const yCoords = mapPricesToY(prices, baseY, waveHeight);
+
+        // X coordinates
+        const xCoords = [];
+        for (let i = 0; i < numPoints; i++) {
+            xCoords.push(marginLeft + (i / (numPoints - 1)) * graphWidth);
+        }
+
+        // Create path
         const linePath = createSmoothPath(xCoords, yCoords);
 
-        // Fill path for occlusion (Joy Division style)
-        const fillPath = linePath + ` L ${xCoords[numPoints]} ${baseY + 80} L ${xCoords[0]} ${baseY + 80} Z`;
+        // Fill path for occlusion effect
+        const fillPath = linePath +
+            ` L ${xCoords[numPoints - 1]} ${baseY + 60}` +
+            ` L ${xCoords[0]} ${baseY + 60} Z`;
 
-        const strokeColor = isProfit ? PULSE_CONFIG.colors.profit : PULSE_CONFIG.colors.loss;
-        const endX = xCoords[numPoints];
-        const endY = yCoords[numPoints];
+        const endX = xCoords[numPoints - 1];
+        const endY = yCoords[numPoints - 1];
 
         svgContent += `
             <g>
@@ -132,11 +194,11 @@ function renderPulseGraph(openPositions, closedTrades) {
                 <path d="${linePath}" fill="none" stroke="${strokeColor}"
                       stroke-width="${PULSE_CONFIG.strokeWidth}"
                       stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="${endX}" cy="${endY}" r="3" fill="${strokeColor}"/>
-                <text x="6" y="${baseY + 4}" fill="${strokeColor}" font-size="10"
+                <circle cx="${endX}" cy="${endY}" r="3.5" fill="${strokeColor}"/>
+                <text x="8" y="${baseY + 4}" fill="${strokeColor}" font-size="11"
                       font-weight="600" font-family="monospace">${symbol}</text>
-                <text x="${endX + 8}" y="${endY + 3}" fill="${strokeColor}" font-size="9"
-                      font-weight="500" font-family="monospace">${isProfit ? '+' : ''}${pnl.toFixed(2)}%</text>
+                <text x="${endX + 10}" y="${endY + 4}" fill="${strokeColor}" font-size="10"
+                      font-weight="500" font-family="monospace">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%</text>
             </g>
         `;
     });
