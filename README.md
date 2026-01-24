@@ -4,6 +4,8 @@ An AI-powered cryptocurrency trading platform with multi-model support, swarm co
 
 > **Current Status:** Pre-Beta Launch
 
+> **Dashboard Note:** Pulse Graph visualization with Catmull-Rom curve smoothing, gradient fills, and glow effects is stable at this commit.
+
 ---
 
 ## Table of Contents
